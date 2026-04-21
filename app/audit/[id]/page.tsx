@@ -70,29 +70,31 @@ export default function VideoDetailPage() {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
         {/* LEFT — Cover + stats */}
         <div>
-          {/* Cover */}
-          <div className="relative w-full rounded-2xl overflow-hidden bg-black mb-5"
-            style={{ aspectRatio: '9/16', maxHeight: '520px' }}>
-            {video.coverUrl ? (
-              <>
-                <img src={video.coverUrl} alt={video.title}
-                  className="w-full h-full object-cover" />
-                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent" />
-                {/* Score badge */}
-                <div className={`absolute top-4 right-4 w-12 h-12 rounded-full flex items-center justify-center text-[15px] font-black ${scoreBg(video.score)}`}>
-                  {video.score}
+          {/* Cover — 9:16 TikTok vertical */}
+          <div className="flex justify-center mb-5">
+            <div className="relative rounded-2xl overflow-hidden bg-black shadow-2xl"
+              style={{ width: '260px', height: '462px' }}>
+              {video.coverUrl ? (
+                <>
+                  <img src={video.coverUrl} alt={video.title}
+                    className="absolute inset-0 w-full h-full object-cover" />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-transparent to-transparent" />
+                  {/* Score badge */}
+                  <div className={`absolute top-3 right-3 w-11 h-11 rounded-full flex items-center justify-center text-[14px] font-black ${scoreBg(video.score)}`}>
+                    {video.score}
+                  </div>
+                  {/* Title + date at bottom */}
+                  <div className="absolute bottom-0 left-0 right-0 p-4">
+                    <p className="text-white text-[13px] font-semibold leading-snug line-clamp-3">{video.title}</p>
+                    <p className="text-white/50 text-[10px] mt-1">{video.posted}</p>
+                  </div>
+                </>
+              ) : (
+                <div className="w-full h-full flex items-center justify-center text-[13px]" style={{ color: 'var(--text-faint)' }}>
+                  No cover
                 </div>
-                {/* Title over cover */}
-                <div className="absolute bottom-0 left-0 right-0 p-5">
-                  <p className="text-white text-[14px] font-semibold leading-snug line-clamp-3">{video.title}</p>
-                  <p className="text-white/60 text-[11px] mt-1">{video.posted}</p>
-                </div>
-              </>
-            ) : (
-              <div className="w-full h-full flex items-center justify-center" style={{ background: 'var(--glass-elevated)' }}>
-                <p style={{ color: 'var(--text-faint)' }} className="text-[13px]">No cover available</p>
-              </div>
-            )}
+              )}
+            </div>
           </div>
 
           {/* Stats row */}
