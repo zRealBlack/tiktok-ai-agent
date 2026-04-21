@@ -13,8 +13,8 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "TikTok AI Agent — MAS Studio",
-  description: "AI-powered TikTok analytics, content audit, competitor intelligence, and video idea generation.",
+  title: "Mas AI Studio",
+  description: "Mas Sarie — AI-powered TikTok content strategy, audit, competitor intelligence, and idea generation.",
 };
 
 export default function RootLayout({

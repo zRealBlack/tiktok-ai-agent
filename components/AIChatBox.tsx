@@ -170,10 +170,10 @@ export default function AIChatBox() {
             <Bot size={15} style={{ color: 'var(--text-secondary)' }} />
           </div>
           <div className="flex-1 min-w-0">
-            <div className="text-[13px] font-bold" style={{ color: 'var(--text-primary)' }}>TikTok AI Agent</div>
+            <div className="text-[13px] font-bold" style={{ color: 'var(--text-primary)' }}>Mas Sarie</div>
             <div className="text-[10px] text-emerald-500 flex items-center gap-1">
               <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 inline-block pulse-dot" />
-              Claude 3.5 Sonnet
+              Mas AI Studio
             </div>
           </div>
           <div className="flex items-center gap-1">

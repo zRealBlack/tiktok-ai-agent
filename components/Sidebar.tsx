@@ -1,9 +1,10 @@
 'use client';
 
 import Link from "next/link";
+import Image from "next/image";
 import { usePathname } from "next/navigation";
-import { LayoutDashboard, Video, Users, Lightbulb, Activity, Sun, Moon } from "lucide-react";
-import { mockAccount } from "@/lib/mockData";
+import { LayoutDashboard, Video, Users, Lightbulb, Sun, Moon } from "lucide-react";
+import { useData } from "@/components/DataContext";
 import { useTheme } from "@/components/ThemeProvider";
 
 const navItems = [
@@ -16,21 +17,27 @@ const navItems = [
 export default function Sidebar() {
   const pathname = usePathname();
   const { theme, toggle } = useTheme();
+  const { account } = useData();
 
   return (
     <aside className="glass-sidebar fixed left-0 top-0 h-full w-[220px] flex flex-col z-40">
       {/* Brand */}
-      <div className="px-5 py-5 border-b" style={{ borderColor: 'var(--sidebar-border)' }}>
+      <div className="px-5 py-4 border-b" style={{ borderColor: 'var(--sidebar-border)' }}>
         <div className="flex items-center gap-2.5">
-          <div className="w-8 h-8 rounded-xl glass-elevated flex items-center justify-center">
-            <Activity size={15} style={{ color: 'var(--text-secondary)' }} strokeWidth={2.5} />
-          </div>
+          <Image
+            src="/mas-logo.png"
+            alt="Mas AI Studio"
+            width={36}
+            height={36}
+            className="rounded-xl object-contain"
+            style={{ background: 'transparent' }}
+          />
           <div>
             <div className="text-[13px] font-extrabold tracking-tight" style={{ color: 'var(--text-primary)' }}>
-              TikTok Agent
+              Mas AI Studio
             </div>
             <div className="text-[10px] font-medium mt-[-1px]" style={{ color: 'var(--text-muted)' }}>
-              AI Dashboard
+              Powered by Mas Sarie
             </div>
           </div>
         </div>
@@ -39,7 +46,7 @@ export default function Sidebar() {
       {/* Nav */}
       <nav className="flex-1 px-3 py-4 space-y-0.5">
         {navItems.map(({ href, label, icon: Icon }) => {
-          const active = pathname === href;
+          const active = pathname === href || (href !== "/" && pathname.startsWith(href));
           return (
             <Link
               key={href}
@@ -71,7 +78,6 @@ export default function Sidebar() {
 
       {/* Footer */}
       <div className="px-4 py-4 border-t space-y-3" style={{ borderColor: 'var(--sidebar-border)' }}>
-        {/* Theme toggle */}
         <button
           onClick={toggle}
           className="w-full flex items-center gap-3 px-3 py-2 rounded-xl transition-all duration-150 btn-secondary text-[12px] font-medium"
@@ -83,14 +89,14 @@ export default function Sidebar() {
         {/* Account */}
         <div className="flex items-center gap-3">
           <div className="w-8 h-8 rounded-full glass-elevated flex items-center justify-center shrink-0">
-            <span className="text-[12px] font-bold" style={{ color: 'var(--text-secondary)' }}>M</span>
+            <span className="text-[12px] font-bold" style={{ color: 'var(--text-secondary)' }}>R</span>
           </div>
           <div className="min-w-0">
             <div className="text-[12px] font-semibold truncate" style={{ color: 'var(--text-primary)' }}>
-              {mockAccount.username}
+              {account?.username || '@rasayel_podcast'}
             </div>
             <div className="text-[10px]" style={{ color: 'var(--text-muted)' }}>
-              {(mockAccount.followers / 1000).toFixed(1)}K followers
+              {account?.followers ? `${(account.followers / 1000).toFixed(1)}K followers` : 'Loading...'}
             </div>
           </div>
         </div>
