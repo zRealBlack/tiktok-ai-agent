@@ -35,7 +35,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const TARGET_HANDLE = "yassingaml"; // Hardcoded specific account
+  const TARGET_HANDLE = "rasayel_podcast"; // Hardcoded specific account
 
   // Load from local storage and auto-sync on mount
   useEffect(() => {
