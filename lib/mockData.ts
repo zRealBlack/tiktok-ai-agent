@@ -190,14 +190,14 @@ export const mockVideos = [
     issue: "Hook doesn't create curiosity or tension",
     suggestion: "Rewrite hook: 'A client fired us after 3 weeks. Here's what we learned.' — tension drives watch time.",
   },
-]
+] as const
 
 export const mockGenerations = [
   { label: "Gen Z", pct: 52, color: "#D4537E" },
   { label: "Millennials", pct: 31, color: "#378ADD" },
   { label: "Gen X", pct: 12, color: "#5DCAA5" },
   { label: "Boomers", pct: 5, color: "#888780" },
-]
+] as const
 
 export const mockTrends = [
   { rank: 1, name: "Day in my life (agency edition)", type: "format", views: "2.1B" },
@@ -205,7 +205,7 @@ export const mockTrends = [
   { rank: 3, name: "Before & after transformation", type: "format", views: "1.4B" },
   { rank: 4, name: "Things I wish I knew earlier", type: "hook", views: "3.2B" },
   { rank: 5, name: "Trending lo-fi beat #4821", type: "sound", views: "890M" },
-]
+] as const
 
 export const mockCompetitors = [
   {
@@ -280,4 +280,4 @@ export const mockIdeas = [
     difficulty: "Easy",
     potential: "Medium",
   },
-]
+] as const
