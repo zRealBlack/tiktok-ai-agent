@@ -7,8 +7,8 @@
 :root {
   /* Background */
   --bg-base: #eff0f6;
-  --bg-gradient-a: rgba(255, 120, 120, 0.55);
-  --bg-gradient-b: rgba(255, 60, 60, 0.35);
+  --bg-gradient-a: transparent;
+  --bg-gradient-b: transparent;
 
   /* Glass panels */
   --glass-bg: rgba(255, 255, 255, 0.65);
@@ -52,8 +52,8 @@
 .dark {
   /* Background */
   --bg-base: #07070b;
-  --bg-gradient-a: rgba(150, 20, 20, 0.25);
-  --bg-gradient-b: rgba(100, 10, 10, 0.15);
+  --bg-gradient-a: transparent;
+  --bg-gradient-b: transparent;
 
   /* Glass panels */
   --glass-bg: rgba(18, 18, 26, 0.65);
@@ -181,8 +181,10 @@ body {
   100% { background-position: 200% 0; }
 }
 
-/* ─── Logo Filter for Light Mode ────────────────────────────── */
-html:not(.dark) .mas-logo-red {
-  filter: brightness(0) saturate(100%) invert(27%) sepia(51%) saturate(2878%) hue-rotate(346deg) brightness(104%) contrast(97%);
+/* ─── Dynamic Logo Filter ────────────────────────────── */
+html:not(.dark) .dynamic-logo {
+  filter: brightness(0); /* Make black in light mode */
 }
-
+html.dark .dynamic-logo {
+  filter: brightness(0) invert(1); /* Make it white in dark mode */
+}

@@ -22,22 +22,16 @@ export default function Sidebar() {
   return (
     <aside className="glass-sidebar fixed left-0 top-0 h-full w-[220px] flex flex-col z-40">
       {/* Brand */}
-      <div className="px-5 py-4 border-b" style={{ borderColor: 'var(--sidebar-border)' }}>
-        <div className="flex items-center gap-2.5">
-          <Image
-            src="/mas-logo.png"
-            alt="Mas AI Studio"
-            width={32}
-            height={32}
-            className="rounded-xl object-contain mas-logo-red transition-all duration-300"
-            style={{ background: 'transparent' }}
-          />
-          <div>
-            <div className="text-[14px] font-extrabold tracking-tight mt-0.5" style={{ color: 'var(--text-primary)' }}>
-              Mas AI Studio
-            </div>
-          </div>
-        </div>
+      <div className="px-5 py-6 border-b flex justify-center items-center" style={{ borderColor: 'var(--sidebar-border)' }}>
+        <Image
+          src="/MAS-aistudiored.png"
+          alt="MAS AI Studio"
+          width={130}
+          height={36}
+          className="object-contain dynamic-logo transition-all duration-300"
+          style={{ background: 'transparent' }}
+          priority
+        />
       </div>
 
       {/* Nav */}
