@@ -78,37 +78,73 @@ async function run() {
     verified: profile.verified || false,
   };
 
+  // ─── SCORING ─────────────────────────────────────────────────────────────
+  // All scores are RELATIVE to the account's own best video (percentile-based)
+  // so every account sees a useful spread from ~20 to 100, not all zeros.
+  const maxViews    = Math.max(...videos.map((v) => v.playCount    || 0), 1);
+  const maxLikes    = Math.max(...videos.map((v) => v.diggCount    || 0), 1);
+  const maxComments = Math.max(...videos.map((v) => v.commentCount || 0), 1);
+
+  const calcScore = (v) => {
+    const views    = v.playCount    || 0;
+    const likes    = v.diggCount    || 0;
+    const comments = v.commentCount || 0;
+    const engRate  = views > 0 ? ((likes + comments) / views) * 100 : 0;
+
+    // Weighted components (100pts total):
+    const viewScore    = Math.round((views    / maxViews)    * 35);  // 35pts — reach
+    const likeScore    = Math.round((likes    / maxLikes)    * 30);  // 30pts — resonance
+    const commentScore = Math.round((comments / maxComments) * 20);  // 20pts — discussion
+    const engScore     = Math.min(15, Math.round(engRate * 1.5));    // 15pts — engagement %
+
+    return Math.max(10, Math.min(100, viewScore + likeScore + commentScore + engScore));
+  };
+  // ─────────────────────────────────────────────────────────────────────────
+
   // Build structured videos array
-  const processedVideos = videos.map((v, i) => ({
-    id: v.id || String(i),
-    title: (v.text || "No caption").substring(0, 80),
-    views: v.playCount || 0,
-    likes: v.diggCount || 0,
-    comments: v.commentCount || 0,
-    shares: v.shareCount || 0,
-    posted: v.createTime
-      ? new Date(v.createTime * 1000).toISOString().split("T")[0]
-      : new Date().toISOString().split("T")[0],
-    score: Math.min(
-      100,
-      Math.round(((v.playCount || 0) / Math.max(profile.fans || 1, 1)) * 100)
-    ),
-    hook: Math.round(Math.random() * 25 + 60),
-    pacing: Math.round(Math.random() * 25 + 60),
-    caption: v.text ? Math.min(100, Math.round(v.text.length / 2)) : 50,
-    hashtags: v.hashtags?.length ? Math.min(100, v.hashtags.length * 20) : 40,
-    cta: Math.round(Math.random() * 25 + 55),
-    issue:
-      v.playCount < 1000
-        ? "Low view count — hook likely failing to retain."
-        : "Decent reach but engagement ratio could be improved.",
-    suggestion:
-      "Use the AI agent chat to rewrite the hook and caption for this video.",
-    isPinned: v.isPinned || false,
-    videoUrl: v.webVideoUrl || "",
-    coverUrl: v.videoMeta?.coverUrl || v.videoMeta?.originalCoverUrl || "",
-    hashtags_list: (v.hashtags || []).map((h) => h.name),
-  }));
+  const processedVideos = videos.map((v, i) => {
+    const views    = v.playCount    || 0;
+    const likes    = v.diggCount    || 0;
+    const comments = v.commentCount || 0;
+    const shares   = v.shareCount   || 0;
+    const engRate  = views > 0 ? ((likes + comments) / views) * 100 : 0;
+    const totalScore = calcScore(v);
+    const captionLen = (v.text || "").length;
+    const hashCount  = (v.hashtags || []).length;
+
+    return {
+      id:    v.id || String(i),
+      title: (v.text || "No caption").substring(0, 80),
+      views,
+      likes,
+      comments,
+      shares,
+      posted: v.createTime
+        ? new Date(v.createTime * 1000).toISOString().split("T")[0]
+        : new Date().toISOString().split("T")[0],
+      score: totalScore,
+      // Sub-scores (also relative/data-driven, not random)
+      hook:     Math.max(20, Math.min(95, Math.round(30 + (views / maxViews) * 60))),
+      pacing:   Math.max(25, Math.min(95, Math.round(40 + Math.min(engRate * 5, 55)))),
+      caption:  captionLen > 15 && captionLen < 180
+        ? Math.min(95, Math.round(55 + captionLen / 4))
+        : Math.max(20, Math.round(captionLen / 3)),
+      hashtags: hashCount >= 3 && hashCount <= 8
+        ? Math.min(95, 55 + hashCount * 6)
+        : Math.max(20, Math.min(50, hashCount * 12)),
+      cta: Math.max(20, Math.min(90, Math.round(35 + (likes / Math.max(views, 1)) * 900))),
+      issue: views < 5000
+        ? "Low views — the opening hook likely needs a stronger first 2 seconds."
+        : engRate < 3
+        ? "Engagement ratio is weak — add a clear CTA or question to boost comments."
+        : "Good reach! Focus on turning viewers into commenters with a direct question.",
+      suggestion: "اسأل الأيجنت في الشات عشان يعيد كتابة الهوك والكابشن والهاشتاقات الخاصة بالفيديو ده.",
+      isPinned:      v.isPinned || false,
+      videoUrl:      v.webVideoUrl || "",
+      coverUrl:      v.videoMeta?.coverUrl || v.videoMeta?.originalCoverUrl || "",
+      hashtags_list: (v.hashtags || []).map((h) => h.name),
+    };
+  });
 
   const payload = {
     account,
@@ -122,6 +158,8 @@ async function run() {
   console.log(`   Followers: ${account.followers.toLocaleString()}`);
   console.log(`   Weekly Views: ${account.weeklyViews.toLocaleString()}`);
   console.log(`   Videos synced: ${processedVideos.length}`);
+  console.log(`   Top video score: ${Math.max(...processedVideos.map((v) => v.score))}`);
+  console.log(`   Avg score: ${Math.round(processedVideos.reduce((s, v) => s + v.score, 0) / processedVideos.length)}`);
   console.log(`   Synced at: ${payload.syncedAt}`);
   console.log(`\n🌐 Your dashboard at https://tiktok-ai-agent.vercel.app now shows real data!\n`);
 }
