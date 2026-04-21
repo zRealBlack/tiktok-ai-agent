@@ -1,94 +1,58 @@
 'use client';
 
 import React from "react";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 
 interface Props {
   content: string;
 }
 
-// Lightweight markdown parser: handles **bold**, *italic*, # headings, and line breaks
 export default function MarkdownMessage({ content }: Props) {
-  const lines = content.split("\n");
-
   return (
-    <div className="space-y-1">
-      {lines.map((line, i) => {
-        // Heading
-        if (line.startsWith("### ")) return <p key={i} className="font-bold text-[13px] mt-2">{renderInline(line.slice(4))}</p>;
-        if (line.startsWith("## ")) return <p key={i} className="font-bold text-[14px] mt-2">{renderInline(line.slice(3))}</p>;
-        if (line.startsWith("# ")) return <p key={i} className="font-bold text-[15px] mt-2">{renderInline(line.slice(2))}</p>;
-
-        // Bullet list items (-, *, ✦, •)
-        const bulletMatch = line.match(/^(\s*)([-•*✦]|\d+\.) (.+)/);
-        if (bulletMatch) {
-          const indent = bulletMatch[1].length;
-          return (
-            <div key={i} className="flex items-start gap-1.5" style={{ paddingLeft: `${indent * 8}px` }}>
-              <span className="shrink-0 mt-0.5 text-[10px]" style={{ color: 'var(--text-muted)' }}>✦</span>
-              <span className="text-[13px] leading-relaxed">{renderInline(bulletMatch[3])}</span>
-            </div>
+    <div className="prose prose-sm dark:prose-invert max-w-none text-[13px] leading-relaxed break-words markdown-content">
+      <ReactMarkdown
+        remarkPlugins={[remarkGfm]}
+        components={{
+        table: ({node, ...props}) => (
+          <div className="overflow-x-auto my-3 rounded-xl" style={{ border: '1px solid var(--glass-elevated-border)' }}>
+            <table className="w-full text-[12px] text-left border-collapse min-w-[300px]" {...props} />
+          </div>
+        ),
+        th: ({node, ...props}) => (
+          <th className="px-3 py-2 border-b font-bold" style={{ borderColor: 'var(--glass-elevated-border)', background: 'var(--glass-elevated)' }} {...props} />
+        ),
+        td: ({node, ...props}) => (
+          <td className="px-3 py-2 border-b" style={{ borderColor: 'var(--glass-elevated-border)' }} {...props} />
+        ),
+        code: ({node, inline, className, children, ...props}: any) => {
+          return inline ? (
+            <code className="px-1 py-0.5 rounded font-mono text-[11px]" style={{ background: 'var(--glass-elevated)', color: 'var(--text-secondary)' }} {...props}>
+              {children}
+            </code>
+          ) : (
+            <pre className="p-3 mb-2 rounded-xl overflow-x-auto font-mono text-[11px]" style={{ background: 'var(--glass-elevated)' }}>
+              <code {...props}>{children}</code>
+            </pre>
           );
-        }
-
-        // Empty line → small spacer
-        if (line.trim() === "") return <div key={i} className="h-1" />;
-
-        // Regular paragraph
-        return (
-          <p key={i} className="text-[13px] leading-relaxed">
-            {renderInline(line)}
-          </p>
-        );
-      })}
+        },
+        p: ({node, ...props}) => <p className="mb-2 last:mb-0" {...props} />,
+        ul: ({node, ...props}) => <ul className="list-disc pl-5 mb-2 space-y-1" {...props} />,
+        ol: ({node, ...props}) => <ol className="list-decimal pl-5 mb-2 space-y-1" {...props} />,
+        li: ({node, ...props}) => <li className="" {...props} />,
+        a: ({node, ...props}) => <a className="text-blue-500 hover:underline inline-flex items-center" target="_blank" rel="noreferrer" {...props} />,
+        h1: ({node, ...props}) => <h1 className="text-base font-bold mb-2 mt-4" {...props} />,
+        h2: ({node, ...props}) => <h2 className="text-[15px] font-bold mb-2 mt-3" {...props} />,
+        h3: ({node, ...props}) => <h3 className="text-[14px] font-bold mb-1 mt-2" {...props} />,
+        strong: ({node, ...props}) => <strong className="font-bold" style={{ color: 'var(--text-primary)' }} {...props} />,
+        em: ({node, ...props}) => <em className="italic" {...props} />,
+        blockquote: ({node, ...props}) => (
+          <blockquote className="pl-3 my-2 border-l-2 italic" style={{ borderColor: 'var(--text-secondary)', color: 'var(--text-muted)' }} {...props} />
+        ),
+      }}
+      >
+        {content}
+      </ReactMarkdown>
     </div>
   );
-}
-
-// Inline: **bold**, *italic*, `code`
-function renderInline(text: string): React.ReactNode[] {
-  const parts: React.ReactNode[] = [];
-  let remaining = text;
-  let key = 0;
-
-  while (remaining.length > 0) {
-    // **bold**
-    const boldIdx = remaining.indexOf("**");
-    const boldEnd = boldIdx >= 0 ? remaining.indexOf("**", boldIdx + 2) : -1;
-    if (boldIdx >= 0 && boldEnd > boldIdx + 1) {
-      if (boldIdx > 0) parts.push(<span key={key++}>{remaining.slice(0, boldIdx)}</span>);
-      parts.push(<strong key={key++} className="font-bold">{remaining.slice(boldIdx + 2, boldEnd)}</strong>);
-      remaining = remaining.slice(boldEnd + 2);
-      continue;
-    }
-
-    // *italic* (single asterisk, not double)
-    const itMatch = remaining.match(/^([^*]*)\*([^*]+)\*(.*)/);
-    if (itMatch) {
-      if (itMatch[1]) parts.push(<span key={key++}>{itMatch[1]}</span>);
-      parts.push(<em key={key++} className="italic">{itMatch[2]}</em>);
-      remaining = itMatch[3];
-      continue;
-    }
-
-    // `code`
-    const btIdx = remaining.indexOf("`");
-    const btEnd = btIdx >= 0 ? remaining.indexOf("`", btIdx + 1) : -1;
-    if (btIdx >= 0 && btEnd > btIdx) {
-      if (btIdx > 0) parts.push(<span key={key++}>{remaining.slice(0, btIdx)}</span>);
-      parts.push(
-        <code key={key++} className="px-1 py-0.5 rounded text-[12px]"
-          style={{ background: 'var(--glass-elevated)', color: 'var(--text-secondary)' }}>
-          {remaining.slice(btIdx + 1, btEnd)}
-        </code>
-      );
-      remaining = remaining.slice(btEnd + 1);
-      continue;
-    }
-
-    // no more matches — output rest as plain text
-    parts.push(<span key={key++}>{remaining}</span>);
-    break;
-  }
-
-  return parts;
 }

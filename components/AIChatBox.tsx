@@ -26,8 +26,17 @@ export default function AIChatBox() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [streaming, setStreaming] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [isUserScrolled, setIsUserScrolled] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
+  const scrollRef = useRef<HTMLDivElement>(null);
   const abortRef = useRef<AbortController | null>(null);
+
+  const handleScroll = useCallback(() => {
+    if (!scrollRef.current) return;
+    const { scrollTop, scrollHeight, clientHeight } = scrollRef.current;
+    const isScrolledUp = scrollHeight - scrollTop - clientHeight > 60;
+    setIsUserScrolled(isScrolledUp);
+  }, []);
 
   // Load chat from sessionStorage on mount (same tab/session only)
   useEffect(() => {
@@ -66,8 +75,10 @@ export default function AIChatBox() {
   }, [open]);
 
   useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages]);
+    if (!isUserScrolled) {
+      bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+    }
+  }, [messages, isUserScrolled, streaming]);
 
   const sendMessage = useCallback(async (text?: string) => {
     const msgText = (text ?? input).trim();
@@ -204,7 +215,7 @@ export default function AIChatBox() {
           </div>
         </div>
 
-        <div className="flex-1 overflow-y-auto px-4 py-3 space-y-3 min-h-0" dir="rtl">
+        <div className="flex-1 overflow-y-auto px-4 py-3 space-y-3 min-h-0" dir="rtl" ref={scrollRef} onScroll={handleScroll}>
           {messages.map((m, i) => (
             <div key={i} className={`flex gap-2.5 ${m.role === "user" ? "justify-end" : "justify-start"}`}>
               {m.role === "assistant" && (
