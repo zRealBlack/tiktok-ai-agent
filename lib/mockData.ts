@@ -235,7 +235,7 @@ export const mockCompetitors = [
     avgViews: 36000,
     topFormat: "DITL / Day in the life",
   },
-]
+] as const
 
 export const mockIdeas = [
   {
