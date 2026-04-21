@@ -3,7 +3,7 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import {
   MessageSquare, X, Send, Bot, User, Loader2,
-  ChevronDown, Trash2, AlertCircle
+  ChevronDown, Trash2, AlertCircle, Maximize2, Minimize2
 } from "lucide-react";
 import { useData } from "@/components/DataContext";
 
@@ -20,6 +20,7 @@ export function dispatchAgentPrompt(prompt: string) {
 export default function AIChatBox() {
   const { account, videos, competitors, ideas, trends, generations } = useData();
   const [open, setOpen] = useState(false);
+  const [expanded, setExpanded] = useState(false);
   const [input, setInput] = useState("");
   const [messages, setMessages] = useState<Message[]>([]);
   const [streaming, setStreaming] = useState(false);
@@ -132,10 +133,17 @@ export default function AIChatBox() {
       </button>
 
       <div
-        className={`fixed bottom-24 right-6 z-50 w-[390px] glass-chat rounded-2xl flex flex-col overflow-hidden transition-all duration-300 ${
+        className={`fixed z-50 glass-chat rounded-2xl flex flex-col overflow-hidden transition-all duration-300 ${
           open ? "opacity-100 translate-y-0 pointer-events-auto" : "opacity-0 translate-y-4 pointer-events-none"
+        } ${
+          expanded
+            ? "bottom-4 right-4 left-4 md:left-auto md:right-6 md:w-[760px]"
+            : "bottom-24 right-6 w-[390px]"
         }`}
-        style={{ maxHeight: "560px" }}
+        style={expanded
+          ? { height: "calc(100vh - 32px)", maxHeight: "calc(100vh - 32px)" }
+          : { maxHeight: "560px" }
+        }
       >
         <div className="flex items-center gap-3 px-4 py-3 border-b shrink-0"
           style={{ borderColor: 'var(--glass-border)' }}>
@@ -152,12 +160,20 @@ export default function AIChatBox() {
           <div className="flex items-center gap-1">
             {messages.length > 1 && (
               <button
-                onClick={() => setMessages([{ role: "assistant", content: `Agent online. I have full access to your account — ${account.username} (${account.followers} followers). What do you need?` }])}
+                onClick={() => setMessages([{ role: "assistant", content: `الأيجنت شغال! عندي كل البيانات بتاعة ${account.username} (${account.followers} متابع). إيه اللي تحتاجه؟` }])}
                 className="w-7 h-7 rounded-lg flex items-center justify-center transition-colors glass-elevated hover:opacity-80"
-                title="Clear chat">
+                title="مسح المحادثة">
                 <Trash2 size={12} style={{ color: 'var(--text-muted)' }} />
               </button>
             )}
+            <button
+              onClick={() => setExpanded(v => !v)}
+              className="w-7 h-7 rounded-lg flex items-center justify-center glass-elevated hover:opacity-80"
+              title={expanded ? "تصغير" : "تكبير"}>
+              {expanded
+                ? <Minimize2 size={13} style={{ color: 'var(--text-muted)' }} />
+                : <Maximize2 size={13} style={{ color: 'var(--text-muted)' }} />}
+            </button>
             <button onClick={() => setOpen(false)}
               className="w-7 h-7 rounded-lg flex items-center justify-center glass-elevated hover:opacity-80">
               <ChevronDown size={15} style={{ color: 'var(--text-muted)' }} />
@@ -165,7 +181,7 @@ export default function AIChatBox() {
           </div>
         </div>
 
-        <div className="flex-1 overflow-y-auto px-4 py-3 space-y-3 min-h-0" style={{ maxHeight: "380px" }}>
+        <div className="flex-1 overflow-y-auto px-4 py-3 space-y-3 min-h-0" dir="rtl">
           {messages.map((m, i) => (
             <div key={i} className={`flex gap-2.5 ${m.role === "user" ? "justify-end" : "justify-start"}`}>
               {m.role === "assistant" && (
@@ -213,11 +229,11 @@ export default function AIChatBox() {
         </div>
 
         {messages.length <= 1 && (
-          <div className="px-3 pt-2 flex gap-1.5 overflow-x-auto pb-1">
+          <div className="px-3 pt-2 flex gap-1.5 overflow-x-auto pb-1" dir="rtl">
             {[
-              "What's my biggest weakness?",
-              "Fix my worst video",
-              "What is @visualcraft.eg doing right?",
+              "إيه أضعف نقطة عندي؟",
+              "صلح أسوأ فيديو عندي",
+              "إيه اللي بيعمله المنافسين صح؟",
             ].map((p) => (
               <button key={p} onClick={() => sendMessage(p)}
                 className="shrink-0 text-[11px] glass-elevated px-3 py-1 rounded-full transition-colors hover:opacity-80 whitespace-nowrap"
@@ -240,10 +256,10 @@ export default function AIChatBox() {
                 onKeyDown={(e) => {
                   if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); sendMessage(); }
                 }}
-                placeholder="Ask the agent..."
+                placeholder="اسأل الأيجنت..."
                 rows={1}
                 className="w-full bg-transparent text-[13px] placeholder-[var(--text-faint)] outline-none resize-none leading-relaxed"
-                style={{ color: 'var(--text-primary)', maxHeight: '96px', fieldSizing: 'content' } as React.CSSProperties}
+                style={{ color: 'var(--text-primary)', maxHeight: '96px', fieldSizing: 'content', direction: 'rtl' } as React.CSSProperties}
               />
             </div>
             {streaming ? (
