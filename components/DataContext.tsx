@@ -57,7 +57,9 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
       const data = await res.json();
 
       if (data.account) setAccount(data.account);
-      if (data.videos) setVideos(data.videos);
+      if (data.videos)  setVideos(data.videos);
+      if (data.generations) setGenerations(data.generations);
+      if (data.trends)  setTrends(data.trends);
       if (data.syncedAt) setSyncedAt(data.syncedAt);
     } catch (err: any) {
       setError(err.message);
