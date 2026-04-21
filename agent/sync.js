@@ -112,6 +112,79 @@ async function run() {
     const captionLen = (v.text || "").length;
     const hashCount  = (v.hashtags || []).length;
 
+    // ─── DEEP CONTENT ANALYSIS ──────────────────────────────────────────────
+    const duration     = v.videoMeta?.duration || 30;
+    const shareRatio   = views > 0 ? shares   / views : 0;
+    const commentRatio = views > 0 ? comments / views : 0;
+    const likeRatio    = views > 0 ? likes    / views : 0;
+
+    // Tone — derived from the engagement pattern (what emotion the content triggers)
+    let tone;
+    if (shareRatio > 0.03)                          tone = "Emotional / Shareable";
+    else if (commentRatio > 0.02)                   tone = "Controversial / Discussion";
+    else if (likeRatio > 0.1)                       tone = "Entertaining / Likeable";
+    else if (engRate < 1.5 && shareRatio < 0.005)   tone = "Flat / Boring";
+    else if (likeRatio > 0.04)                      tone = "Informative / Valuable";
+    else                                             tone = "Neutral";
+
+    // Emotional pull (0–100): shares are the strongest signal of emotional resonance
+    const emotionalPull = Math.min(100, Math.round(shareRatio * 3000 + commentRatio * 1500));
+
+    // Content energy (0–100): short + high-engagement = high energy; long + low-eng = dead
+    const energyBase = Math.max(0, 100 - (duration / 1.5));
+    const energy     = Math.min(100, Math.round(energyBase * 0.6 + Math.min(40, engRate * 4)));
+
+    // Retention risk: long videos with weak engagement signal early drop-off
+    let retentionRisk;
+    if ((duration > 120 && engRate < 3) || (duration > 90 && engRate < 2)) retentionRisk = "High";
+    else if ((duration > 60 && engRate < 5) || (duration > 30 && engRate < 2))  retentionRisk = "Medium";
+    else retentionRisk = "Low";
+
+    // Growth potential (0–100): how much upside this video has with fixes
+    const growthPotential = Math.min(100, Math.round(
+      Math.min(30, shareRatio   * 2000) +
+      Math.min(20, commentRatio * 1500) +
+      Math.min(30, engRate      * 5)    +
+      (retentionRisk === "Low" ? 20 : retentionRisk === "Medium" ? 10 : 0)
+    ));
+
+    // Specific weakness flags — a list of diagnosed problems
+    const weaknessFlags = [];
+    if (likeRatio    < 0.02)              weaknessFlags.push("Low Likes");
+    if (shareRatio   < 0.003)             weaknessFlags.push("Not Shareable");
+    if (commentRatio < 0.005)             weaknessFlags.push("No Discussion");
+    if (duration > 90 && engRate < 4)     weaknessFlags.push("Too Long");
+    if (duration < 8)                     weaknessFlags.push("Too Short");
+    if (hashCount < 3)                    weaknessFlags.push("Few Hashtags");
+    if (captionLen < 15)                  weaknessFlags.push("Weak Caption");
+    if (engRate < 2)                      weaknessFlags.push("Low Engagement");
+    // ─────────────────────────────────────────────────────────────────────────
+
+    // Issue and suggestion — specific to the diagnosed tone and risk
+    let issue, suggestion;
+    if (tone === "Flat / Boring") {
+      issue = views < 5000
+        ? "Flat content — near-zero emotional reaction. The video fails to trigger any share or comment behavior. Hook isn't stopping the scroll."
+        : "Content feels empty — decent views but nobody cared enough to share or comment. No emotional hook, no tension, no payoff.";
+      suggestion = "Rebuild video structure: shock/question hook in second 1, build tension or story in the middle, deliver an emotional payoff at the end. Add text overlays every 8–10s.";
+    } else if (retentionRisk === "High") {
+      issue = `Video is ${duration}s long but engagement is only ${engRate.toFixed(1)}% — viewers are dropping off early. Content isn't holding attention past the opening seconds.`;
+      suggestion = `Cut to ~${Math.round(duration * 0.6)}s. Lead with the most valuable moment. Use jump cuts every 8–10s. Add text overlays to reinforce key points and maintain energy.`;
+    } else if (shareRatio < 0.003 && views > 5000) {
+      issue = "Good reach but near-zero shares — content is watchable but forgettable. It isn't triggering any 'I need to send this' emotion.";
+      suggestion = "Add a relatable or surprising moment. End with a story payoff. Frame one key insight as 'send this to someone who needs it'. Make the ending emotionally memorable.";
+    } else if (commentRatio < 0.005 && views > 3000) {
+      issue = "Viewers are watching but not engaging — no CTA is triggering comments. Passive consumption with no community building.";
+      suggestion = "End with a direct question or controversial take. Ask something specific like 'Do you agree or think I'm wrong?' Give them a reason to respond.";
+    } else {
+      issue = views < 5000
+        ? "Low views — the opening hook likely needs a stronger first 2 seconds."
+        : engRate < 3
+        ? "Engagement ratio is weak — add a clear CTA or question to boost comments."
+        : "Good reach! Focus on turning viewers into commenters with a direct question.";
+      suggestion = "اسأل الأيجنت في الشات عشان يعيد كتابة الهوك والكابشن والهاشتاقات الخاصة بالفيديو ده.";
+    }
+
     return {
       id:    v.id || String(i),
       title: (v.text || "No caption").substring(0, 80),
@@ -133,12 +206,16 @@ async function run() {
         ? Math.min(95, 55 + hashCount * 6)
         : Math.max(20, Math.min(50, hashCount * 12)),
       cta: Math.max(20, Math.min(90, Math.round(35 + (likes / Math.max(views, 1)) * 900))),
-      issue: views < 5000
-        ? "Low views — the opening hook likely needs a stronger first 2 seconds."
-        : engRate < 3
-        ? "Engagement ratio is weak — add a clear CTA or question to boost comments."
-        : "Good reach! Focus on turning viewers into commenters with a direct question.",
-      suggestion: "اسأل الأيجنت في الشات عشان يعيد كتابة الهوك والكابشن والهاشتاقات الخاصة بالفيديو ده.",
+      // Deep content analysis fields
+      duration,
+      tone,
+      emotionalPull,
+      energy,
+      retentionRisk,
+      growthPotential,
+      weaknessFlags,
+      issue,
+      suggestion,
       isPinned:      v.isPinned || false,
       videoUrl:      v.webVideoUrl || "",
       coverUrl:      v.videoMeta?.coverUrl || v.videoMeta?.originalCoverUrl || "",
