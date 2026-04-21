@@ -61,7 +61,10 @@ export default function VideoDetailPage() {
     const soundInfo  = video.sound !== undefined ? ` | Sound: ${video.sound}/100 (${video.soundType || "?"})` : "";
     const appInfo    = video.appearance !== null && video.appearance !== undefined ? ` | Appearance: ${video.appearance}/100` : "";
     const flagsInfo  = video.weaknessFlags?.length ? ` | Weakness Flags: ${video.weaknessFlags.join(", ")}` : "";
-    dispatchAgentPrompt(`حلل الفيديو ده بالكامل واصلحه: "${video.title}" — سكور ${video.score}/100${toneInfo}${riskInfo}${energyInfo}${pullInfo}${soundInfo}${appInfo}${flagsInfo}. المشكلة: ${video.issue}. حلل الفيديو من الأول للآخر (هوك + منتصف + نهاية + صوت + مظهر)، واديني: 1) اعادة كتابة الهوك 2) كابشن أحسن من 100 حرف 3) 3 هاشتاقات مناسبة 4) تقييم الصوت والموسيقى الخلفية 5) تقييم مظهر المقدم (outfit + makeup + إضاءة + خلفية) 6) ٣ تعديلات تحريرية تزيد المشاهدات.`);
+    dispatchAgentPrompt(
+      `شوف الصورة دي وحلل الفيديو ده بالكامل واصلحه: "${video.title}" — سكور ${video.score}/100${toneInfo}${riskInfo}${energyInfo}${pullInfo}${soundInfo}${appInfo}${flagsInfo}. المشكلة: ${video.issue}. حلل الفيديو من الأول للآخر (هوك + منتصف + نهاية + صوت + مظهر + إضاءة + كاميرات)، واديني: 1) اعادة كتابة الهوك 2) كابشن أحسن من 100 حرف 3) 3 هاشتاقات مناسبة 4) تقييم الصوت والموسيقى 5) تقييم المظهر والإضاءة من الصورة (outfit + makeup + درجة حرارة الإضاءة + خلفية) 6) توصيات وضعية الـ 3 كاميرات للفيديو الجاي 7) ٣ تعديلات تحريرية تزيد المشاهدات.`,
+      video.coverUrl
+    );
     router.back();
   };
 
@@ -288,10 +291,13 @@ export default function VideoDetailPage() {
                   Visual assessment needed — the agent will evaluate outfit, makeup, lighting, and background.
                 </p>
                 <button
-                  onClick={() => dispatchAgentPrompt(`حلل مظهر المقدم في الفيديو ده: "${video.title}". قيّم: الـ Outfit، الـ Grooming/Makeup، الإضاءة، والخلفية. اديني Appearance Score من 100 مع مشاكل محددة وحلول عملية.`)}
+                  onClick={() => dispatchAgentPrompt(
+                    `شوف الصورة دي من فيديو "${video.title}" وحلل المظهر بالكامل. قيّم كل حاجة بتشوفها في الفريم: الـ Outfit والألوان، الـ Grooming/Makeup، الإضاءة (درجة حرارتها دافية ولا باردة وهل في ظلال)، الخلفية (هل مناسبة للـ branding). اديني Appearance Score من 100، ومشاكل محددة بالظبط بناءً على الصورة دي، مع حلول عملية. كمان قدم توصيات لوضعية الـ 3 كاميرات في الاستوديو للفيديو الجاي.`,
+                    video.coverUrl
+                  )}
                   className="btn-secondary px-4 py-2 rounded-xl text-[12px] font-semibold"
                 >
-                  Ask Agent to Analyze
+                  Analyze with Vision
                 </button>
               </div>
             )}
