@@ -26,47 +26,34 @@ export default function AIChatBox() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [streaming, setStreaming] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [historyLoaded, setHistoryLoaded] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
   const abortRef = useRef<AbortController | null>(null);
-  const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // Load chat history from KV on mount
+  // Load chat from sessionStorage on mount (same tab/session only)
   useEffect(() => {
-    fetch("/api/chat")
-      .then((r) => r.json())
-      .then(({ messages: saved }) => {
-        if (saved && saved.length > 0) {
-          setMessages(saved);
-        }
-        setHistoryLoaded(true);
-      })
-      .catch(() => setHistoryLoaded(true));
+    try {
+      const saved = sessionStorage.getItem("chat_history");
+      if (saved) setMessages(JSON.parse(saved));
+    } catch {}
   }, []);
 
-  // Save chat history to KV whenever messages change (debounced)
+  // Save to sessionStorage whenever messages change
   const saveHistory = useCallback((msgs: Message[]) => {
-    const toSave = msgs.filter((m) => !m.streaming);
-    if (!historyLoaded || toSave.length === 0) return;
-    if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
-    saveTimerRef.current = setTimeout(() => {
-      fetch("/api/chat", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ messages: toSave }),
-      }).catch(() => {});
-    }, 1000);
-  }, [historyLoaded]);
+    try {
+      const toSave = msgs.filter((m) => !m.streaming);
+      sessionStorage.setItem("chat_history", JSON.stringify(toSave));
+    } catch {}
+  }, []);
 
   // Set greeting when account loads and no history found yet
   useEffect(() => {
-    if (historyLoaded && messages.length === 0 && account?.username) {
+    if (messages.length === 0 && account?.username) {
       setMessages([{
         role: "assistant",
         content: `الأيجنت شغال! عندي كل البيانات بتاعة ${account.username} (${(account.followers || 0).toLocaleString()} متابع). إيه اللي تحتاجه؟`,
       }]);
     }
-  }, [historyLoaded, account?.username]);
+  }, [account?.username]);
 
   useEffect(() => {
     const handler = (e: CustomEvent<{ prompt: string }>) => {
@@ -140,7 +127,7 @@ export default function AIChatBox() {
     } finally {
       setStreaming(false);
     }
-  }, [input, messages, streaming, account, videos, competitors, ideas, trends, generations, saveHistory, historyLoaded]);
+  }, [input, messages, streaming, account, videos, competitors, ideas, trends, generations, saveHistory]);
 
   const stop = () => {
     abortRef.current?.abort();
