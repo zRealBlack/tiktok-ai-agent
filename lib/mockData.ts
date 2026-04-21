@@ -9,7 +9,7 @@ export const mockAccount = {
   actionItems: 4,
 }
 
-export const mockVideos = [
+export const mockVideos: any[] = [
   {
     id: "1",
     title: "How we built a studio in 30 days",
@@ -192,14 +192,14 @@ export const mockVideos = [
   },
 ] as const
 
-export const mockGenerations = [
+export const mockGenerations: any[] = [
   { label: "Gen Z", pct: 52, color: "#D4537E" },
   { label: "Millennials", pct: 31, color: "#378ADD" },
   { label: "Gen X", pct: 12, color: "#5DCAA5" },
   { label: "Boomers", pct: 5, color: "#888780" },
 ] as const
 
-export const mockTrends = [
+export const mockTrends: any[] = [
   { rank: 1, name: "Day in my life (agency edition)", type: "format", views: "2.1B" },
   { rank: 2, name: "POV: you hired an agency", type: "format", views: "440M" },
   { rank: 3, name: "Before & after transformation", type: "format", views: "1.4B" },
@@ -207,7 +207,7 @@ export const mockTrends = [
   { rank: 5, name: "Trending lo-fi beat #4821", type: "sound", views: "890M" },
 ] as const
 
-export const mockCompetitors = [
+export const mockCompetitors: any[] = [
   {
     handle: "@visualcraft.eg",
     followers: 112000,
@@ -237,7 +237,7 @@ export const mockCompetitors = [
   },
 ] as const
 
-export const mockIdeas = [
+export const mockIdeas: any[] = [
   {
     id: "1",
     hook: "POV: a client came to us with zero presence — here's week 1",

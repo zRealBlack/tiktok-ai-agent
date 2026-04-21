@@ -28,7 +28,7 @@ export default function MetricCard({
   format = "number", icon, highlight,
 }: MetricCardProps) {
   const [displayed, setDisplayed] = useState(0);
-  const animRef = useRef<ReturnType<typeof requestAnimationFrame>>();
+  const animRef = useRef<number | undefined>(undefined);
   const numericValue = typeof value === "number" ? value : parseFloat(value as string) || 0;
 
   useEffect(() => {
