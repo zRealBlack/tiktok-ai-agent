@@ -20,6 +20,8 @@ interface VideoData {
   cta: number;
   issue: string;
   suggestion: string;
+  coverUrl?: string;
+  videoUrl?: string;
 }
 
 const scoreColor = (v: number) =>
@@ -68,10 +70,31 @@ export default function VideoScoreCard({ video, compact = false }: { video: Vide
   };
 
   return (
-    <div className="glass-panel rounded-2xl p-5 transition-all duration-200 hover:-translate-y-0.5">
+    <div className="glass-panel rounded-2xl overflow-hidden transition-all duration-200 hover:-translate-y-0.5">
+      {/* Cover thumbnail */}
+      {video.coverUrl && (
+        <a
+          href={video.videoUrl || `https://tiktok.com/@rasayel_podcast`}
+          target="_blank"
+          rel="noreferrer"
+          className="block relative w-full h-36 bg-black overflow-hidden"
+        >
+          <img
+            src={video.coverUrl}
+            alt={video.title}
+            className="w-full h-full object-cover opacity-90 hover:opacity-100 transition-opacity"
+          />
+          <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
+          <div className={`absolute top-2 right-2 w-9 h-9 rounded-full flex items-center justify-center text-[12px] font-black ${scoreBadge(video.score)}`}>
+            {video.score}
+          </div>
+        </a>
+      )}
+
+      <div className="p-5">
       <div className="flex items-start justify-between mb-4">
         <div className="flex-1 min-w-0 pr-3">
-          <h3 className="text-[14px] font-semibold leading-snug mb-1 line-clamp-1" style={{ color: 'var(--text-primary)' }}>
+          <h3 className="text-[14px] font-semibold leading-snug mb-1 line-clamp-2" style={{ color: 'var(--text-primary)' }}>
             {video.title}
           </h3>
           <div className="flex items-center gap-3 text-[11px]" style={{ color: 'var(--text-muted)' }}>
@@ -81,9 +104,11 @@ export default function VideoScoreCard({ video, compact = false }: { video: Vide
             <span className="flex items-center gap-1"><Share2 size={11}/> {fmtNum(video.shares)}</span>
           </div>
         </div>
-        <div className={`shrink-0 w-10 h-10 rounded-full flex items-center justify-center text-[13px] font-black ${scoreBadge(video.score)}`}>
-          {video.score}
-        </div>
+        {!video.coverUrl && (
+          <div className={`shrink-0 w-10 h-10 rounded-full flex items-center justify-center text-[13px] font-black ${scoreBadge(video.score)}`}>
+            {video.score}
+          </div>
+        )}
       </div>
 
       {!compact && (
@@ -111,6 +136,7 @@ export default function VideoScoreCard({ video, compact = false }: { video: Vide
         <Zap size={13} />
         Fix this with Agent
       </button>
+      </div>
     </div>
   );
 }

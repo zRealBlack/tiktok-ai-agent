@@ -21,21 +21,21 @@ export default function OverviewPage() {
         <div>
           <h1 className="text-2xl font-bold mb-1" style={{ color: 'var(--text-primary)' }}>Overview</h1>
           <p className="text-sm" style={{ color: 'var(--text-muted)' }}>
-            Welcome back, {account.username} — here&apos;s your performance snapshot.
+            Welcome back, {account?.username || '@rasayel_podcast'} — here&apos;s your performance snapshot.
           </p>
         </div>
-        {account.actionItems > 0 && (
+        {(account?.actionItems || 0) > 0 && (
           <div className="flex items-center gap-2 px-3 py-2 rounded-xl glass-panel text-amber-500 text-[12px] font-semibold">
-            <AlertTriangle size={14} /> {account.actionItems} action items
+            <AlertTriangle size={14} /> {account?.actionItems} action items
           </div>
         )}
       </div>
 
       {/* Metric Cards */}
       <div className="grid grid-cols-4 gap-4 mb-8">
-        <MetricCard label="Followers" value={account.followers} change={account.followersGrowth} changeSuffix=" new" icon={<Users size={16} />} />
-        <MetricCard label="Avg Engagement" value={account.avgEngagement} change={account.engagementChange} changeSuffix="%" format="decimal" suffix="%" icon={<TrendingUp size={16} />} highlight />
-        <MetricCard label="Weekly Views" value={account.weeklyViews} change={account.weeklyViewsChange} changeSuffix="%" icon={<Eye size={16} />} />
+        <MetricCard label="Followers" value={account?.followers ?? 0} change={account?.followersGrowth ?? 0} changeSuffix=" new" icon={<Users size={16} />} />
+        <MetricCard label="Avg Engagement" value={account?.avgEngagement ?? 0} change={account?.engagementChange ?? 0} changeSuffix="%" format="decimal" suffix="%" icon={<TrendingUp size={16} />} highlight />
+        <MetricCard label="Weekly Views" value={account?.weeklyViews ?? 0} change={account?.weeklyViewsChange ?? 0} changeSuffix="%" icon={<Eye size={16} />} />
         <MetricCard label="Videos Audited" value={videos.length} format="raw" icon={<AlertTriangle size={16} />} />
       </div>
 
