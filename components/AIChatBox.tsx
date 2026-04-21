@@ -20,12 +20,11 @@ export function dispatchAgentPrompt(prompt: string) {
 }
 
 export default function AIChatBox() {
-  const { account, videos, competitors, ideas, trends, generations, refreshData, isLoading: dataLoading } = useData();
+  const { account, videos, competitors, ideas, trends, generations, refreshData } = useData();
   const [open, setOpen] = useState(false);
   const [view, setView] = useState<"chat" | "setup">("chat");
   const [apiKey, setApiKey] = useState("");
   const [savedKey, setSavedKey] = useState("");
-  const [tiktokHandle, setTiktokHandle] = useState("");
   
   const [showKey, setShowKey] = useState(false);
   const [input, setInput] = useState("");
@@ -38,10 +37,6 @@ export default function AIChatBox() {
   useEffect(() => {
     const key = localStorage.getItem(STORAGE_KEY) || "";
     setSavedKey(key);
-    
-    // Load apify credentials if exist
-    const handle = localStorage.getItem("tiktok-handle") || "";
-    if (handle) setTiktokHandle(handle);
 
     if (!key) {
       setView("setup");
@@ -68,19 +63,8 @@ export default function AIChatBox() {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
-  const handleSyncData = async () => {
-    if (!tiktokHandle) return;
-    localStorage.setItem("tiktok-handle", tiktokHandle);
-    try {
-      await refreshData(tiktokHandle);
-      setMessages([{
-        role: "assistant",
-        content: `Data synced! I've loaded the latest info for ${tiktokHandle}. You can now ask me to fix these videos or generate ideas.`,
-      }]);
-    } catch (e: any) {
-      setError(e.message);
-    }
-  };
+  // The fetching is now handled completely autonomously in the background by DataContext.
+  // We no longer need manual handleSyncData function.
 
   const saveKey = () => {
     const trimmed = apiKey.trim();
@@ -257,33 +241,6 @@ export default function AIChatBox() {
               Save Claude Key
             </button>
 
-            {/* Apify Data Sync Setup */}
-            <div className="flex items-center gap-2 mb-4 pt-4 border-t" style={{ borderColor: 'var(--glass-border)' }}>
-              <Key size={15} style={{ color: 'var(--text-secondary)' }} />
-              <span className="text-[13px] font-bold" style={{ color: 'var(--text-primary)' }}>2. TikTok Data Sync (Apify)</span>
-            </div>
-            <div className="mb-3 space-y-3">
-              <input
-                type="text"
-                value={tiktokHandle}
-                onChange={(e) => setTiktokHandle(e.target.value)}
-                placeholder="TikTok Username (e.g. mas.studio)"
-                className="glass-input w-full text-[13px] rounded-xl px-3 py-2.5 outline-none transition-all"
-                style={{ color: 'var(--text-primary)' }}
-              />
-            </div>
-            
-            {error && (
-              <div className="flex items-center gap-2 text-[12px] text-red-500 mb-3">
-                <AlertCircle size={13} /> {error}
-              </div>
-            )}
-            
-            <button onClick={handleSyncData} disabled={!tiktokHandle || dataLoading}
-              className="btn-secondary w-full flex justify-center items-center gap-2 py-2.5 rounded-xl text-[13px] font-semibold transition-colors disabled:opacity-40 mb-2">
-              {dataLoading ? <><Loader2 size={14} className="animate-spin" /> Scraping TikTok Data...</> : <><RefreshCw size={14} /> Fetch Live Data</>}
-            </button>
-            
             {savedKey && (
               <button onClick={clearKey}
                 className="w-full py-2 mt-4 text-[12px] transition-colors"

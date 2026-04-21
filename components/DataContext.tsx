@@ -35,7 +35,9 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Load from local storage on mount if available
+  const TARGET_HANDLE = "yassingaml"; // Hardcoded specific account
+
+  // Load from local storage and auto-sync on mount
   useEffect(() => {
     const saved = localStorage.getItem("tiktok-real-data");
     if (saved) {
@@ -45,6 +47,16 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
         if (parsed.videos) setVideos(parsed.videos);
       } catch (e) {}
     }
+
+    // Auto-sync data in the background instantly
+    refreshData(TARGET_HANDLE);
+
+    // Continue to sync every 15 minutes to keep it fresh
+    const interval = setInterval(() => {
+      refreshData(TARGET_HANDLE);
+    }, 15 * 60 * 1000);
+
+    return () => clearInterval(interval);
   }, []);
 
   const refreshData = async (handle: string) => {
