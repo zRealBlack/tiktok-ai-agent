@@ -1,105 +1,94 @@
 'use client';
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import IdeaCard from "@/components/IdeaCard";
 import { Sparkles, Loader2, RefreshCw } from "lucide-react";
-import { dispatchAgentPrompt } from "@/components/AIChatBox";
 import { useData } from "@/components/DataContext";
 
-const NICHE_OPTIONS = ["Digital Agency", "Content Creator", "E-Commerce", "Fitness", "Food & Beverage", "Tech Startup"];
-const GEN_OPTIONS = ["Gen Z", "Millennials", "Gen X", "All Generations"];
-const GOAL_OPTIONS = ["Grow Followers", "Get Clients", "Build Authority", "Monetize Content", "Go Viral"];
-
 export default function IdeasPage() {
-  const { ideas } = useData();
-  const [niche, setNiche] = useState("Digital Agency");
-  const [generation, setGeneration] = useState("Gen Z");
-  const [goal, setGoal] = useState("Grow Followers");
+  const { account, videos } = useData();
+  const [generatedIdeas, setGeneratedIdeas] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  const handleGenerate = () => {
+  const generateIdeas = async () => {
+    if (!videos.length) return;
     setLoading(true);
-    dispatchAgentPrompt(
-      `Generate 3 original TikTok video briefs for my account (${niche} niche, targeting ${generation}, goal: ${goal}). For each, include: hook line, 3-act video structure with specific shot directions, recommended sound type, best post time, and a punchy caption under 100 chars with 3 niche hashtags. Make each idea distinct.`
-    );
-    setTimeout(() => setLoading(false), 500);
+    setError(null);
+    try {
+      const res = await fetch("/api/ideas", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ videos, account }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Failed");
+      setGeneratedIdeas(data.ideas);
+    } catch (e: any) {
+      setError(e.message);
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const selectClass = "w-full glass-input rounded-xl px-3 py-2 text-[13px] outline-none transition-all";
+  // Auto-generate on mount once we have videos
+  useEffect(() => {
+    if (videos.length > 0 && generatedIdeas.length === 0) {
+      generateIdeas();
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [videos]);
 
   return (
     <div className="px-8 py-8 max-w-[1400px] mx-auto">
       <div className="mb-8">
         <h1 className="text-2xl font-bold mb-1" style={{ color: 'var(--text-primary)' }}>Video Ideas</h1>
         <p className="text-sm" style={{ color: 'var(--text-muted)' }}>
-          AI-generated video briefs. Use the agent to generate custom ideas for your niche and goals.
-        </p>
-      </div>
-
-      {/* Generator */}
-      <div className="glass-panel rounded-2xl p-5 mb-8">
-        <div className="flex items-center gap-2 mb-4">
-          <Sparkles size={16} style={{ color: 'var(--text-secondary)' }} />
-          <h2 className="text-[14px] font-bold" style={{ color: 'var(--text-primary)' }}>Generate with Agent</h2>
-          <span className="ml-auto text-[11px] glass-elevated px-2 py-0.5 rounded-full" style={{ color: 'var(--text-muted)' }}>
-            Powered by Claude
-          </span>
-        </div>
-
-        <div className="grid grid-cols-4 gap-4 mb-4">
-          <div>
-            <label className="block text-[11px] font-bold uppercase tracking-wide mb-2" style={{ color: 'var(--text-muted)' }}>
-              Your Niche
-            </label>
-            <select value={niche} onChange={(e) => setNiche(e.target.value)}
-              className={selectClass} style={{ color: 'var(--text-primary)' }}>
-              {NICHE_OPTIONS.map((o) => <option key={o}>{o}</option>)}
-            </select>
-          </div>
-          <div>
-            <label className="block text-[11px] font-bold uppercase tracking-wide mb-2" style={{ color: 'var(--text-muted)' }}>
-              Target Generation
-            </label>
-            <select value={generation} onChange={(e) => setGeneration(e.target.value)}
-              className={selectClass} style={{ color: 'var(--text-primary)' }}>
-              {GEN_OPTIONS.map((o) => <option key={o}>{o}</option>)}
-            </select>
-          </div>
-          <div>
-            <label className="block text-[11px] font-bold uppercase tracking-wide mb-2" style={{ color: 'var(--text-muted)' }}>
-              Content Goal
-            </label>
-            <select value={goal} onChange={(e) => setGoal(e.target.value)}
-              className={selectClass} style={{ color: 'var(--text-primary)' }}>
-              {GOAL_OPTIONS.map((o) => <option key={o}>{o}</option>)}
-            </select>
-          </div>
-          <div className="flex items-end">
-            <button onClick={handleGenerate} disabled={loading}
-              className="btn-primary w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-[13px] font-semibold transition-all disabled:opacity-60">
-              {loading
-                ? <><Loader2 size={14} className="animate-spin" /> Opening...</>
-                : <><RefreshCw size={14} /> Generate Ideas</>}
-            </button>
-          </div>
-        </div>
-        <p className="text-[11px]" style={{ color: 'var(--text-faint)' }}>
-          The agent will generate ideas in the chat panel based on your account data and the parameters above.
+          أفكار فيديو مُولَّدة بالذكاء الاصطناعي بناءً على محتوى أكاونتك الفعلي.
         </p>
       </div>
 
       <div className="flex items-center justify-between mb-5">
         <h2 className="text-[13px] font-bold" style={{ color: 'var(--text-secondary)' }}>
-          {ideas.length} Baseline Briefs
+          3 Baseline Briefs
           <span className="ml-2 text-[11px] font-normal" style={{ color: 'var(--text-faint)' }}>
-            Click any idea to expand it with the agent
+            مبنية على أحدث فيديوهات {account.username}
           </span>
         </h2>
+        <button
+          onClick={generateIdeas}
+          disabled={loading}
+          className="btn-secondary flex items-center gap-2 px-4 py-2 rounded-xl text-[12px] font-semibold transition-all disabled:opacity-50"
+        >
+          {loading
+            ? <><Loader2 size={13} className="animate-spin" /> جاري التوليد...</>
+            : <><RefreshCw size={13} /> توليد 3 أفكار جديدة</>}
+        </button>
       </div>
 
-      <div className="grid grid-cols-2 xl:grid-cols-3 gap-5">
-        {ideas.map((idea: any) => <IdeaCard key={idea.id} idea={idea} />)}
-      </div>
+      {error && (
+        <div className="glass-panel rounded-xl p-4 mb-5 text-[13px] text-red-500">{error}</div>
+      )}
+
+      {loading && generatedIdeas.length === 0 ? (
+        <div className="grid grid-cols-2 xl:grid-cols-3 gap-5">
+          {[1, 2, 3].map((i) => (
+            <div key={i} className="glass-panel rounded-2xl p-5 animate-pulse">
+              <div className="h-4 rounded-lg mb-3 w-1/3" style={{ background: 'var(--glass-elevated)' }} />
+              <div className="h-5 rounded-lg mb-4 w-3/4" style={{ background: 'var(--glass-elevated)' }} />
+              <div className="space-y-2 mb-4">
+                {[1, 2, 3].map((j) => <div key={j} className="h-3 rounded-lg" style={{ background: 'var(--glass-elevated)' }} />)}
+              </div>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <div className="grid grid-cols-2 xl:grid-cols-3 gap-5">
+          {generatedIdeas.map((idea: any) => (
+            <IdeaCard key={idea.id} idea={idea} />
+          ))}
+        </div>
+      )}
     </div>
   );
 }

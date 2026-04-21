@@ -6,6 +6,7 @@ import {
   ChevronDown, Trash2, AlertCircle, Maximize2, Minimize2
 } from "lucide-react";
 import { useData } from "@/components/DataContext";
+import MarkdownMessage from "@/components/MarkdownMessage";
 
 export interface Message {
   role: "user" | "assistant";
@@ -197,7 +198,11 @@ export default function AIChatBox() {
                   ? { background: 'var(--glass-elevated)', color: 'var(--text-primary)', border: '1px solid var(--glass-elevated-border)' }
                   : { background: 'var(--glass-elevated)', color: 'var(--text-secondary)', border: '1px solid var(--glass-elevated-border)' }}
               >
-                {m.content}
+                {m.role === "assistant" ? (
+                  <MarkdownMessage content={m.content} />
+                ) : (
+                  m.content
+                )}
                 {m.streaming && (
                   <span className="inline-block w-1.5 h-4 ml-0.5 animate-pulse rounded-sm align-middle"
                     style={{ background: 'var(--text-muted)' }} />
