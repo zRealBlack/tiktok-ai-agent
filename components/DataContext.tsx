@@ -12,7 +12,7 @@ export interface GlobalData {
   generations: any[];
   isLoading: boolean;
   error: string | null;
-  refreshData: (handle: string, token: string) => Promise<void>;
+  refreshData: (handle: string) => Promise<void>;
   clearData: () => void;
 }
 
@@ -47,14 +47,14 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
     }
   }, []);
 
-  const refreshData = async (handle: string, token: string) => {
+  const refreshData = async (handle: string) => {
     setIsLoading(true);
     setError(null);
     try {
       const res = await fetch("/api/tiktok", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ handle, token }),
+        body: JSON.stringify({ handle }),
       });
       if (!res.ok) {
         const err = await res.json();

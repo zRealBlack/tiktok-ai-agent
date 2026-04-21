@@ -3,11 +3,15 @@ import { ApifyClient } from "apify-client";
 
 export async function POST(req: Request) {
   try {
-    const { handle, token } = await req.json();
-    if (!handle || !token) {
-      return NextResponse.json({ error: "Handle and Apify Token are required" }, { status: 400 });
+    const { handle } = await req.json();
+    if (!handle) {
+      return NextResponse.json({ error: "TikTok Handle is required" }, { status: 400 });
     }
 
+    const token = process.env.APIFY_TOKEN;
+    if (!token) {
+      return NextResponse.json({ error: "Server is missing Apify API Token" }, { status: 500 });
+    }
     const client = new ApifyClient({ token });
     
     // We will scrape both the profile info and the recent videos
