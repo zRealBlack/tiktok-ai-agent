@@ -9,10 +9,39 @@ export default function IdeasPage() {
   const { account, videos, syncedAt } = useData();
   const [generatedIdeas, setGeneratedIdeas] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
+  const [initialLoading, setInitialLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  // On mount: load cached ideas from KV
+  useEffect(() => {
+    async function loadCachedIdeas() {
+      try {
+        const res = await fetch("/api/ideas");
+        const data = await res.json();
+        if (data.ideas && data.ideas.length > 0) {
+          setGeneratedIdeas(data.ideas);
+          setInitialLoading(false);
+        } else {
+          // No cache yet — will wait for real data then generate
+          setInitialLoading(false);
+        }
+      } catch {
+        setInitialLoading(false);
+      }
+    }
+    loadCachedIdeas();
+  }, []);
+
+  // Only auto-generate if cache was empty AND we now have real data
+  useEffect(() => {
+    if (!initialLoading && syncedAt && videos.length > 0 && generatedIdeas.length === 0) {
+      generateIdeas();
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initialLoading, syncedAt]);
+
   const generateIdeas = async () => {
-    if (!videos.length) return;
+    if (!videos.length || !account) return;
     setLoading(true);
     setError(null);
     try {
@@ -31,20 +60,14 @@ export default function IdeasPage() {
     }
   };
 
-  // Auto-generate only when real KV data has loaded (syncedAt will be set)
-  useEffect(() => {
-    if (syncedAt && videos.length > 0 && generatedIdeas.length === 0) {
-      generateIdeas();
-    }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [syncedAt]);
+  const showSkeleton = (loading && generatedIdeas.length === 0) || initialLoading;
 
   return (
     <div className="px-8 py-8 max-w-[1400px] mx-auto">
       <div className="mb-8">
         <h1 className="text-2xl font-bold mb-1" style={{ color: 'var(--text-primary)' }}>Video Ideas</h1>
         <p className="text-sm" style={{ color: 'var(--text-muted)' }}>
-          أفكار فيديو مُولَّدة بالذكاء الاصطناعي بناءً على محتوى أكاونتك الفعلي.
+          أفكار فيديو مُولَّدة بالذكاء الاصطناعي بناءً على محتوى أكاونتك الفعلي — محفوظة حتى تضغط تجديد.
         </p>
       </div>
 
@@ -57,8 +80,9 @@ export default function IdeasPage() {
         </h2>
         <button
           onClick={generateIdeas}
-          disabled={loading}
+          disabled={loading || !syncedAt}
           className="btn-secondary flex items-center gap-2 px-4 py-2 rounded-xl text-[12px] font-semibold transition-all disabled:opacity-50"
+          title={!syncedAt ? "Waiting for live data..." : undefined}
         >
           {loading
             ? <><Loader2 size={13} className="animate-spin" /> جاري التوليد...</>
@@ -70,12 +94,7 @@ export default function IdeasPage() {
         <div className="glass-panel rounded-xl p-4 mb-5 text-[13px] text-red-500">{error}</div>
       )}
 
-      {!syncedAt && !loading && generatedIdeas.length === 0 ? (
-        <div className="flex flex-col items-center justify-center py-20 gap-4" style={{ color: 'var(--text-muted)' }}>
-          <Loader2 size={28} className="animate-spin" />
-          <p className="text-[13px]">جاري تحميل بيانات @rasayel_podcast...</p>
-        </div>
-      ) : loading && generatedIdeas.length === 0 ? (
+      {showSkeleton ? (
         <div className="grid grid-cols-2 xl:grid-cols-3 gap-5">
           {[1, 2, 3].map((i) => (
             <div key={i} className="glass-panel rounded-2xl p-5 animate-pulse">
