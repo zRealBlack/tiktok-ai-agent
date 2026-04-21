@@ -1,23 +1,28 @@
 // Removing hardcoded mockData dependency. Context is dynamically built.
 export function buildAgentContext(data: any): string {
+  const account = data.account || {};
+  const videos  = data.videos  || [];
+  const gens    = data.generations || [];
+  const trends  = data.trends  || [];
+  const comps   = data.competitors || [];
   return `
 === ACCOUNT OVERVIEW ===
-Username: ${data.account.username}
-Followers: ${data.account.followers.toLocaleString()} (+${data.account.followersGrowth.toLocaleString()} this week)
-Avg Engagement Rate: ${data.account.avgEngagement}% (${data.account.engagementChange > 0 ? "+" : ""}${data.account.engagementChange}% change)
-Weekly Views: ${data.account.weeklyViews.toLocaleString()} (${data.account.weeklyViewsChange}% change)
-Open Action Items: ${data.account.actionItems}
+Username: ${account.username || '@rasayel_podcast'}
+Followers: ${(account.followers || 0).toLocaleString()} (+${(account.followersGrowth || 0).toLocaleString()} this week)
+Avg Engagement Rate: ${account.avgEngagement || 0}% (${account.engagementChange > 0 ? "+" : ""}${account.engagementChange || 0}% change)
+Weekly Views: ${(account.weeklyViews || 0).toLocaleString()} (${account.weeklyViewsChange || 0}% change)
+Open Action Items: ${account.actionItems || 0}
 
 === AUDIENCE BREAKDOWN ===
-${data.generations.map((g: any) => `- ${g.label}: ${g.pct}%`).join("\n")}
+${gens.map((g: any) => `- ${g.label}: ${g.pct}%`).join("\n") || "No data"}
 
 === CONTENT AUDIT — ALL RECENT VIDEOS (AI-SCORED) ===
-${data.videos
+${videos
   .map(
     (v: any) => `
 VIDEO: "${v.title}" [Score: ${v.score}/100]
   Posted: ${v.posted}
-  Views: ${v.views.toLocaleString()} | Likes: ${v.likes.toLocaleString()} | Comments: ${v.comments} | Shares: ${v.shares}
+  Views: ${(v.views || 0).toLocaleString()} | Likes: ${(v.likes || 0).toLocaleString()} | Comments: ${v.comments || 0} | Shares: ${v.shares || 0}
   Engagement: ${v.views > 0 ? ((v.likes / v.views) * 100).toFixed(2) : 0}%
   Score Breakdown — Hook: ${v.hook} | Pacing: ${v.pacing} | Caption: ${v.caption} | Hashtags: ${v.hashtags} | CTA: ${v.cta}
   ⚠ Issue: ${v.issue}
@@ -27,41 +32,41 @@ VIDEO: "${v.title}" [Score: ${v.score}/100]
   .join("\n")}
 
 === TRENDING CONTENT (Top 5) ===
-${data.trends.map((t: any) => `#${t.rank} "${t.name}" — Type: ${t.type} — Views: ${t.views}`).join("\n")}
+${trends.map((t: any) => `#${t.rank} "${t.name}" — Type: ${t.type} — Views: ${t.views}`).join("\n") || "No data"}
 
 === COMPETITOR LANDSCAPE ===
-${data.competitors
+${comps
   .map(
     (c: any) => `
 ${c.handle}
-  Followers: ${c.followers.toLocaleString()} | Status: ${c.status} | Posts/week: ${c.postsThisWeek}
-  View Change: ${c.viewChange} | Avg Views: ${c.avgViews.toLocaleString()}
+  Followers: ${(c.followers || 0).toLocaleString()} | Status: ${c.status} | Posts/week: ${c.postsThisWeek}
+  View Change: ${c.viewChange} | Avg Views: ${(c.avgViews || 0).toLocaleString()}
   Top Format: ${c.topFormat}
 `
   )
-  .join("\n")}
+  .join("\n") || "No data"}
 `.trim();
 }
 
-export const AGENT_SYSTEM_PROMPT = `You are the TikTok Growth AI Agent embedded in the MAS Studio content dashboard. You are not a generic chatbot — you are a data-driven TikTok strategist with direct access to this account's performance data, every published video's AI scores, the full competitor landscape, and current trending content.
+export const AGENT_SYSTEM_PROMPT = `أنت Mas Sarie، الأيجنت الذكي المتخصص في TikTok، مدمج في داشبورد Mas AI Studio. مش شات بوت عادي — أنت استراتيجي محتوى بيشوف البيانات الحقيقية للأكاونت ده: كل فيديو، كل سكور، المنافسين، والترندات الحالية.
 
-IMPORTANT: You MUST always respond in Egyptian Arabic (اللهجة المصرية). Never use Modern Standard Arabic (فصحى). Write naturally as an Egyptian would speak — casual, direct, and smart.
+مهم جداً: لازم دايماً تتكلم بالعامية المصرية فقط. مفيش فصحى خالص. اتكلم طبيعي زي المصريين — واضح، مباشر، وذكي.
 
-Your role is to:
-1. تحليل بيانات الأكاونت وإعطاء نصايح استراتيجية واضحة وقابلة للتنفيذ
-2. تحديد الباترنز في الفيديوهات اللي بتطلع بشكل ضعيف وتقترح حلول دقيقة
-3. مقارنة الأكاونت بالمنافسين واكتشاف تاكتيكات ممكن تتسرقها منهم
-4. توليد أفكار فيديو متخصصة وبريفات جاهزة للتنفيذ
-5. إعادة كتابة الهوكس والكابشنز والـ CTAs بشكل كامل عند الطلب
-6. توقع أي فورمات المحتوى هتشتغل أحسن بناءً على الأوديانس
-7. التفكير بأسلوب الـ senior strategist — مباشر، دقيق، ومحور على النتايج
+دورك:
+1. تحليل بيانات الأكاونت وتقديم استراتيجيات عملية وقابلة للتنفيذ فوراً
+2. تحديد المشاكل في الفيديوهات اللي بتعاني وتقديم حلول دقيقة
+3. مقارنة الأكاونت بالمنافسين واقتراح تحسينات بناءً على ما بتعمله الكبار
+4. توليد أفكار فيديو متخصصة وبريفات جاهزة للتيك توك
+5. إعادة كتابة الهوك، الكابشن، والـ CTAs عشان تزيد الـ engagement
+6. تحليل أي فيديو محدد بشكل عميق وتقديم خطة تحسين واضحة
+7. التصرف كـ senior strategist — تحليل حقيقي وكلام مبني على الأرقام
 
 القواعد:
-- ممنوع تدي نصيحة جنريكة عن TikTok. كل توصية لازم ترجع للداتا الفعلية بتاعة الأكاونت
-- لما تقترح حلول، كن دقيق جداً (مثلاً: "اشيل الـ 8 ثوان اللي عند الثانية 12 اللي بيقل فيها التيمبو")
-- نظم التعليقات الطويلة في سيكشنز واضحة. استخدم ✦ للـ action items
-- لو اتطلب منك تعيد كتابة هوك أو كابشن، اكتبه كامل — متوصفوش بس
-- كن موجز. من غير تعبئة. من غير إخلاء المسؤولية.
+- ممنوع أي نصيحة عامة عن TikTok. كل إجابة لازم تبني على البيانات الفعلية للأكاونت
+- لما تقدم حلولاً قدم دليل (مثلاً: "ارجع لـ 8 أمام اللي عند الـ engagement 12 اللي بيبقى الأعلى")
+- استخدم التحليلات الطويلة في سياقها وموجزة. استخدم ✦ لـ action items
+- ما تبدأش أبداً برد عريض قبل ما تفهم المطلوب بالظبط — استفسر بس
+- كن موجز. كن مباشر. كن مفيد.
 
-LIVE ACCOUNT DATA:
+BIANAT EL ACCOUNT:
 {{CONTEXT}}`;
