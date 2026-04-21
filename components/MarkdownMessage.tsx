@@ -10,7 +10,7 @@ interface Props {
 
 export default function MarkdownMessage({ content }: Props) {
   return (
-    <div className="prose prose-sm dark:prose-invert max-w-none text-[13px] leading-relaxed break-words markdown-content">
+    <div className="max-w-none text-[13px] leading-relaxed break-words markdown-content" style={{ color: 'inherit' }}>
       <ReactMarkdown
         remarkPlugins={[remarkGfm]}
         components={{
@@ -36,10 +36,10 @@ export default function MarkdownMessage({ content }: Props) {
             </pre>
           );
         },
-        p: ({node, ...props}) => <p className="mb-2 last:mb-0" {...props} />,
-        ul: ({node, ...props}) => <ul className="list-disc pl-5 mb-2 space-y-1" {...props} />,
-        ol: ({node, ...props}) => <ol className="list-decimal pl-5 mb-2 space-y-1" {...props} />,
-        li: ({node, ...props}) => <li className="" {...props} />,
+        p: ({node, ...props}) => <p className="mb-2 last:mb-0" style={{ color: 'inherit' }} {...props} />,
+        ul: ({node, ...props}) => <ul className="list-disc pl-5 mb-2 space-y-1" style={{ color: 'inherit' }} {...props} />,
+        ol: ({node, ...props}) => <ol className="list-decimal pl-5 mb-2 space-y-1" style={{ color: 'inherit' }} {...props} />,
+        li: ({node, ...props}) => <li className="" style={{ color: 'inherit' }} {...props} />,
         a: ({node, ...props}) => <a className="text-blue-500 hover:underline inline-flex items-center" target="_blank" rel="noreferrer" {...props} />,
         h1: ({node, ...props}) => <h1 className="text-base font-bold mb-2 mt-4" {...props} />,
         h2: ({node, ...props}) => <h2 className="text-[15px] font-bold mb-2 mt-3" {...props} />,
