@@ -26,7 +26,6 @@ export default function AIChatBox() {
   const [apiKey, setApiKey] = useState("");
   const [savedKey, setSavedKey] = useState("");
   const [tiktokHandle, setTiktokHandle] = useState("");
-  const [apifyToken, setApifyToken] = useState("");
   
   const [showKey, setShowKey] = useState(false);
   const [input, setInput] = useState("");
@@ -42,9 +41,7 @@ export default function AIChatBox() {
     
     // Load apify credentials if exist
     const handle = localStorage.getItem("tiktok-handle") || "";
-    const aToken = localStorage.getItem("apify-token") || "";
     if (handle) setTiktokHandle(handle);
-    if (aToken) setApifyToken(aToken);
 
     if (!key) {
       setView("setup");
@@ -72,11 +69,10 @@ export default function AIChatBox() {
   }, [messages]);
 
   const handleSyncData = async () => {
-    if (!tiktokHandle || !apifyToken) return;
+    if (!tiktokHandle) return;
     localStorage.setItem("tiktok-handle", tiktokHandle);
-    localStorage.setItem("apify-token", apifyToken);
     try {
-      await refreshData(tiktokHandle, apifyToken);
+      await refreshData(tiktokHandle);
       setMessages([{
         role: "assistant",
         content: `Data synced! I've loaded the latest info for ${tiktokHandle}. You can now ask me to fix these videos or generate ideas.`,
@@ -275,14 +271,6 @@ export default function AIChatBox() {
                 className="glass-input w-full text-[13px] rounded-xl px-3 py-2.5 outline-none transition-all"
                 style={{ color: 'var(--text-primary)' }}
               />
-              <input
-                type="password"
-                value={apifyToken}
-                onChange={(e) => setApifyToken(e.target.value)}
-                placeholder="Apify API Token (apify_api_...)"
-                className="glass-input w-full text-[13px] rounded-xl px-3 py-2.5 outline-none transition-all"
-                style={{ color: 'var(--text-primary)' }}
-              />
             </div>
             
             {error && (
@@ -291,7 +279,7 @@ export default function AIChatBox() {
               </div>
             )}
             
-            <button onClick={handleSyncData} disabled={!tiktokHandle || !apifyToken || dataLoading}
+            <button onClick={handleSyncData} disabled={!tiktokHandle || dataLoading}
               className="btn-secondary w-full flex justify-center items-center gap-2 py-2.5 rounded-xl text-[13px] font-semibold transition-colors disabled:opacity-40 mb-2">
               {dataLoading ? <><Loader2 size={14} className="animate-spin" /> Scraping TikTok Data...</> : <><RefreshCw size={14} /> Fetch Live Data</>}
             </button>
