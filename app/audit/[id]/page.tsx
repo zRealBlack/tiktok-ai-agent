@@ -54,7 +54,12 @@ export default function VideoDetailPage() {
   const engagementRate = video.views > 0 ? ((video.likes + video.comments) / video.views * 100).toFixed(2) : "0";
 
   const handleFix = () => {
-    dispatchAgentPrompt(`صلح الفيديو ده: "${video.title}" — اللي عنده سكور ${video.score}/100. المشكلة الأساسية: ${video.issue}. اقتراح: ${video.suggestion}. اعيد كتابة الهوك، اديني كابشن أحسن من 100 حرف، و3 هاشتاقات مناسبة.`);
+    const toneInfo = video.tone ? ` | Tone: ${video.tone}` : "";
+    const riskInfo = video.retentionRisk ? ` | Retention Risk: ${video.retentionRisk}` : "";
+    const energyInfo = video.energy !== undefined ? ` | Energy: ${video.energy}/100` : "";
+    const pullInfo = video.emotionalPull !== undefined ? ` | Emotional Pull: ${video.emotionalPull}/100` : "";
+    const flagsInfo = video.weaknessFlags?.length ? ` | Weakness Flags: ${video.weaknessFlags.join(", ")}` : "";
+    dispatchAgentPrompt(`حلل الفيديو ده بالكامل واصلحه: "${video.title}" — سكور ${video.score}/100${toneInfo}${riskInfo}${energyInfo}${pullInfo}${flagsInfo}. المشكلة: ${video.issue}. حلل الفيديو من الأول للآخر (هوك + منتصف + نهاية)، واديني: 1) اعادة كتابة الهوك 2) كابشن أحسن من 100 حرف 3) 3 هاشتاقات مناسبة 4) ٣ تعديلات تحريرية تزيد المشاهدات.`);
     router.back();
   };
 
@@ -160,6 +165,65 @@ export default function VideoDetailPage() {
               ))}
             </div>
           </div>
+
+          {/* Content DNA */}
+          {(video.tone || video.energy !== undefined) && (
+            <div className="glass-panel rounded-2xl p-5">
+              <h2 className="text-[13px] font-bold mb-4" style={{ color: 'var(--text-primary)' }}>Content DNA</h2>
+              <div className="grid grid-cols-2 gap-3">
+                {[
+                  { label: "Tone", value: video.tone || "—" },
+                  { label: "Retention Risk", value: video.retentionRisk || "—" },
+                  { label: "Duration", value: video.duration ? `${video.duration}s` : "—" },
+                  { label: "Growth Potential", value: video.growthPotential !== undefined ? `${video.growthPotential}/100` : "—" },
+                ].map(({ label, value }) => (
+                  <div key={label} className="glass-elevated rounded-xl p-3">
+                    <div className="text-[10px] font-bold uppercase tracking-wide mb-1" style={{ color: 'var(--text-muted)' }}>{label}</div>
+                    <div className="text-[12px] font-semibold" style={{ color: 'var(--text-primary)' }}>{value}</div>
+                  </div>
+                ))}
+              </div>
+              {/* Emotional Pull + Energy bars */}
+              <div className="mt-4 space-y-3">
+                {video.emotionalPull !== undefined && (
+                  <div>
+                    <div className="flex justify-between mb-1">
+                      <span className="text-[11px] font-medium" style={{ color: 'var(--text-muted)' }}>Emotional Pull</span>
+                      <span className="text-[11px] font-bold" style={{ color: scoreColor(video.emotionalPull) }}>{video.emotionalPull}</span>
+                    </div>
+                    <div className="h-1.5 rounded-full glass-elevated overflow-hidden">
+                      <div className="h-full rounded-full transition-all duration-700" style={{ width: `${video.emotionalPull}%`, backgroundColor: scoreColor(video.emotionalPull) }} />
+                    </div>
+                  </div>
+                )}
+                {video.energy !== undefined && (
+                  <div>
+                    <div className="flex justify-between mb-1">
+                      <span className="text-[11px] font-medium" style={{ color: 'var(--text-muted)' }}>Content Energy</span>
+                      <span className="text-[11px] font-bold" style={{ color: scoreColor(video.energy) }}>{video.energy}</span>
+                    </div>
+                    <div className="h-1.5 rounded-full glass-elevated overflow-hidden">
+                      <div className="h-full rounded-full transition-all duration-700" style={{ width: `${video.energy}%`, backgroundColor: scoreColor(video.energy) }} />
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* Weakness Flags */}
+          {video.weaknessFlags && video.weaknessFlags.length > 0 && (
+            <div className="glass-panel rounded-2xl p-5">
+              <div className="text-[10px] font-bold text-red-500 uppercase tracking-widest mb-3">Weakness Flags</div>
+              <div className="flex flex-wrap gap-2">
+                {video.weaknessFlags.map((flag: string) => (
+                  <span key={flag} className="bg-red-500/10 text-red-400 px-2.5 py-1 rounded-full text-[11px] font-semibold">
+                    {flag}
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
 
           {/* Issue */}
           <div className="glass-panel rounded-2xl p-5">

@@ -24,6 +24,13 @@ interface VideoData {
   videoUrl?: string;
   isPinned?: boolean;
   hashtags_list?: string[];
+  tone?: string;
+  emotionalPull?: number;
+  energy?: number;
+  retentionRisk?: string;
+  growthPotential?: number;
+  weaknessFlags?: string[];
+  duration?: number;
 }
 
 const scoreColor = (v: number) =>
@@ -33,6 +40,16 @@ const scoreBadge = (v: number) =>
   v >= 80 ? "bg-emerald-500/15 text-emerald-500"
   : v >= 60 ? "bg-amber-500/15 text-amber-500"
   : "bg-red-500/15 text-red-500";
+
+const toneBadgeStyle = (tone?: string) => {
+  if (!tone) return "bg-zinc-500/15 text-zinc-400";
+  if (tone.includes("Emotional") || tone.includes("Shareable")) return "bg-pink-500/15 text-pink-400";
+  if (tone.includes("Controversial") || tone.includes("Discussion")) return "bg-orange-500/15 text-orange-400";
+  if (tone.includes("Entertaining") || tone.includes("Likeable")) return "bg-blue-500/15 text-blue-400";
+  if (tone.includes("Flat") || tone.includes("Boring")) return "bg-red-500/15 text-red-400";
+  if (tone.includes("Informative") || tone.includes("Valuable")) return "bg-emerald-500/15 text-emerald-400";
+  return "bg-zinc-500/15 text-zinc-400";
+};
 
 const ScoreBar = ({ label, value, delay }: { label: string; value: number; delay: number }) => {
   const [mounted, setMounted] = useState(false);
@@ -103,6 +120,22 @@ export default function VideoScoreCard({ video, compact = false }: { video: Vide
             {(['hook', 'pacing', 'caption', 'hashtags', 'cta'] as const).map((key, i) => (
               <ScoreBar key={key} label={key.charAt(0).toUpperCase() + key.slice(1)} value={video[key]} delay={i * 80} />
             ))}
+          </div>
+        )}
+
+        {/* Tone + Growth Potential row */}
+        {(video.tone || video.growthPotential !== undefined) && (
+          <div className="flex items-center gap-2 mb-3 flex-wrap">
+            {video.tone && (
+              <span className={`px-2 py-0.5 rounded-full text-[10px] font-semibold ${toneBadgeStyle(video.tone)}`}>
+                {video.tone}
+              </span>
+            )}
+            {video.retentionRisk && video.retentionRisk !== "Low" && (
+              <span className={`px-2 py-0.5 rounded-full text-[10px] font-semibold ${video.retentionRisk === "High" ? "bg-red-500/15 text-red-400" : "bg-amber-500/15 text-amber-400"}`}>
+                {video.retentionRisk} Retention Risk
+              </span>
+            )}
           </div>
         )}
 
