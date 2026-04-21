@@ -13,11 +13,12 @@ import SarieAvatar from "@/public/sarie_generated.png";
 export interface Message {
   role: "user" | "assistant";
   content: string;
+  imageUrl?: string;
   streaming?: boolean;
 }
 
-export function dispatchAgentPrompt(prompt: string) {
-  window.dispatchEvent(new CustomEvent("agent-prompt", { detail: { prompt } }));
+export function dispatchAgentPrompt(prompt: string, imageUrl?: string) {
+  window.dispatchEvent(new CustomEvent("agent-prompt", { detail: { prompt, imageUrl } }));
 }
 
 export default function AIChatBox() {
@@ -67,9 +68,9 @@ export default function AIChatBox() {
   }, [account?.username]);
 
   useEffect(() => {
-    const handler = (e: CustomEvent<{ prompt: string }>) => {
+    const handler = (e: CustomEvent<{ prompt: string; imageUrl?: string }>) => {
       if (!open) setOpen(true);
-      setTimeout(() => sendMessage(e.detail.prompt), 150);
+      setTimeout(() => sendMessage(e.detail.prompt, e.detail.imageUrl), 150);
     };
     window.addEventListener("agent-prompt", handler as EventListener);
     return () => window.removeEventListener("agent-prompt", handler as EventListener);
@@ -82,13 +83,13 @@ export default function AIChatBox() {
     }
   }, [messages, isUserScrolled, streaming]);
 
-  const sendMessage = useCallback(async (text?: string) => {
+  const sendMessage = useCallback(async (text?: string, imageUrl?: string) => {
     const msgText = (text ?? input).trim();
     if (!msgText || streaming) return;
     if (!text) setInput("");
     setError(null);
 
-    const userMsg: Message = { role: "user", content: msgText };
+    const userMsg: Message = { role: "user", content: msgText, imageUrl };
     const newMessages = [...messages, userMsg];
     setMessages(newMessages);
     setStreaming(true);
@@ -102,7 +103,7 @@ export default function AIChatBox() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          messages: newMessages.map((m) => ({ role: m.role, content: m.content })),
+          messages: newMessages.map((m) => ({ role: m.role, content: m.content, imageUrl: m.imageUrl })),
           contextData: { account, videos, competitors, ideas, trends, generations }
         }),
         signal: ctrl.signal,
@@ -233,6 +234,10 @@ export default function AIChatBox() {
                   ? { background: 'var(--glass-elevated)', color: 'var(--text-primary)', border: '1px solid var(--glass-elevated-border)' }
                   : { background: 'var(--glass-elevated)', color: 'var(--text-secondary)', border: '1px solid var(--glass-elevated-border)' }}
               >
+                {m.role === "user" && m.imageUrl && (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={m.imageUrl} alt="Video cover" className="w-full rounded-lg mb-2 object-cover" style={{ maxHeight: '80px' }} />
+                )}
                 {m.role === "assistant" ? (
                   <MarkdownMessage content={m.content} />
                 ) : (
