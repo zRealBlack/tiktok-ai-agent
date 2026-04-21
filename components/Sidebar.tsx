@@ -27,17 +27,14 @@ export default function Sidebar() {
           <Image
             src="/mas-logo.png"
             alt="Mas AI Studio"
-            width={36}
-            height={36}
-            className="rounded-xl object-contain"
+            width={32}
+            height={32}
+            className="rounded-xl object-contain mas-logo-red transition-all duration-300"
             style={{ background: 'transparent' }}
           />
           <div>
-            <div className="text-[13px] font-extrabold tracking-tight" style={{ color: 'var(--text-primary)' }}>
+            <div className="text-[14px] font-extrabold tracking-tight mt-0.5" style={{ color: 'var(--text-primary)' }}>
               Mas AI Studio
-            </div>
-            <div className="text-[10px] font-medium mt-[-1px]" style={{ color: 'var(--text-muted)' }}>
-              Powered by Mas Sarie
             </div>
           </div>
         </div>
