@@ -14,7 +14,7 @@ const { ApifyClient } = require("apify-client");
 const TIKTOK_HANDLE = "rasayel_podcast";
 const APIFY_TOKEN = "apify_api_" + "g6bQyWvIy8xp0jseCouNiHrVh0pZ9A3kJuHg";
 const KV_REST_API_URL = "https://sure-shrew-104058.upstash.io";
-const KV_REST_API_TOKEN = "gQAAAAAAZ6AAIgcDE4OGQ5NzI3Y2N1MTI0MTk0OTA3NjhmMjZkY2RiYmRhOA==";
+const KV_REST_API_TOKEN = "gQAAAAAAAZZ6AAIgcDE4OGQ5NzI3Y2NlMTI0MTk0OTA3NjhmMjZkY2RiYmRhOA";
 // ───────────────────────────────────────────────────────────────────────────
 
 async function kvSet(key, value) {
