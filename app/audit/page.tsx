@@ -6,7 +6,7 @@ import { useData } from "@/components/DataContext";
 
 const summaryItems = (videos: any[]) => [
   { icon: <Video size={18} style={{ color: 'var(--text-muted)' }} />, value: videos.length, label: "Videos Audited" },
-  { icon: <TrendingUp size={18} className="text-blue-500" />, value: Math.round(videos.reduce((a, v) => a + v.score, 0) / videos.length), label: "Avg Score" },
+  { icon: <TrendingUp size={18} className="text-blue-500" />, value: videos.length ? Math.round(videos.reduce((a, v) => a + (v.score || 0), 0) / videos.length) : 0, label: "Avg Score" },
   { icon: <Star size={18} className="text-emerald-500" />, value: videos.filter(v => v.score >= 75).length, label: "High Performers" },
   { icon: <AlertTriangle size={18} className="text-red-500" />, value: videos.filter(v => v.score < 60).length, label: "Need Fixing" },
 ];
