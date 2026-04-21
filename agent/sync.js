@@ -158,6 +158,43 @@ async function run() {
     if (hashCount < 3)                    weaknessFlags.push("Few Hashtags");
     if (captionLen < 15)                  weaknessFlags.push("Weak Caption");
     if (engRate < 2)                      weaknessFlags.push("Low Engagement");
+
+    // ─── SOUND ANALYSIS ───────────────────────────────────────────────────────
+    const musicOriginal = v.musicMeta?.musicOriginal === true;
+    const musicName     = (v.musicMeta?.musicName   || "").trim();
+    const musicAuthor   = (v.musicMeta?.musicAuthor || "").trim();
+    const soundType     = musicOriginal ? "Original Sound" : musicName ? "Trending Audio" : "No Audio";
+    const soundName     = musicName
+      ? `${musicName}${musicAuthor ? " — " + musicAuthor : ""}`
+      : "Unknown";
+
+    // Sound score: trending audio gets a reach bonus, original needs high engagement to justify itself
+    let sound;
+    if (!musicName) {
+      sound = Math.max(25, Math.min(50, Math.round(28 + engRate)));
+    } else if (musicOriginal) {
+      sound = Math.max(40, Math.min(88, Math.round(48 + engRate * 4)));
+    } else {
+      sound = Math.max(55, Math.min(92, Math.round(58 + engRate * 3)));
+    }
+
+    let soundIssue, soundSuggestion;
+    if (!musicName) {
+      soundIssue = "No background audio detected — missing a key TikTok discoverability signal on the For You page.";
+      soundSuggestion = "Add a soft lofi track from TikTok's Creator Tools library. Keep music at 10–15% volume relative to voice so speech stays clear.";
+      weaknessFlags.push("No Audio");
+    } else if (musicOriginal && sound < 60) {
+      soundIssue = "Using original sound but engagement is weak — original audio only works when the hook is exceptionally strong.";
+      soundSuggestion = "Layer a low-volume trending background track under the original voice audio. Test a popular lofi or podcast instrumental.";
+    } else if (!musicOriginal && sound < 65) {
+      soundIssue = `Trending audio ("${musicName.substring(0, 45)}") is present but not lifting results — likely a mismatch with the content energy.`;
+      soundSuggestion = "Ensure audio energy matches video mood. High-energy trending tracks on slow podcast clips create friction and hurt retention.";
+    } else {
+      soundIssue = sound >= 75
+        ? `Sound strategy is working — "${musicName.substring(0, 45)}" fits the content well.`
+        : "Sound is present but there's room to optimize for reach.";
+      soundSuggestion = "Consider building a consistent audio identity — using the same lofi track across episodes creates recognizable branding.";
+    }
     // ─────────────────────────────────────────────────────────────────────────
 
     // Issue and suggestion — specific to the diagnosed tone and risk
@@ -216,6 +253,15 @@ async function run() {
       weaknessFlags,
       issue,
       suggestion,
+      // Sound analysis
+      sound,
+      soundType,
+      soundName,
+      soundIssue,
+      soundSuggestion,
+      // Appearance: can't be auto-scored from metadata — agent evaluates on request
+      appearance:     null,
+      appearanceNote: "Visual assessment required — ask the agent to evaluate outfit, makeup, lighting, and background.",
       isPinned:      v.isPinned || false,
       videoUrl:      v.webVideoUrl || "",
       coverUrl:      v.videoMeta?.coverUrl || v.videoMeta?.originalCoverUrl || "",

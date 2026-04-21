@@ -31,6 +31,12 @@ interface VideoData {
   growthPotential?: number;
   weaknessFlags?: string[];
   duration?: number;
+  sound?: number;
+  soundType?: string;
+  soundName?: string;
+  soundIssue?: string;
+  appearance?: number | null;
+  appearanceIssue?: string | null;
 }
 
 const scoreColor = (v: number) =>
@@ -120,6 +126,12 @@ export default function VideoScoreCard({ video, compact = false }: { video: Vide
             {(['hook', 'pacing', 'caption', 'hashtags', 'cta'] as const).map((key, i) => (
               <ScoreBar key={key} label={key.charAt(0).toUpperCase() + key.slice(1)} value={video[key]} delay={i * 80} />
             ))}
+            {video.sound !== undefined && (
+              <ScoreBar key="sound" label="Sound" value={video.sound} delay={5 * 80} />
+            )}
+            {video.appearance !== null && video.appearance !== undefined && (
+              <ScoreBar key="appearance" label="Appearance" value={video.appearance} delay={6 * 80} />
+            )}
           </div>
         )}
 

@@ -54,12 +54,14 @@ export default function VideoDetailPage() {
   const engagementRate = video.views > 0 ? ((video.likes + video.comments) / video.views * 100).toFixed(2) : "0";
 
   const handleFix = () => {
-    const toneInfo = video.tone ? ` | Tone: ${video.tone}` : "";
-    const riskInfo = video.retentionRisk ? ` | Retention Risk: ${video.retentionRisk}` : "";
-    const energyInfo = video.energy !== undefined ? ` | Energy: ${video.energy}/100` : "";
-    const pullInfo = video.emotionalPull !== undefined ? ` | Emotional Pull: ${video.emotionalPull}/100` : "";
-    const flagsInfo = video.weaknessFlags?.length ? ` | Weakness Flags: ${video.weaknessFlags.join(", ")}` : "";
-    dispatchAgentPrompt(`حلل الفيديو ده بالكامل واصلحه: "${video.title}" — سكور ${video.score}/100${toneInfo}${riskInfo}${energyInfo}${pullInfo}${flagsInfo}. المشكلة: ${video.issue}. حلل الفيديو من الأول للآخر (هوك + منتصف + نهاية)، واديني: 1) اعادة كتابة الهوك 2) كابشن أحسن من 100 حرف 3) 3 هاشتاقات مناسبة 4) ٣ تعديلات تحريرية تزيد المشاهدات.`);
+    const toneInfo   = video.tone              ? ` | Tone: ${video.tone}`                          : "";
+    const riskInfo   = video.retentionRisk     ? ` | Retention Risk: ${video.retentionRisk}`        : "";
+    const energyInfo = video.energy !== undefined ? ` | Energy: ${video.energy}/100`                : "";
+    const pullInfo   = video.emotionalPull !== undefined ? ` | Emotional Pull: ${video.emotionalPull}/100` : "";
+    const soundInfo  = video.sound !== undefined ? ` | Sound: ${video.sound}/100 (${video.soundType || "?"})` : "";
+    const appInfo    = video.appearance !== null && video.appearance !== undefined ? ` | Appearance: ${video.appearance}/100` : "";
+    const flagsInfo  = video.weaknessFlags?.length ? ` | Weakness Flags: ${video.weaknessFlags.join(", ")}` : "";
+    dispatchAgentPrompt(`حلل الفيديو ده بالكامل واصلحه: "${video.title}" — سكور ${video.score}/100${toneInfo}${riskInfo}${energyInfo}${pullInfo}${soundInfo}${appInfo}${flagsInfo}. المشكلة: ${video.issue}. حلل الفيديو من الأول للآخر (هوك + منتصف + نهاية + صوت + مظهر)، واديني: 1) اعادة كتابة الهوك 2) كابشن أحسن من 100 حرف 3) 3 هاشتاقات مناسبة 4) تقييم الصوت والموسيقى الخلفية 5) تقييم مظهر المقدم (outfit + makeup + إضاءة + خلفية) 6) ٣ تعديلات تحريرية تزيد المشاهدات.`);
     router.back();
   };
 
@@ -155,11 +157,13 @@ export default function VideoDetailPage() {
             <h2 className="text-[13px] font-bold mb-4" style={{ color: 'var(--text-primary)' }}>AI Score Breakdown</h2>
             <div className="space-y-3">
               {([
-                ["Hook", video.hook],
-                ["Pacing", video.pacing],
-                ["Caption", video.caption],
-                ["Hashtags", video.hashtags],
-                ["CTA", video.cta],
+                ["Hook",       video.hook],
+                ["Pacing",     video.pacing],
+                ["Caption",    video.caption],
+                ["Hashtags",   video.hashtags],
+                ["CTA",        video.cta],
+                ...(video.sound      !== undefined              ? [["Sound",      video.sound]]      : []),
+                ...(video.appearance !== null && video.appearance !== undefined ? [["Appearance", video.appearance]] : []),
               ] as [string, number][]).map(([label, val], i) => (
                 <ScoreBar key={label} label={label} value={val} delay={i * 80} />
               ))}
@@ -210,6 +214,88 @@ export default function VideoDetailPage() {
               </div>
             </div>
           )}
+
+          {/* Sound Analysis */}
+          {(video.sound !== undefined || video.soundType) && (
+            <div className="glass-panel rounded-2xl p-5">
+              <div className="flex items-center justify-between mb-3">
+                <h2 className="text-[13px] font-bold" style={{ color: 'var(--text-primary)' }}>Sound & Music</h2>
+                {video.sound !== undefined && (
+                  <span className={`px-2.5 py-0.5 rounded-full text-[11px] font-bold ${scoreBg(video.sound)}`}>
+                    {video.sound}/100
+                  </span>
+                )}
+              </div>
+              <div className="flex gap-2 mb-3 flex-wrap">
+                {video.soundType && (
+                  <span className={`px-2 py-0.5 rounded-full text-[10px] font-semibold ${
+                    video.soundType === "Trending Audio" ? "bg-blue-500/15 text-blue-400"
+                    : video.soundType === "Original Sound" ? "bg-emerald-500/15 text-emerald-400"
+                    : "bg-red-500/15 text-red-400"
+                  }`}>
+                    {video.soundType}
+                  </span>
+                )}
+                {video.soundName && video.soundName !== "Unknown" && (
+                  <span className="glass-elevated px-2 py-0.5 rounded-full text-[10px]" style={{ color: 'var(--text-muted)' }}>
+                    ♪ {video.soundName}
+                  </span>
+                )}
+              </div>
+              {video.soundIssue && (
+                <p className="text-[12px] leading-relaxed mb-2" style={{ color: 'var(--text-secondary)' }}>{video.soundIssue}</p>
+              )}
+              {video.soundSuggestion && (
+                <div className="glass-elevated rounded-xl p-2.5 mt-2">
+                  <span className="text-[10px] font-bold text-emerald-500 uppercase tracking-wide">✦ Fix  </span>
+                  <span className="text-[11px] leading-relaxed" style={{ color: 'var(--text-secondary)' }}>{video.soundSuggestion}</span>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Appearance Analysis */}
+          <div className="glass-panel rounded-2xl p-5">
+            <div className="flex items-center justify-between mb-3">
+              <h2 className="text-[13px] font-bold" style={{ color: 'var(--text-primary)' }}>Appearance & Visual Presentation</h2>
+              {video.appearance !== null && video.appearance !== undefined ? (
+                <span className={`px-2.5 py-0.5 rounded-full text-[11px] font-bold ${scoreBg(video.appearance)}`}>
+                  {video.appearance}/100
+                </span>
+              ) : (
+                <span className="bg-zinc-500/15 text-zinc-400 px-2.5 py-0.5 rounded-full text-[11px] font-bold">
+                  Not scored
+                </span>
+              )}
+            </div>
+            {video.appearance !== null && video.appearance !== undefined ? (
+              <>
+                <div className="h-1.5 rounded-full glass-elevated overflow-hidden mb-3">
+                  <div className="h-full rounded-full transition-all duration-700" style={{ width: `${video.appearance}%`, backgroundColor: scoreColor(video.appearance) }} />
+                </div>
+                {video.appearanceIssue ? (
+                  <div className="glass-elevated rounded-xl p-2.5">
+                    <span className="text-[10px] font-bold text-amber-500 uppercase tracking-wide">⚠ Issue  </span>
+                    <span className="text-[11px] leading-relaxed" style={{ color: 'var(--text-secondary)' }}>{video.appearanceIssue}</span>
+                  </div>
+                ) : (
+                  <p className="text-[12px]" style={{ color: 'var(--text-muted)' }}>Outfit, makeup, lighting, and background all look good.</p>
+                )}
+              </>
+            ) : (
+              <div className="text-center py-3">
+                <p className="text-[12px] mb-3" style={{ color: 'var(--text-muted)' }}>
+                  Visual assessment needed — the agent will evaluate outfit, makeup, lighting, and background.
+                </p>
+                <button
+                  onClick={() => dispatchAgentPrompt(`حلل مظهر المقدم في الفيديو ده: "${video.title}". قيّم: الـ Outfit، الـ Grooming/Makeup، الإضاءة، والخلفية. اديني Appearance Score من 100 مع مشاكل محددة وحلول عملية.`)}
+                  className="btn-secondary px-4 py-2 rounded-xl text-[12px] font-semibold"
+                >
+                  Ask Agent to Analyze
+                </button>
+              </div>
+            )}
+          </div>
 
           {/* Weakness Flags */}
           {video.weaknessFlags && video.weaknessFlags.length > 0 && (

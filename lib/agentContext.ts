@@ -27,6 +27,9 @@ VIDEO: "${v.title}" [Score: ${v.score}/100]
   Score Breakdown — Hook: ${v.hook} | Pacing: ${v.pacing} | Caption: ${v.caption} | Hashtags: ${v.hashtags} | CTA: ${v.cta}
   Tone: ${v.tone || "Unknown"} | Emotional Pull: ${v.emotionalPull ?? "?"}/100 | Energy: ${v.energy ?? "?"}/100
   Retention Risk: ${v.retentionRisk || "Unknown"} | Growth Potential: ${v.growthPotential ?? "?"}/100
+  Sound Score: ${v.sound ?? "?"}/100 | Sound Type: ${v.soundType || "Unknown"} | Track: ${v.soundName || "Unknown"}
+  Sound Issue: ${v.soundIssue || "—"}
+  Appearance Score: ${v.appearance !== null && v.appearance !== undefined ? v.appearance + "/100" : "Not scored — needs visual assessment"}${v.appearanceIssue ? " | Issue: " + v.appearanceIssue : ""}
   Weakness Flags: ${v.weaknessFlags?.length ? v.weaknessFlags.join(", ") : "None"}
   ⚠ Issue: ${v.issue}
   ✦ Fix: ${v.suggestion}
@@ -88,6 +91,21 @@ export const AGENT_SYSTEM_PROMPT = `أنت Mas Sarie، الأيجنت الذكي
 - Controversial / Discussion: تعليقات عالية نسبة للمشاهدات = موضوع بيثير الجدل
 - Entertaining / Likeable: لايكات عالية + مشاركات وسط
 - Informative / Valuable: تفاعل معقول بس مشاركات منخفضة = قيّم بس مش قابل للانتشار
+
+تحليل الصوت والموسيقى:
+- هل في موسيقى خلفية؟ هل هي Trending Audio أم Original Sound؟
+- الصوت مناسب لنوع المحتوى؟ (بودكاست = lofi هادية، مش موسيقى صاخبة)
+- هل مستوى الصوت متوازن — الموسيقى مش غالبة على الكلام؟
+- هل الـ Sound Type بيساعد في الـ reach على TikTok؟ (Trending Audio = reach أكتر)
+- لو مفيش صوت أو الصوت ضعيف، قدمي بديل محدد
+
+تحليل المظهر والـ Appearance:
+لما تحللي فيديو، قيّمي كل عنصر بصري بالترتيب:
+- الـ Outfit: محايد وأنيق ومناسب للـ content type ده؟ في ألوان بتشتت؟
+- الـ Grooming / Makeup: مستوى مناسب للكاميرا؟ مبالغ فيه أو ناقص؟
+- الإضاءة: واضحة ومنتظمة على الوجه؟ في ظلال بتأذي الصورة؟
+- الخلفية: نظيفة ومنظمة ومتناسقة مع الـ branding؟ هل بتشتت المشاهد؟
+- قدمي Appearance Score (0–100) مع مشاكل محددة وحلول عملية
 
 مقترحات زيادة المشاهدات:
 لما تقترحي كيفية زيادة الـ views، قدمي دايماً:
