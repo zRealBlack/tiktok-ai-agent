@@ -26,17 +26,47 @@ export default function AIChatBox() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [streaming, setStreaming] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [historyLoaded, setHistoryLoaded] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
   const abortRef = useRef<AbortController | null>(null);
+  const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  // Load chat history from KV on mount
   useEffect(() => {
-    if (messages.length === 0 && account?.username) {
+    fetch("/api/chat")
+      .then((r) => r.json())
+      .then(({ messages: saved }) => {
+        if (saved && saved.length > 0) {
+          setMessages(saved);
+        }
+        setHistoryLoaded(true);
+      })
+      .catch(() => setHistoryLoaded(true));
+  }, []);
+
+  // Save chat history to KV whenever messages change (debounced)
+  const saveHistory = useCallback((msgs: Message[]) => {
+    const toSave = msgs.filter((m) => !m.streaming);
+    if (!historyLoaded || toSave.length === 0) return;
+    if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
+    saveTimerRef.current = setTimeout(() => {
+      fetch("/api/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ messages: toSave }),
+      }).catch(() => {});
+    }, 1000);
+  }, [historyLoaded]);
+
+  // Set greeting when account loads and no history found yet
+  useEffect(() => {
+    if (historyLoaded && messages.length === 0 && account?.username) {
       setMessages([{
         role: "assistant",
-        content: `Agent online. I have full access to your account — ${account.username} (${account.followers} followers). What do you need?`,
+        content: `الأيجنت شغال! عندي كل البيانات بتاعة ${account.username} (${(account.followers || 0).toLocaleString()} متابع). إيه اللي تحتاجه؟`,
       }]);
     }
-  }, [account?.username, account?.followers, messages.length]);
+  }, [historyLoaded, account?.username]);
 
   useEffect(() => {
     const handler = (e: CustomEvent<{ prompt: string }>) => {
@@ -100,6 +130,7 @@ export default function AIChatBox() {
       setMessages((prev) => {
         const updated = [...prev];
         updated[updated.length - 1] = { role: "assistant", content: accumulated };
+        saveHistory(updated);
         return updated;
       });
     } catch (err: unknown) {
@@ -109,7 +140,7 @@ export default function AIChatBox() {
     } finally {
       setStreaming(false);
     }
-  }, [input, messages, streaming, account, videos, competitors, ideas, trends, generations]);
+  }, [input, messages, streaming, account, videos, competitors, ideas, trends, generations, saveHistory, historyLoaded]);
 
   const stop = () => {
     abortRef.current?.abort();
@@ -161,7 +192,11 @@ export default function AIChatBox() {
           <div className="flex items-center gap-1">
             {messages.length > 1 && (
               <button
-                onClick={() => setMessages([{ role: "assistant", content: `الأيجنت شغال! عندي كل البيانات بتاعة ${account.username} (${account.followers} متابع). إيه اللي تحتاجه؟` }])}
+                onClick={() => {
+                  const greeting = [{ role: "assistant" as const, content: `الأيجنت شغال! عندي كل البيانات بتاعة ${account?.username} (${(account?.followers || 0).toLocaleString()} متابع). إيه اللي تحتاجه؟` }];
+                  setMessages(greeting);
+                  saveHistory(greeting);
+                }}
                 className="w-7 h-7 rounded-lg flex items-center justify-center transition-colors glass-elevated hover:opacity-80"
                 title="مسح المحادثة">
                 <Trash2 size={12} style={{ color: 'var(--text-muted)' }} />
