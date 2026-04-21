@@ -177,8 +177,8 @@ export default function AIChatBox() {
       >
         <div className="flex items-center gap-3 px-4 py-3 border-b shrink-0"
           style={{ borderColor: 'var(--glass-border)' }}>
-          <div className="w-8 h-8 rounded-full glass-elevated flex items-center justify-center">
-            <Bot size={15} style={{ color: 'var(--text-secondary)' }} />
+          <div className="w-8 h-8 rounded-full glass-elevated flex items-center justify-center overflow-hidden shrink-0">
+            <img src="/sariecharachter.png" alt="Sarie" className="w-full h-full object-cover" />
           </div>
           <div className="flex-1 min-w-0">
             <div className="text-[13px] font-bold" style={{ color: 'var(--text-primary)' }}>Mas Sarie</div>
@@ -219,8 +219,8 @@ export default function AIChatBox() {
           {messages.map((m, i) => (
             <div key={i} className={`flex gap-2.5 ${m.role === "user" ? "justify-end" : "justify-start"}`}>
               {m.role === "assistant" && (
-                <div className="w-6 h-6 rounded-full glass-elevated flex items-center justify-center shrink-0 mt-0.5">
-                  <Bot size={11} style={{ color: 'var(--text-secondary)' }} />
+                <div className="w-6 h-6 rounded-full glass-elevated flex shrink-0 mt-0.5 overflow-hidden items-center justify-center">
+                  <img src="/sariecharachter.png" alt="Sarie" className="w-full h-full object-cover" />
                 </div>
               )}
               <div
