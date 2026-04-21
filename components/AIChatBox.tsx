@@ -8,7 +8,7 @@ import {
 import { useData } from "@/components/DataContext";
 import MarkdownMessage from "@/components/MarkdownMessage";
 import Image from "next/image";
-import SarieAvatar from "@/public/sariecharachter.png";
+import SarieAvatar from "@/public/sarie_generated.png";
 
 export interface Message {
   role: "user" | "assistant";
@@ -180,7 +180,7 @@ export default function AIChatBox() {
         <div className="flex items-center gap-3 px-4 py-3 border-b shrink-0"
           style={{ borderColor: 'var(--glass-border)' }}>
           <div className="w-8 h-8 rounded-full glass-elevated flex items-center justify-center overflow-hidden shrink-0 relative">
-            <Image src={SarieAvatar} alt="Sarie" fill className="object-cover object-center scale-[1.8]" />
+            <Image src={SarieAvatar} alt="Sarie" fill className="object-cover object-center" />
           </div>
           <div className="flex-1 min-w-0">
             <div className="text-[13px] font-bold" style={{ color: 'var(--text-primary)' }}>Mas Sarie</div>
@@ -222,7 +222,7 @@ export default function AIChatBox() {
             <div key={i} className={`flex gap-2.5 ${m.role === "user" ? "justify-end" : "justify-start"}`}>
               {m.role === "assistant" && (
                 <div className="w-6 h-6 rounded-full glass-elevated flex shrink-0 mt-0.5 overflow-hidden justify-center relative">
-                  <Image src={SarieAvatar} alt="Sarie" fill className="object-cover object-center scale-[1.8]" />
+                  <Image src={SarieAvatar} alt="Sarie" fill className="object-cover object-center" />
                 </div>
               )}
               <div
