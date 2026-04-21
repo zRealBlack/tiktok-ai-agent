@@ -3,8 +3,9 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import {
   MessageSquare, X, Send, Bot, User, Loader2, Key,
-  Eye, EyeOff, ChevronDown, Settings, AlertCircle, Trash2,
+  Eye, EyeOff, ChevronDown, Settings, AlertCircle, Trash2, RefreshCw
 } from "lucide-react";
+import { useData } from "@/components/DataContext";
 
 export interface Message {
   role: "user" | "assistant";
@@ -19,10 +20,14 @@ export function dispatchAgentPrompt(prompt: string) {
 }
 
 export default function AIChatBox() {
+  const { account, videos, competitors, ideas, trends, generations, refreshData, isLoading: dataLoading } = useData();
   const [open, setOpen] = useState(false);
   const [view, setView] = useState<"chat" | "setup">("chat");
   const [apiKey, setApiKey] = useState("");
   const [savedKey, setSavedKey] = useState("");
+  const [tiktokHandle, setTiktokHandle] = useState("");
+  const [apifyToken, setApifyToken] = useState("");
+  
   const [showKey, setShowKey] = useState(false);
   const [input, setInput] = useState("");
   const [messages, setMessages] = useState<Message[]>([]);
@@ -34,15 +39,22 @@ export default function AIChatBox() {
   useEffect(() => {
     const key = localStorage.getItem(STORAGE_KEY) || "";
     setSavedKey(key);
+    
+    // Load apify credentials if exist
+    const handle = localStorage.getItem("tiktok-handle") || "";
+    const aToken = localStorage.getItem("apify-token") || "";
+    if (handle) setTiktokHandle(handle);
+    if (aToken) setApifyToken(aToken);
+
     if (!key) {
       setView("setup");
     } else {
       setMessages([{
         role: "assistant",
-        content: "Agent online. I have full access to your account — 48.2K followers, 10 audited videos, 3 competitors tracked. What do you need?",
+        content: `Agent online. I have full access to your account — ${account.username} (${account.followers} followers). What do you need?`,
       }]);
     }
-  }, []);
+  }, [account.username, account.followers]);
 
   useEffect(() => {
     const handler = (e: CustomEvent<{ prompt: string }>) => {
@@ -59,6 +71,21 @@ export default function AIChatBox() {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
+  const handleSyncData = async () => {
+    if (!tiktokHandle || !apifyToken) return;
+    localStorage.setItem("tiktok-handle", tiktokHandle);
+    localStorage.setItem("apify-token", apifyToken);
+    try {
+      await refreshData(tiktokHandle, apifyToken);
+      setMessages([{
+        role: "assistant",
+        content: `Data synced! I've loaded the latest info for ${tiktokHandle}. You can now ask me to fix these videos or generate ideas.`,
+      }]);
+    } catch (e: any) {
+      setError(e.message);
+    }
+  };
+
   const saveKey = () => {
     const trimmed = apiKey.trim();
     if (!trimmed.startsWith("sk-ant-")) {
@@ -71,7 +98,7 @@ export default function AIChatBox() {
     setError(null);
     setMessages([{
       role: "assistant",
-      content: "Agent online. I have full access to your account — 48.2K followers, 10 audited videos, 3 competitors tracked. What do you need?",
+      content: `Agent online. I have full access to your account — ${account.username} (${account.followers} followers). What do you need?`,
     }]);
   };
 
@@ -102,6 +129,7 @@ export default function AIChatBox() {
         body: JSON.stringify({
           messages: newMessages.map((m) => ({ role: m.role, content: m.content })),
           apiKey: savedKey,
+          contextData: { account, videos, competitors, ideas, trends, generations }
         }),
         signal: ctrl.signal,
       });
@@ -137,7 +165,7 @@ export default function AIChatBox() {
     } finally {
       setStreaming(false);
     }
-  }, [input, messages, savedKey, streaming]);
+  }, [input, messages, savedKey, streaming, account, videos, competitors, ideas, trends, generations]);
 
   const stop = () => {
     abortRef.current?.abort();
@@ -208,19 +236,17 @@ export default function AIChatBox() {
         {/* Setup */}
         {view === "setup" && (
           <div className="flex-1 p-5 overflow-y-auto">
+            {/* Claude API Setup */}
             <div className="flex items-center gap-2 mb-4">
-              <Key size={15} style={{ color: 'var(--text-secondary)' }} />
-              <span className="text-[13px] font-bold" style={{ color: 'var(--text-primary)' }}>Configure Anthropic API Key</span>
+              <Bot size={15} style={{ color: 'var(--text-secondary)' }} />
+              <span className="text-[13px] font-bold" style={{ color: 'var(--text-primary)' }}>1. Anthropic API Key (Claude)</span>
             </div>
-            <p className="text-[12px] leading-relaxed mb-4" style={{ color: 'var(--text-muted)' }}>
-              Stored locally in your browser. Never sent anywhere except directly to Anthropic&apos;s API.
-            </p>
             <div className="relative mb-3">
               <input
                 type={showKey ? "text" : "password"}
                 value={apiKey}
                 onChange={(e) => { setApiKey(e.target.value); setError(null); }}
-                placeholder="sk-ant-api03-..."
+                placeholder={savedKey ? "••••••••••••" : "sk-ant-api03-..."}
                 className="glass-input w-full text-[13px] rounded-xl px-3 py-2.5 pr-10 outline-none transition-all"
                 style={{ color: 'var(--text-primary)' }}
               />
@@ -230,29 +256,53 @@ export default function AIChatBox() {
                 {showKey ? <EyeOff size={14} /> : <Eye size={14} />}
               </button>
             </div>
+            <button onClick={saveKey} disabled={!apiKey.trim()}
+              className="btn-primary w-full py-2.5 rounded-xl text-[13px] font-semibold transition-colors disabled:opacity-40 mb-6">
+              Save Claude Key
+            </button>
+
+            {/* Apify Data Sync Setup */}
+            <div className="flex items-center gap-2 mb-4 pt-4 border-t" style={{ borderColor: 'var(--glass-border)' }}>
+              <Key size={15} style={{ color: 'var(--text-secondary)' }} />
+              <span className="text-[13px] font-bold" style={{ color: 'var(--text-primary)' }}>2. TikTok Data Sync (Apify)</span>
+            </div>
+            <div className="mb-3 space-y-3">
+              <input
+                type="text"
+                value={tiktokHandle}
+                onChange={(e) => setTiktokHandle(e.target.value)}
+                placeholder="TikTok Username (e.g. mas.studio)"
+                className="glass-input w-full text-[13px] rounded-xl px-3 py-2.5 outline-none transition-all"
+                style={{ color: 'var(--text-primary)' }}
+              />
+              <input
+                type="password"
+                value={apifyToken}
+                onChange={(e) => setApifyToken(e.target.value)}
+                placeholder="Apify API Token (apify_api_...)"
+                className="glass-input w-full text-[13px] rounded-xl px-3 py-2.5 outline-none transition-all"
+                style={{ color: 'var(--text-primary)' }}
+              />
+            </div>
+            
             {error && (
               <div className="flex items-center gap-2 text-[12px] text-red-500 mb-3">
                 <AlertCircle size={13} /> {error}
               </div>
             )}
-            <button onClick={saveKey} disabled={!apiKey.trim()}
-              className="btn-primary w-full py-2.5 rounded-xl text-[13px] font-semibold transition-colors disabled:opacity-40 mb-2">
-              Save & Activate Agent
+            
+            <button onClick={handleSyncData} disabled={!tiktokHandle || !apifyToken || dataLoading}
+              className="btn-secondary w-full flex justify-center items-center gap-2 py-2.5 rounded-xl text-[13px] font-semibold transition-colors disabled:opacity-40 mb-2">
+              {dataLoading ? <><Loader2 size={14} className="animate-spin" /> Scraping TikTok Data...</> : <><RefreshCw size={14} /> Fetch Live Data</>}
             </button>
+            
             {savedKey && (
               <button onClick={clearKey}
-                className="w-full py-2 text-[12px] transition-colors"
+                className="w-full py-2 mt-4 text-[12px] transition-colors"
                 style={{ color: 'var(--text-muted)' }}>
-                Clear saved key
+                Clear Context & Reset
               </button>
             )}
-            <p className="text-[11px] mt-4 text-center" style={{ color: 'var(--text-faint)' }}>
-              Get your key at{" "}
-              <a href="https://console.anthropic.com" target="_blank" rel="noreferrer"
-                className="underline" style={{ color: 'var(--text-muted)' }}>
-                console.anthropic.com
-              </a>
-            </p>
           </div>
         )}
 

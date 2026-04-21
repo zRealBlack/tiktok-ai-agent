@@ -4,6 +4,7 @@ import "./globals.css";
 import Sidebar from "@/components/Sidebar";
 import AIChatBox from "@/components/AIChatBox";
 import { ThemeProvider } from "@/components/ThemeProvider";
+import { DataProvider } from "@/components/DataContext";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -31,11 +32,13 @@ export default function RootLayout({
       </head>
       <body className="min-h-full flex antialiased">
         <ThemeProvider>
-          <Sidebar />
-          <main className="flex-1 flex flex-col overflow-auto ml-[220px] min-h-screen">
-            <div className="flex-1 page-fade">{children}</div>
-          </main>
-          <AIChatBox />
+          <DataProvider>
+            <Sidebar />
+            <main className="flex-1 flex flex-col overflow-auto ml-[220px] min-h-screen">
+              <div className="flex-1 page-fade">{children}</div>
+            </main>
+            <AIChatBox />
+          </DataProvider>
         </ThemeProvider>
       </body>
     </html>
