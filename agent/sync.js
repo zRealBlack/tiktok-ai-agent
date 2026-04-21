@@ -104,8 +104,8 @@ async function run() {
         : "Decent reach but engagement ratio could be improved.",
     suggestion:
       "Use the AI agent chat to rewrite the hook and caption for this video.",
-    videoUrl: v.webVideoUrl || v.videoUrl || "",
-    coverUrl: v.covers?.[0] || "",
+    videoUrl: v.webVideoUrl || "",
+    coverUrl: v.videoMeta?.coverUrl || v.videoMeta?.originalCoverUrl || "",
     hashtags_list: (v.hashtags || []).map((h) => h.name),
   }));
 
