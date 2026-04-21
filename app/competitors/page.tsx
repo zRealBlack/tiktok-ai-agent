@@ -1,12 +1,13 @@
 'use client';
 
 import { useState } from "react";
-import { mockCompetitors } from "@/lib/mockData";
 import CompetitorCard from "@/components/CompetitorCard";
 import { Plus, Search } from "lucide-react";
 import { dispatchAgentPrompt } from "@/components/AIChatBox";
+import { useData } from "@/components/DataContext";
 
 export default function CompetitorsPage() {
+  const { competitors } = useData();
   const [newHandle, setNewHandle] = useState("");
 
   const handleCustomSpy = () => {
@@ -59,7 +60,7 @@ export default function CompetitorsPage() {
         Tracked Accounts
       </h2>
       <div className="grid grid-cols-3 gap-5">
-        {mockCompetitors.map((c) => <CompetitorCard key={c.handle} competitor={c} />)}
+        {competitors.map((c: any) => <CompetitorCard key={c.handle} competitor={c} />)}
       </div>
     </div>
   );

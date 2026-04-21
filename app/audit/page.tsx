@@ -1,8 +1,10 @@
-import { mockVideos } from "@/lib/mockData";
+'use client';
+
 import VideoScoreCard from "@/components/VideoScoreCard";
 import { Video, TrendingUp, AlertTriangle, Star } from "lucide-react";
+import { useData } from "@/components/DataContext";
 
-const summaryItems = (videos: typeof mockVideos) => [
+const summaryItems = (videos: any[]) => [
   { icon: <Video size={18} style={{ color: 'var(--text-muted)' }} />, value: videos.length, label: "Videos Audited" },
   { icon: <TrendingUp size={18} className="text-blue-500" />, value: Math.round(videos.reduce((a, v) => a + v.score, 0) / videos.length), label: "Avg Score" },
   { icon: <Star size={18} className="text-emerald-500" />, value: videos.filter(v => v.score >= 75).length, label: "High Performers" },
@@ -10,13 +12,14 @@ const summaryItems = (videos: typeof mockVideos) => [
 ];
 
 export default function AuditPage() {
-  const items = summaryItems(mockVideos);
+  const { videos } = useData();
+  const items = summaryItems(videos);
   return (
     <div className="px-8 py-8 max-w-[1400px] mx-auto">
       <div className="mb-8">
         <h1 className="text-2xl font-bold mb-1" style={{ color: 'var(--text-primary)' }}>Content Audit</h1>
         <p className="text-sm" style={{ color: 'var(--text-muted)' }}>
-          AI-scored breakdown of your last {mockVideos.length} videos. Click &quot;Fix this with Agent&quot; for real Claude analysis.
+          AI-scored breakdown of your last {videos.length} videos. Click &quot;Fix this with Agent&quot; for real Claude analysis.
         </p>
       </div>
 
@@ -40,7 +43,7 @@ export default function AuditPage() {
       </div>
 
       <div className="grid grid-cols-2 xl:grid-cols-3 gap-5">
-        {[...mockVideos].sort((a, b) => b.score - a.score).map((video) => (
+        {[...videos].sort((a: any, b: any) => b.score - a.score).map((video: any) => (
           <VideoScoreCard key={video.id} video={video} />
         ))}
       </div>

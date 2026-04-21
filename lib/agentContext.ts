@@ -1,32 +1,25 @@
-import {
-  mockAccount,
-  mockVideos,
-  mockCompetitors,
-  mockTrends,
-  mockGenerations,
-} from "./mockData";
-
-export function buildAgentContext(): string {
+// Removing hardcoded mockData dependency. Context is dynamically built.
+export function buildAgentContext(data: any): string {
   return `
 === ACCOUNT OVERVIEW ===
-Username: ${mockAccount.username}
-Followers: ${mockAccount.followers.toLocaleString()} (+${mockAccount.followersGrowth.toLocaleString()} this week)
-Avg Engagement Rate: ${mockAccount.avgEngagement}% (${mockAccount.engagementChange > 0 ? "+" : ""}${mockAccount.engagementChange}% change)
-Weekly Views: ${mockAccount.weeklyViews.toLocaleString()} (${mockAccount.weeklyViewsChange}% change)
-Open Action Items: ${mockAccount.actionItems}
+Username: ${data.account.username}
+Followers: ${data.account.followers.toLocaleString()} (+${data.account.followersGrowth.toLocaleString()} this week)
+Avg Engagement Rate: ${data.account.avgEngagement}% (${data.account.engagementChange > 0 ? "+" : ""}${data.account.engagementChange}% change)
+Weekly Views: ${data.account.weeklyViews.toLocaleString()} (${data.account.weeklyViewsChange}% change)
+Open Action Items: ${data.account.actionItems}
 
 === AUDIENCE BREAKDOWN ===
-${mockGenerations.map((g) => `- ${g.label}: ${g.pct}%`).join("\n")}
+${data.generations.map((g: any) => `- ${g.label}: ${g.pct}%`).join("\n")}
 
-=== CONTENT AUDIT — ALL 10 VIDEOS (AI-SCORED) ===
-${mockVideos
+=== CONTENT AUDIT — ALL RECENT VIDEOS (AI-SCORED) ===
+${data.videos
   .map(
-    (v) => `
+    (v: any) => `
 VIDEO: "${v.title}" [Score: ${v.score}/100]
   Posted: ${v.posted}
   Views: ${v.views.toLocaleString()} | Likes: ${v.likes.toLocaleString()} | Comments: ${v.comments} | Shares: ${v.shares}
-  Engagement: ${((v.likes / v.views) * 100).toFixed(2)}%
-  Score Breakdown → Hook: ${v.hook} | Pacing: ${v.pacing} | Caption: ${v.caption} | Hashtags: ${v.hashtags} | CTA: ${v.cta}
+  Engagement: ${v.views > 0 ? ((v.likes / v.views) * 100).toFixed(2) : 0}%
+  Score Breakdown — Hook: ${v.hook} | Pacing: ${v.pacing} | Caption: ${v.caption} | Hashtags: ${v.hashtags} | CTA: ${v.cta}
   ⚠ Issue: ${v.issue}
   ✦ Fix: ${v.suggestion}
 `
@@ -34,12 +27,12 @@ VIDEO: "${v.title}" [Score: ${v.score}/100]
   .join("\n")}
 
 === TRENDING CONTENT (Top 5) ===
-${mockTrends.map((t) => `#${t.rank} "${t.name}" — Type: ${t.type} — Views: ${t.views}`).join("\n")}
+${data.trends.map((t: any) => `#${t.rank} "${t.name}" — Type: ${t.type} — Views: ${t.views}`).join("\n")}
 
 === COMPETITOR LANDSCAPE ===
-${mockCompetitors
+${data.competitors
   .map(
-    (c) => `
+    (c: any) => `
 ${c.handle}
   Followers: ${c.followers.toLocaleString()} | Status: ${c.status} | Posts/week: ${c.postsThisWeek}
   View Change: ${c.viewChange} | Avg Views: ${c.avgViews.toLocaleString()}
@@ -64,7 +57,7 @@ Your role is to:
 Rules:
 - Never give generic TikTok advice. Every recommendation must reference actual data from the account
 - When suggesting fixes, be ultra-specific (e.g., "cut the 8 seconds at 0:12 where pacing drops")
-- Format long responses with clear sections. Use → for action items
+- Format long responses with clear sections. Use ✦ for action items
 - If asked to rewrite a hook/caption, actually write it out fully — don't describe it
 - Be concise. No filler. No disclaimers.
 

@@ -1,16 +1,17 @@
 'use client';
 
 import { useState } from "react";
-import { mockIdeas } from "@/lib/mockData";
 import IdeaCard from "@/components/IdeaCard";
 import { Sparkles, Loader2, RefreshCw } from "lucide-react";
 import { dispatchAgentPrompt } from "@/components/AIChatBox";
+import { useData } from "@/components/DataContext";
 
 const NICHE_OPTIONS = ["Digital Agency", "Content Creator", "E-Commerce", "Fitness", "Food & Beverage", "Tech Startup"];
 const GEN_OPTIONS = ["Gen Z", "Millennials", "Gen X", "All Generations"];
 const GOAL_OPTIONS = ["Grow Followers", "Get Clients", "Build Authority", "Monetize Content", "Go Viral"];
 
 export default function IdeasPage() {
+  const { ideas } = useData();
   const [niche, setNiche] = useState("Digital Agency");
   const [generation, setGeneration] = useState("Gen Z");
   const [goal, setGoal] = useState("Grow Followers");
@@ -89,7 +90,7 @@ export default function IdeasPage() {
 
       <div className="flex items-center justify-between mb-5">
         <h2 className="text-[13px] font-bold" style={{ color: 'var(--text-secondary)' }}>
-          {mockIdeas.length} Baseline Briefs
+          {ideas.length} Baseline Briefs
           <span className="ml-2 text-[11px] font-normal" style={{ color: 'var(--text-faint)' }}>
             Click any idea to expand it with the agent
           </span>
@@ -97,7 +98,7 @@ export default function IdeasPage() {
       </div>
 
       <div className="grid grid-cols-2 xl:grid-cols-3 gap-5">
-        {mockIdeas.map((idea) => <IdeaCard key={idea.id} idea={idea} />)}
+        {ideas.map((idea: any) => <IdeaCard key={idea.id} idea={idea} />)}
       </div>
     </div>
   );
