@@ -1,20 +1,9 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { AGENT_SYSTEM_PROMPT } from "@/lib/agentContext";
-import { kvGet, kvSet } from "@/lib/kv";
 
 export const runtime = "nodejs";
 
-// GET /api/ideas — return cached ideas from KV
-export async function GET() {
-  try {
-    const ideas = await kvGet("tiktok_ideas");
-    return Response.json({ ideas: ideas || [] });
-  } catch (err: any) {
-    return Response.json({ ideas: [] });
-  }
-}
-
-// POST /api/ideas — generate new ideas via Claude and cache in KV
+// Only POST — generate new ideas via Claude (no GET/KV caching, done client-side with sessionStorage)
 export async function POST(req: Request) {
   try {
     const { videos, account } = await req.json();
@@ -59,15 +48,12 @@ ${videoSummary}
 
     const raw = resp.content[0].type === "text" ? resp.content[0].text : "";
     const match = raw.match(/\[[\s\S]*\]/);
-    if (!match) throw new Error("Invalid response format from Claude");
+    if (!match) throw new Error("Invalid JSON from Claude");
 
     const ideas = JSON.parse(match[0]).map((idea: any, i: number) => ({
       ...idea,
       id: `ai-${Date.now()}-${i}`,
     }));
-
-    // Cache in KV so they survive refreshes
-    await kvSet("tiktok_ideas", ideas);
 
     return Response.json({ ideas });
   } catch (err: any) {

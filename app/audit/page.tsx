@@ -9,8 +9,8 @@ export default function AuditPage() {
   const { videos } = useData();
   const [tab, setTab] = useState<"latest" | "pinned">("latest");
 
-  const latestVideos = videos.filter((v: any) => !v.isPinned);
-  const pinnedVideos = videos.filter((v: any) => v.isPinned);
+  const pinnedVideos = videos.filter((v: any) => v.isPinned === true);
+  const latestVideos = videos.filter((v: any) => v.isPinned !== true);
 
   const activeVideos = tab === "latest" ? latestVideos : pinnedVideos;
 
