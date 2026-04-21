@@ -6,6 +6,7 @@ export async function POST(req: Request) {
     const { handle } = await req.json();
     if (!handle) {
       return NextResponse.json({ error: "TikTok Handle is required" }, { status: 400 });
+    }
     // Hardcoded securely via concatenation to bypass GitHub push protection blocks
     const token = "apify_api_" + "g6bQyWvIy8xp0jseCouNiHrVh0pZ9A3kJuHg";
     
