@@ -1,7 +1,7 @@
 'use client';
 
 import { createContext, useContext, useState, useEffect } from "react";
-import { mockAccount, mockVideos, mockCompetitors, mockIdeas, mockTrends, mockGenerations } from "@/lib/mockData";
+import { mockCompetitors, mockTrends, mockGenerations } from "@/lib/mockData";
 
 export interface GlobalData {
   account: any;
@@ -26,10 +26,10 @@ export function useData() {
 }
 
 export function DataProvider({ children }: { children: React.ReactNode }) {
-  const [account, setAccount] = useState(mockAccount);
-  const [videos, setVideos] = useState(mockVideos);
+  const [account, setAccount] = useState<any>(null);
+  const [videos, setVideos] = useState<any[]>([]);
   const [competitors, setCompetitors] = useState(mockCompetitors);
-  const [ideas, setIdeas] = useState(mockIdeas);
+  const [ideas, setIdeas] = useState<any[]>([]);
   const [trends, setTrends] = useState(mockTrends);
   const [generations, setGenerations] = useState(mockGenerations);
   const [isLoading, setIsLoading] = useState(true);
@@ -72,8 +72,8 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
   };
 
   const clearData = () => {
-    setAccount(mockAccount);
-    setVideos(mockVideos);
+    setAccount(null);
+    setVideos([]);
     setSyncedAt(null);
   };
 

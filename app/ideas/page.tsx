@@ -6,7 +6,7 @@ import { Sparkles, Loader2, RefreshCw } from "lucide-react";
 import { useData } from "@/components/DataContext";
 
 export default function IdeasPage() {
-  const { account, videos } = useData();
+  const { account, videos, syncedAt } = useData();
   const [generatedIdeas, setGeneratedIdeas] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -31,13 +31,13 @@ export default function IdeasPage() {
     }
   };
 
-  // Auto-generate on mount once we have videos
+  // Auto-generate only when real KV data has loaded (syncedAt will be set)
   useEffect(() => {
-    if (videos.length > 0 && generatedIdeas.length === 0) {
+    if (syncedAt && videos.length > 0 && generatedIdeas.length === 0) {
       generateIdeas();
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [videos]);
+  }, [syncedAt]);
 
   return (
     <div className="px-8 py-8 max-w-[1400px] mx-auto">
@@ -52,7 +52,7 @@ export default function IdeasPage() {
         <h2 className="text-[13px] font-bold" style={{ color: 'var(--text-secondary)' }}>
           3 Baseline Briefs
           <span className="ml-2 text-[11px] font-normal" style={{ color: 'var(--text-faint)' }}>
-            مبنية على أحدث فيديوهات {account.username}
+            مبنية على أحدث فيديوهات {account?.username || '@rasayel_podcast'}
           </span>
         </h2>
         <button
@@ -70,7 +70,12 @@ export default function IdeasPage() {
         <div className="glass-panel rounded-xl p-4 mb-5 text-[13px] text-red-500">{error}</div>
       )}
 
-      {loading && generatedIdeas.length === 0 ? (
+      {!syncedAt && !loading && generatedIdeas.length === 0 ? (
+        <div className="flex flex-col items-center justify-center py-20 gap-4" style={{ color: 'var(--text-muted)' }}>
+          <Loader2 size={28} className="animate-spin" />
+          <p className="text-[13px]">جاري تحميل بيانات @rasayel_podcast...</p>
+        </div>
+      ) : loading && generatedIdeas.length === 0 ? (
         <div className="grid grid-cols-2 xl:grid-cols-3 gap-5">
           {[1, 2, 3].map((i) => (
             <div key={i} className="glass-panel rounded-2xl p-5 animate-pulse">
