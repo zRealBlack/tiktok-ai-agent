@@ -37,6 +37,8 @@ interface VideoData {
   soundIssue?: string;
   appearance?: number | null;
   appearanceIssue?: string | null;
+  filming?: number | null;
+  mood?: string;
 }
 
 const scoreColor = (v: number) =>
@@ -123,18 +125,23 @@ export default function VideoScoreCard({ video, compact = false }: { video: Vide
 
         {!compact && (
           <div className="space-y-2.5 mb-3">
-            {(['hook', 'pacing', 'caption', 'hashtags', 'cta', 'sound', 'appearance'] as const).map((key, i) => (
+            {(['hook', 'pacing', 'caption', 'hashtags', 'cta', 'sound', 'appearance', 'filming'] as const).map((key, i) => (
               <ScoreBar key={key} label={key.charAt(0).toUpperCase() + key.slice(1)} value={video[key] || 0} delay={i * 80} />
             ))}
           </div>
         )}
 
-        {/* Tone + Growth Potential row */}
-        {(video.tone || video.growthPotential !== undefined) && (
+        {/* Tone, Mood + Growth Potential row */}
+        {(video.tone || video.mood || video.growthPotential !== undefined) && (
           <div className="flex items-center gap-2 mb-3 flex-wrap">
             {video.tone && (
               <span className={`px-2 py-0.5 rounded-full text-[10px] font-semibold ${toneBadgeStyle(video.tone)}`}>
                 {video.tone}
+              </span>
+            )}
+            {video.mood && (
+              <span className="bg-purple-500/15 text-purple-400 px-2 py-0.5 rounded-full text-[10px] font-semibold">
+                {video.mood}
               </span>
             )}
             {video.retentionRisk && video.retentionRisk !== "Low" && (

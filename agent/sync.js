@@ -134,6 +134,13 @@ async function run() {
     const energyBase = Math.max(0, 100 - (duration / 1.5));
     const energy     = Math.min(100, Math.round(energyBase * 0.6 + Math.min(40, engRate * 4)));
 
+    // Mood — aesthetic feeling based on energy and tone
+    let mood;
+    if (energy > 80 && tone === "Entertaining / Likeable") mood = "Energetic";
+    else if (energy > 70)                                    mood = "Upbeat";
+    else if (tone === "Informative / Valuable" && energy < 60) mood = "Serious / Focus";
+    else                                                     mood = "Casual";
+
     // Retention risk: long videos with weak engagement signal early drop-off
     let retentionRisk;
     if ((duration > 120 && engRate < 3) || (duration > 90 && engRate < 2)) retentionRisk = "High";
@@ -246,6 +253,7 @@ async function run() {
       // Deep content analysis fields
       duration,
       tone,
+      mood,
       emotionalPull,
       energy,
       retentionRisk,
@@ -259,9 +267,10 @@ async function run() {
       soundName,
       soundIssue,
       soundSuggestion,
-      // Appearance: can't be auto-scored from metadata — agent evaluates on request
+      // Appearance & Filming: can't be auto-scored from metadata — agent evaluates on request
       appearance:     null,
       appearanceNote: "Visual assessment required — ask the agent to evaluate outfit, makeup, lighting, and background.",
+      filming:        null,
       isPinned:      v.isPinned || false,
       videoUrl:      v.webVideoUrl || "",
       coverUrl:      v.videoMeta?.coverUrl || v.videoMeta?.originalCoverUrl || "",
