@@ -46,7 +46,13 @@ async function kvGet(key: string) {
   });
   if (!res.ok) return null;
   const json = await res.json();
-  return json.result;
+  let raw = json.result;
+  if (!raw) return null;
+  // Handle multi-level string encoding (sync scripts double-stringify)
+  for (let i = 0; i < 5 && typeof raw === "string"; i++) {
+    try { raw = JSON.parse(raw); } catch { break; }
+  }
+  return typeof raw === "object" ? raw : null;
 }
 
 async function kvSet(key: string, value: string) {
@@ -63,10 +69,9 @@ async function kvSet(key: string, value: string) {
 
 // Always return full competitor list — KV data merged with empty seeds for missing ones
 async function getFullCompetitorList(): Promise<any[]> {
-  const raw = await kvGet("competitor_data");
+  const parsed = await kvGet("competitor_data");
   let kvCompetitors: any[] = [];
-  if (raw) {
-    const parsed = typeof raw === "string" ? JSON.parse(raw) : raw;
+  if (parsed) {
     kvCompetitors = parsed.competitors || [];
   }
 

@@ -1,16 +1,22 @@
 // Permanent client profile — always available even if KV is empty
+// Last-known stats are updated every time sync.js runs (as a safety fallback)
 const CLIENT_PROFILE = {
-  username:      "@rasayel_podcast",
-  realName:      "Rasayel Podcast",
-  niche:         "Arabic podcast / conversations / storytelling",
-  market:        "Egypt & Arab world",
-  studio:        "Mas Studio — professional 3-camera setup",
-  contentTypes:  "Podcast clips, guest highlights, behind-the-scenes, conversation excerpts",
-  targetAudience:"Egyptians 18–35, Gen Z & Millennials, Arabic content consumers",
-  goals:         "Grow TikTok presence, increase episode reach, convert views to podcast listeners",
-  knownStrengths:"High-quality studio production, authentic conversations, strong guests",
+  username:       "@rasayel_podcast",
+  realName:       "Rasayel Podcast",
+  niche:          "Arabic podcast / conversations / storytelling",
+  market:         "Egypt & Arab world",
+  studio:         "Mas Studio — professional 3-camera setup",
+  contentTypes:   "Podcast clips, guest highlights, behind-the-scenes, conversation excerpts",
+  targetAudience: "Egyptians 18–35, Gen Z & Millennials, Arabic content consumers",
+  goals:          "Grow TikTok presence, increase episode reach, convert views to podcast listeners",
+  knownStrengths: "High-quality studio production, authentic conversations, strong guests",
   knownWeaknesses:"TikTok clip hooks need improvement, hashtag strategy underdeveloped, CTAs need work",
-  agency:        "Managed by Mas Agency (Yassin Gaml)",
+  agency:         "Managed by Mas Agency (Yassin Gaml)",
+  // Last-known metrics (fallback if KV fails) — updated April 2026
+  lastKnownFollowers: 279600,
+  lastKnownAvgEngagement: 1.42,
+  lastKnownWeeklyViews: 3668480,
+  lastKnownTotalVideos: 30,
 };
 
 export function buildAgentContext(data: any): string {
@@ -20,9 +26,12 @@ export function buildAgentContext(data: any): string {
   const trends  = data.trends  || [];
   const comps   = data.competitors || [];
 
-  // Merge live KV account data with permanent client profile fallback
+  // Use live KV data if available, otherwise fall back to last-known stats
+  const followers = account.followers || CLIENT_PROFILE.lastKnownFollowers;
+  const avgEngagement = account.avgEngagement || CLIENT_PROFILE.lastKnownAvgEngagement;
+  const weeklyViews = account.weeklyViews || CLIENT_PROFILE.lastKnownWeeklyViews;
+  const totalVideos = videos.length || CLIENT_PROFILE.lastKnownTotalVideos;
   const clientUsername = account.username || CLIENT_PROFILE.username;
-  const clientFollowers = account.followers || 0;
 
   return `
 === PERMANENT CLIENT MEMORY (always remember this) ===
@@ -36,15 +45,14 @@ Goals: ${CLIENT_PROFILE.goals}
 Known Strengths: ${CLIENT_PROFILE.knownStrengths}
 Known Weaknesses: ${CLIENT_PROFILE.knownWeaknesses}
 Managed by: ${CLIENT_PROFILE.agency}
-`
-  + `
-=== LIVE ACCOUNT DATA (from KV sync — updated when agent runs node agent/sync.js) ===
+
+=== ACCOUNT DATA (${account.followers ? "LIVE from KV" : "last-known fallback"}) ===
 Username: ${clientUsername}
-Followers: ${clientFollowers > 0 ? clientFollowers.toLocaleString() + " (+" + (account.followersGrowth || 0).toLocaleString() + " this week)" : "Live sync pending — use permanent memory above for strategy"}
-Avg Engagement Rate: ${account.avgEngagement ? account.avgEngagement + "% (" + (account.engagementChange > 0 ? "+" : "") + (account.engagementChange || 0) + "% change)" : "Live sync pending"}
-Weekly Views: ${account.weeklyViews ? account.weeklyViews.toLocaleString() + " (" + (account.weeklyViewsChange || 0) + "% change)" : "Live sync pending"}
+Followers: ${followers.toLocaleString()}${account.followersGrowth ? " (+" + account.followersGrowth.toLocaleString() + " this week)" : ""}
+Avg Engagement Rate: ${avgEngagement}%${account.engagementChange ? " (" + (account.engagementChange > 0 ? "+" : "") + account.engagementChange + "% change)" : ""}
+Weekly Views: ${weeklyViews.toLocaleString()}${account.weeklyViewsChange ? " (" + account.weeklyViewsChange + "% change)" : ""}
+Total Videos Analyzed: ${totalVideos}
 Open Action Items: ${account.actionItems || 0}
-Note: لو بيانات الأكاونت مش متزامنة، استخدمي الذاكرة الدائمة في الأعلى عشان تعرفي العميل.
 
 === AUDIENCE BREAKDOWN ===
 ${gens.map((g: any) => `- ${g.label}: ${g.pct}%`).join("\n") || "No data"}
