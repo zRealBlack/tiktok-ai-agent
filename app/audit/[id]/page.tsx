@@ -61,10 +61,11 @@ export default function VideoDetailPage() {
     const soundInfo  = video.sound !== undefined ? ` | Sound: ${video.sound}/100 (${video.soundType || "?"})` : "";
     const appInfo    = video.appearance !== null && video.appearance !== undefined ? ` | Appearance: ${video.appearance}/100` : "";
     const filmInfo   = video.filming !== null && video.filming !== undefined ? ` | Filming: ${video.filming}/100` : "";
+    const contentInfo= video.content !== undefined ? ` | Content: ${video.content}/100` : "";
     const moodInfo   = video.mood ? ` | Mood: ${video.mood}` : "";
     const flagsInfo  = video.weaknessFlags?.length ? ` | Weakness Flags: ${video.weaknessFlags.join(", ")}` : "";
     dispatchAgentPrompt(
-      `شوف الصورة دي وحلل الفيديو ده بالكامل واصلحه: "${video.title}" — سكور ${video.score}/100${toneInfo}${moodInfo}${riskInfo}${energyInfo}${pullInfo}${soundInfo}${appInfo}${filmInfo}${flagsInfo}. المشكلة: ${video.issue}. حلل الفيديو من الأول للآخر (هوك + منتصف + نهاية + صوت + مظهر + إضاءة + كاميرات)، واديني: 1) اعادة كتابة الهوك 2) كابشن أحسن من 100 حرف 3) 3 هاشتاقات مناسبة 4) تقييم الصوت والموسيقى 5) تقييم المظهر والإضاءة من الصورة (outfit + makeup + درجة حرارة الإضاءة + خلفية) 6) تقييم زوايا التصوير وحركة الكاميرا 7) ٣ تعديلات تحريرية تزيد المشاهدات.`,
+      `شوف الصورة دي وحلل الفيديو ده بالكامل واصلحه: "${video.title}" — سكور ${video.score}/100${toneInfo}${moodInfo}${riskInfo}${energyInfo}${pullInfo}${soundInfo}${appInfo}${filmInfo}${contentInfo}${flagsInfo}. المشكلة: ${video.issue}. حلل الفيديو من الأول للآخر (هوك + منتصف + نهاية + صوت + مظهر + إضاءة + كاميرات)، واديني: 1) اعادة كتابة الهوك 2) كابشن أحسن من 100 حرف 3) 3 هاشتاقات مناسبة 4) تقييم الصوت والموسيقى 5) تقييم المظهر والإضاءة من الصورة (outfit + makeup + درجة حرارة الإضاءة + خلفية) 6) تقييم زوايا التصوير وحركة الكاميرا 7) ٣ تعديلات تحريرية تزيد المشاهدات.`,
       video.coverUrl
     );
     router.back();
@@ -170,6 +171,7 @@ export default function VideoDetailPage() {
                 ["Sound",      video.sound || 0],
                 ["Appearance", video.appearance || 0],
                 ["Filming",    video.filming || 0],
+                ["Content",    video.content || 0],
               ] as [string, number][]).map(([label, val], i) => (
                 <ScoreBar key={label} label={label} value={val} delay={i * 80} />
               ))}

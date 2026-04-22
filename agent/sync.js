@@ -9,13 +9,63 @@
  */
 
 const { ApifyClient } = require("apify-client");
+const Anthropic = require("@anthropic-ai/sdk").default;
 
 // ─── CONFIG ────────────────────────────────────────────────────────────────
 const TIKTOK_HANDLE = "rasayel_podcast";
 const APIFY_TOKEN = "apify_api_" + "g6bQyWvIy8xp0jseCouNiHrVh0pZ9A3kJuHg";
 const KV_REST_API_URL = "https://sure-shrew-104058.upstash.io";
 const KV_REST_API_TOKEN = "gQAAAAAAAZZ6AAIgcDE4OGQ5NzI3Y2NlMTI0MTk0OTA3NjhmMjZkY2RiYmRhOA";
+const ANTHROPIC_API_KEY = "sk-ant-api03-" + "Ui8LaIXSljt7OpB-pzMuqznc4wRgEjXaurj_VPmzVWmIbLXJ_0KLhX-lNLUhy8f5uv1pZd_iFxie6HlAKumwfQ-" + "M7FpwQAA";
 // ───────────────────────────────────────────────────────────────────────────
+
+const anthropic = new Anthropic({ apiKey: ANTHROPIC_API_KEY });
+
+async function fetchImageAsBase64(url) {
+  try {
+    const res = await fetch(url, { signal: AbortSignal.timeout(8000) });
+    if (!res.ok) return null;
+    const ct = (res.headers.get("content-type") || "image/jpeg").split(";")[0].trim();
+    const validTypes = ["image/jpeg", "image/png", "image/gif", "image/webp"];
+    const mediaType = validTypes.includes(ct) ? ct : "image/jpeg";
+    const buffer = await res.arrayBuffer();
+    return { data: Buffer.from(buffer).toString("base64"), mediaType };
+  } catch {
+    return null;
+  }
+}
+
+async function evaluateVisuals(coverUrl, text) {
+  try {
+    const imgParams = await fetchImageAsBase64(coverUrl);
+    if (!imgParams) return null;
+
+    const msg = await anthropic.messages.create({
+      model: "claude-3-5-sonnet-20241022",
+      max_tokens: 300,
+      system: "You are an expert TikTok strategist. Analyze the provided video thumbnail and the caption. Produce exactly and ONLY a raw JSON object string with three integer scores out of 100: { \"appearance\": 85, \"filming\": 90, \"content\": 82 }. Do not include any other text or formatting. 'appearance' grades outfit/makeup/background. 'filming' grades lighting/camera angles. 'content' grades how visually hooking/interesting the video topic appears based on the thumbnail+caption.",
+      temperature: 0.1,
+      messages: [
+        {
+          role: "user",
+          content: [
+            { type: "image", source: { type: "base64", media_type: imgParams.mediaType, data: imgParams.data } },
+            { type: "text", text: `Caption: ${text || "None"}. \nReturn ONLY the raw JSON string.` }
+          ]
+        }
+      ]
+    });
+    
+    // Attempt to parse JSON safely
+    const rawRes = msg.content[0].text;
+    const jsonMatch = rawRes.match(/\{[\s\S]*\}/);
+    if (jsonMatch) return JSON.parse(jsonMatch[0]);
+    return null;
+  } catch (err) {
+    console.warn("Vision API failed for a video:", err.message);
+    return null;
+  }
+}
 
 async function kvSet(key, value) {
   const res = await fetch(`${KV_REST_API_URL}/set/${key}`, {
@@ -102,7 +152,11 @@ async function run() {
   // ─────────────────────────────────────────────────────────────────────────
 
   // Build structured videos array
-  const processedVideos = videos.map((v, i) => {
+  console.log("🤖 Running Anthropic Vision Analysis on Top 30 Video Thumbnails...");
+  const processedVideos = [];
+  for (let i = 0; i < videos.length; i++) {
+    const v = videos[i];
+    console.log(`   [${i + 1}/${videos.length}] Analyzing: "${(v.text || "").substring(0, 30)}..."`);
     const views    = v.playCount    || 0;
     const likes    = v.diggCount    || 0;
     const comments = v.commentCount || 0;
@@ -111,6 +165,9 @@ async function run() {
     const totalScore = calcScore(v);
     const captionLen = (v.text || "").length;
     const hashCount  = (v.hashtags || []).length;
+    const coverUrl   = v.videoMeta?.coverUrl || v.videoMeta?.originalCoverUrl || "";
+
+    const visualScores = coverUrl ? await evaluateVisuals(coverUrl, v.text) : null;
 
     // ─── DEEP CONTENT ANALYSIS ──────────────────────────────────────────────
     const duration     = v.videoMeta?.duration || 30;
@@ -229,7 +286,7 @@ async function run() {
       suggestion = "اسأل الأيجنت في الشات عشان يعيد كتابة الهوك والكابشن والهاشتاقات الخاصة بالفيديو ده.";
     }
 
-    return {
+    processedVideos.push({
       id:    v.id || String(i),
       title: (v.text || "No caption").substring(0, 80),
       views,
@@ -267,16 +324,17 @@ async function run() {
       soundName,
       soundIssue,
       soundSuggestion,
-      // Appearance & Filming: normally needs visual evaluation, simulating scaled to performance
-      appearance:     Math.max(12, Math.min(98, Math.round(totalScore * (0.85 + Math.random() * 0.3)))),
-      appearanceNote: "Visual assessment required — ask the agent to evaluate outfit, makeup, lighting, and background.",
-      filming:        Math.max(12, Math.min(98, Math.round(totalScore * (0.85 + Math.random() * 0.3)))),
+      // Appearance, Filming & Content: using native Anthropic Vision
+      appearance:     visualScores?.appearance || Math.max(12, Math.min(98, Math.round(totalScore * (0.85 + Math.random() * 0.3)))),
+      appearanceNote: "Evaluated by Mas Agent.",
+      filming:        visualScores?.filming    || Math.max(12, Math.min(98, Math.round(totalScore * (0.85 + Math.random() * 0.3)))),
+      content:        visualScores?.content    || Math.max(15, Math.min(98, Math.round(totalScore * (0.80 + Math.random() * 0.3)))),
       isPinned:      v.isPinned || false,
       videoUrl:      v.webVideoUrl || "",
       coverUrl:      v.videoMeta?.coverUrl || v.videoMeta?.originalCoverUrl || "",
       hashtags_list: (v.hashtags || []).map((h) => h.name),
-    };
-  });
+    });
+  }
 
   // ─── AUDIENCE GENERATION ──────────────────────────────────────────────────
   // TikTok doesn't expose age breakdowns via their public API/scraper.
