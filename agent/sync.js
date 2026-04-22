@@ -118,44 +118,8 @@ async function fetchImageAsBase64(url) {
   } catch { return null; }
 }
 
-// Analyze appearance + filming from the cover image
-async function analyzeVisuals(coverUrl) {
-  if (!coverUrl) return null;
-  const img = await fetchImageAsBase64(coverUrl);
-  if (!img) return null;
-  try {
-    const msg = await anthropic.messages.create({
-      model: "claude-3-5-sonnet-20241022",
-      max_tokens: 400,
-      temperature: 0.1,
-      system: `You are an expert TikTok production analyst reviewing a video cover/thumbnail image.
-Return ONLY a raw JSON object:
-{
-  "appearance": <0-100: outfit color contrast vs background, grooming, makeup (matte vs shiny), background cleanliness>,
-  "filming": <0-100: lighting quality, color temperature (warm/cool/neutral), shadows, camera framing>,
-  "appearanceIssue": <one specific outfit/makeup/background problem, or null if fine>,
-  "filmingIssue": <one specific lighting/camera problem — include color temperature in Kelvin if relevant, or null if fine>,
-  "mood": <"Energetic"|"Upbeat"|"Serious/Focus"|"Casual"|"Emotional"|"Neutral">
-}`,
-      messages: [{
-        role: "user",
-        content: [
-          { type: "image", source: { type: "base64", media_type: img.mediaType, data: img.data } },
-          { type: "text", text: "Analyze the appearance and filming quality. Return only the JSON." },
-        ],
-      }],
-    });
-    const match = msg.content[0].text.match(/\{[\s\S]*\}/);
-    return match ? JSON.parse(match[0]) : null;
-  } catch { return null; }
-}
-
-// Analyze content: hook/pacing/cta/tone/mood/issue/suggestion from caption + metadata
-async function analyzeContent(text, hashtags, duration, musicMeta, views, likes, comments, shares) {
-  // ── PASS 1: try real video frames via ffmpeg (when download URL becomes available) ─
-  // (Currently no download URL from Apify — kept for future use)
-
-  // ── PASS 2: Claude reads the actual Arabic caption + performance data ──────
+// Unified video analysis: Sarie scores everything in one pass (content + visuals)
+async function analyzeVideo(text, hashtags, duration, musicMeta, views, likes, comments, shares, coverUrl) {
   const hashtagStr = (hashtags || []).map(h => "#" + (h.name || h)).join(" ");
   const soundLabel = !musicMeta?.musicName ? "No Audio"
     : musicMeta?.musicOriginal             ? "Original Sound"
@@ -163,40 +127,56 @@ async function analyzeContent(text, hashtags, duration, musicMeta, views, likes,
   const engRate   = views > 0 ? (((likes + comments) / views) * 100).toFixed(2) : "0";
   const shareRate = views > 0 ? ((shares / views) * 100).toFixed(2) : "0";
 
-  try {
-    const msg = await anthropic.messages.create({
-      model: "claude-sonnet-4-6",
-      max_tokens: 700,
-      temperature: 0.1,
-      system: `You are an expert TikTok content strategist for Arabic-language Egyptian/Arab audiences.
-Analyze this video based on its caption, metadata, and performance.
+  const img = coverUrl ? await fetchImageAsBase64(coverUrl) : null;
+
+  const systemPrompt = `You are Sarie, an expert TikTok content strategist and production analyst for Arabic-language Egyptian/Arab accounts.
+You analyze TikTok videos — content quality, visual presentation, and filming — and give comprehensive scores.
 
 Return ONLY a raw JSON object:
 {
-  "hook": <0-100: is the opening caption a strong scroll-stopper? Curiosity, tension, emotional trigger?>,
-  "pacing": <0-100: estimate from duration — short emotional clips score higher>,
-  "cta": <0-100: does the caption include a CTA? 'شوف الحلقة' / 'تابعنا' / episode links = high>,
+  "hook": <0-100: scroll-stopping power of the opening caption — curiosity, tension, emotional trigger>,
+  "pacing": <0-100: from duration — short emotional clips (15-30s) score higher, slow long-form lower>,
+  "cta": <0-100: does caption/thumbnail include a CTA? 'شوف الحلقة' / 'تابعنا' / episode link = high>,
   "tone": <"Emotional / Shareable"|"Controversial / Discussion"|"Entertaining / Likeable"|"Flat / Boring"|"Informative / Valuable"|"Neutral">,
   "mood": <"Energetic"|"Upbeat"|"Serious/Focus"|"Casual"|"Emotional"|"Neutral">,
-  "issue": <the single most impactful content problem — specific and actionable, in English>,
-  "suggestion": <one specific fix for the issue above, in English>
-}`,
-      messages: [{
-        role: "user",
-        content: `Caption: "${(text || "No caption").substring(0, 400)}"
+  "appearance": <0-100: outfit color contrast vs background, grooming, visual polish — from the thumbnail image>,
+  "filming": <0-100: lighting quality, color temperature, shadow control, camera framing — from the thumbnail image>,
+  "appearanceIssue": <one specific outfit/makeup/background problem, or null if looks good>,
+  "filmingIssue": <one specific lighting/camera/framing problem — include Kelvin temp if relevant, or null if looks good>,
+  "issue": <the single most impactful content problem — specific, actionable, in English>,
+  "suggestion": <one specific fix for the main issue above, in English>,
+  "analysisReport": <2-3 sentences summarizing Sarie's full verdict on this video — what works, what's broken, and the #1 priority fix — written as Sarie's memorized opinion she can reference later>
+}`;
+
+  const textContent = `Caption: "${(text || "No caption").substring(0, 400)}"
 Hashtags: ${hashtagStr || "None"}
 Duration: ${duration}s | Sound: ${soundLabel} — "${musicMeta?.musicName || "Unknown"}"
 Views: ${views.toLocaleString()} | Likes: ${likes.toLocaleString()} | Comments: ${comments} | Shares: ${shares}
 Engagement: ${engRate}% | Share rate: ${shareRate}%
 
-Return the JSON analysis.`,
-      }],
+${img ? "Analyze the thumbnail image for appearance and filming quality alongside the content data." : "No thumbnail available — score appearance and filming as null."}
+Return only the JSON.`;
+
+  const userContent = img
+    ? [
+        { type: "image", source: { type: "base64", media_type: img.mediaType, data: img.data } },
+        { type: "text", text: textContent },
+      ]
+    : textContent;
+
+  try {
+    const msg = await anthropic.messages.create({
+      model: "claude-sonnet-4-6",
+      max_tokens: 1000,
+      temperature: 0.1,
+      system: systemPrompt,
+      messages: [{ role: "user", content: userContent }],
     });
     const match = msg.content[0].text.match(/\{[\s\S]*\}/);
     if (match) return JSON.parse(match[0]);
     return null;
   } catch (err) {
-    console.warn(`content analysis failed: ${err.message}`);
+    console.warn(`video analysis failed: ${err.message}`);
     return null;
   }
 }
@@ -288,14 +268,10 @@ async function run() {
     const hashCount  = (v.hashtags  || []).length;
     const duration   = v.videoMeta?.duration || 30;
 
-    // ─── CLAUDE PASS 1: content analysis from caption + metadata ─────────
-    process.stdout.write("    🤖 Content analysis... ");
-    const content = await analyzeContent(v.text, v.hashtags, duration, v.musicMeta, views, likes, comments, shares);
-
-    // ─── CLAUDE PASS 2: visual analysis from cover image ──────────────────
+    // ─── SARIE: unified video analysis (content + visuals in one pass) ───
     const coverUrl_ = v.videoMeta?.coverUrl || v.videoMeta?.originalCoverUrl || "";
-    process.stdout.write("    🎥 Visual analysis... ");
-    const visuals = await analyzeVisuals(coverUrl_);
+    process.stdout.write("    🤖 Sarie analyzing... ");
+    const analysis = await analyzeVideo(v.text, v.hashtags, duration, v.musicMeta, views, likes, comments, shares, coverUrl_);
     // ─────────────────────────────────────────────────────────────────────
 
     // ─── ENGAGEMENT METRICS (things Claude can't see or hear) ─────────────
@@ -378,7 +354,7 @@ async function run() {
 
     // ─── OVERALL SCORE: 40% reach performance + 60% Claude quality ───────
     const engScore   = calcEngScore(v);
-    const claudeNums = [content?.hook, content?.pacing, content?.cta, visuals?.appearance, visuals?.filming]
+    const claudeNums = [analysis?.hook, analysis?.pacing, analysis?.cta, analysis?.appearance, analysis?.filming]
       .filter(s => typeof s === "number" && !isNaN(s));
     const claudeAvg  = claudeNums.length > 0
       ? Math.round(claudeNums.reduce((a, b) => a + b, 0) / claudeNums.length)
@@ -399,19 +375,19 @@ async function run() {
         ? new Date(v.createTime * 1000).toISOString().split("T")[0]
         : new Date().toISOString().split("T")[0],
       score: totalScore,
-      // From Claude reading the caption & metadata
-      hook:       content?.hook       ?? null,
-      pacing:     content?.pacing     ?? null,
-      cta:        content?.cta        ?? null,
-      tone:       content?.tone       ?? null,
-      mood:       visuals?.mood       ?? content?.mood       ?? null,
-      issue:      content?.issue      ?? "Analysis unavailable.",
-      suggestion: content?.suggestion ?? "اسأل الأيجنت في الشات.",
-      // From Claude analyzing the cover image
-      appearance:      visuals?.appearance      ?? null,
-      appearanceIssue: visuals?.appearanceIssue ?? null,
-      filming:         visuals?.filming         ?? null,
-      filmingIssue:    visuals?.filmingIssue    ?? null,
+      // From Sarie's unified analysis
+      hook:            analysis?.hook            ?? null,
+      pacing:          analysis?.pacing          ?? null,
+      cta:             analysis?.cta             ?? null,
+      tone:            analysis?.tone            ?? null,
+      mood:            analysis?.mood            ?? null,
+      issue:           analysis?.issue           ?? "Analysis unavailable.",
+      suggestion:      analysis?.suggestion      ?? "اسأل الأيجنت في الشات.",
+      appearance:      analysis?.appearance      ?? null,
+      appearanceIssue: analysis?.appearanceIssue ?? null,
+      filming:         analysis?.filming         ?? null,
+      filmingIssue:    analysis?.filmingIssue    ?? null,
+      analysisReport:  analysis?.analysisReport  ?? null,
       content:         null,
       // Text-based (Claude can't read captions, he sees frames only)
       caption:  captionScore,

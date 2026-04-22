@@ -4,7 +4,7 @@ import { useState, useRef, useEffect, useCallback } from "react";
 import {
   MessageSquare, X, Send, Bot, User, Loader2,
   ChevronDown, Trash2, AlertCircle, Maximize2, Minimize2,
-  Copy, Check, MoreVertical
+  Copy, Check, MoreVertical, Pencil, Share
 } from "lucide-react";
 import { useData } from "@/components/DataContext";
 import MarkdownMessage from "@/components/MarkdownMessage";
@@ -36,6 +36,8 @@ export default function AIChatBox() {
   const abortRef = useRef<AbortController | null>(null);
   const [activeMenu, setActiveMenu] = useState<number | null>(null);
   const [copiedId, setCopiedId] = useState<number | null>(null);
+  const [editingIndex, setEditingIndex] = useState<number | null>(null);
+  const [editValue, setEditValue] = useState("");
 
   const handleScroll = useCallback(() => {
     if (!scrollRef.current) return;
@@ -86,14 +88,14 @@ export default function AIChatBox() {
     }
   }, [messages, isUserScrolled, streaming]);
 
-  const sendMessage = useCallback(async (text?: string, imageUrl?: string) => {
+  const sendMessage = useCallback(async (text?: string, imageUrl?: string, baseMessages?: Message[]) => {
     const msgText = (text ?? input).trim();
     if (!msgText || streaming) return;
     if (!text) setInput("");
     setError(null);
 
     const userMsg: Message = { role: "user", content: msgText, imageUrl };
-    const newMessages = [...messages, userMsg];
+    const newMessages = [...(baseMessages ?? messages), userMsg];
     setMessages(newMessages);
     setStreaming(true);
     setMessages((prev) => [...prev, { role: "assistant", content: "", streaming: true }]);
@@ -170,6 +172,39 @@ export default function AIChatBox() {
       setCopiedId(index);
       setTimeout(() => setCopiedId(null), 2000);
     });
+  };
+
+  const handleEdit = (index: number, content: string) => {
+    setEditingIndex(index);
+    setEditValue(content);
+  };
+
+  const submitEdit = async (index: number) => {
+    if (!editValue.trim() || streaming) return;
+    
+    // Discard all messages after the one being edited
+    const truncated = messages.slice(0, index);
+    const updatedUserMsg: Message = { ...messages[index], content: editValue.trim() };
+    
+    setEditingIndex(null);
+    setMessages(truncated); // This will then be updated by sendMessage to include the new user msg
+    sendMessage(editValue.trim(), updatedUserMsg.imageUrl, truncated);
+  };
+
+  const handleShare = async (content: string) => {
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: "محطة ساري للذكاء الاصطناعي",
+          text: content,
+          url: window.location.href,
+        });
+      } catch (err) {
+        if ((err as Error).name !== "AbortError") copyToClipboard(content, -1);
+      }
+    } else {
+      copyToClipboard(content, -1);
+    }
   };
 
   // Close menu on click outside
@@ -254,64 +289,117 @@ export default function AIChatBox() {
                 </div>
               )}
               <div className="relative group max-w-[82%]">
-                <div
-                  className={`px-3 py-2.5 rounded-xl text-[13px] leading-relaxed whitespace-pre-wrap ${
-                    m.role === "user" ? "rounded-br-none" : "rounded-bl-none"
-                  }`}
-                  style={m.role === "user"
-                    ? { background: 'var(--glass-elevated)', color: 'var(--text-primary)', border: '1px solid var(--glass-elevated-border)' }
-                    : { background: 'var(--glass-elevated)', color: 'var(--text-secondary)', border: '1px solid var(--glass-elevated-border)' }}
-                >
-                  {m.role === "user" && m.imageUrl && (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img src={m.imageUrl} alt="Video cover" className="w-full rounded-lg mb-2 object-cover" style={{ maxHeight: '80px' }} />
-                  )}
-                  {m.role === "assistant" ? (
-                    <MarkdownMessage content={m.content} />
-                  ) : (
-                    m.content
-                  )}
-                  {m.streaming && (
-                    <span className="inline-block w-1.5 h-4 ml-0.5 animate-pulse rounded-sm align-middle"
-                      style={{ background: 'var(--text-muted)' }} />
-                  )}
-                </div>
-
-                {/* Message Actions */}
-                <div className={`absolute top-0 flex gap-1 transition-all duration-200 opacity-0 group-hover:opacity-100 ${
-                  m.role === "user" ? "right-full mr-2" : "left-full ml-2"
-                }`}>
-                  <button
-                    onClick={() => copyToClipboard(m.content, i)}
-                    className="w-7 h-7 rounded-lg flex items-center justify-center glass-elevated hover:bg-white/5"
-                    title="نسخ النص"
-                  >
-                    {copiedId === i ? <Check size={12} className="text-emerald-500" /> : <Copy size={12} style={{ color: 'var(--text-muted)' }} />}
-                  </button>
-                  <div className="relative">
-                    <button
-                      onClick={(e) => { e.stopPropagation(); setActiveMenu(activeMenu === i ? null : i); }}
-                      className="w-7 h-7 rounded-lg flex items-center justify-center glass-elevated hover:bg-white/5"
-                      title="المزيد"
-                    >
-                      <MoreVertical size={13} style={{ color: 'var(--text-muted)' }} />
-                    </button>
-                    {activeMenu === i && (
-                      <div 
-                        className="absolute bottom-full mb-2 left-0 z-[60] min-w-[100px] glass-chat rounded-xl border p-1 shadow-2xl animate-in fade-in zoom-in-95 duration-100"
-                        style={{ borderColor: 'var(--glass-border)' }}
+                {editingIndex === i ? (
+                  <div className="flex flex-col gap-2 w-full min-w-[280px]">
+                    <textarea
+                      value={editValue}
+                      onChange={(e) => setEditValue(e.target.value)}
+                      className="w-full bg-transparent text-[13px] p-3 rounded-xl border outline-none focus:ring-1 focus:ring-purple-500/50"
+                      style={{ 
+                        background: 'var(--glass-elevated)', 
+                        color: 'var(--text-primary)', 
+                        borderColor: 'var(--glass-border)',
+                        minHeight: '80px'
+                      }}
+                      autoFocus
+                    />
+                    <div className="flex justify-end gap-2">
+                      <button 
+                        onClick={() => setEditingIndex(null)}
+                        className="px-3 py-1.5 rounded-lg text-[11px] font-medium transition-colors hover:opacity-80"
+                        style={{ color: 'var(--text-muted)' }}
                       >
-                        <button
-                          onClick={() => deleteMessage(i)}
-                          className="w-full flex items-center gap-2 px-3 py-2 text-[11px] font-medium text-red-500 hover:bg-red-500/10 rounded-lg transition-colors"
-                        >
-                          <Trash2 size={12} />
-                          حذف الرسالة
-                        </button>
-                      </div>
-                    )}
+                        Cancel
+                      </button>
+                      <button 
+                        onClick={() => submitEdit(i)}
+                        className="px-3 py-1.5 rounded-lg text-[11px] font-medium bg-purple-600 text-white transition-all hover:bg-purple-500"
+                      >
+                        Send
+                      </button>
+                    </div>
                   </div>
-                </div>
+                ) : (
+                  <>
+                    <div
+                      className={`px-3 py-2.5 rounded-xl text-[13px] leading-relaxed whitespace-pre-wrap ${
+                        m.role === "user" ? "rounded-br-none" : "rounded-bl-none"
+                      }`}
+                      style={m.role === "user"
+                        ? { background: 'var(--glass-elevated)', color: 'var(--text-primary)', border: '1px solid var(--glass-elevated-border)' }
+                        : { background: 'var(--glass-elevated)', color: 'var(--text-secondary)', border: '1px solid var(--glass-elevated-border)' }}
+                    >
+                      {m.role === "user" && m.imageUrl && (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img src={m.imageUrl} alt="Video cover" className="w-full rounded-lg mb-2 object-cover" style={{ maxHeight: '80px' }} />
+                      )}
+                      {m.role === "assistant" ? (
+                        <MarkdownMessage content={m.content} />
+                      ) : (
+                        m.content
+                      )}
+                      {m.streaming && (
+                        <span className="inline-block w-1.5 h-4 ml-0.5 animate-pulse rounded-sm align-middle"
+                          style={{ background: 'var(--text-muted)' }} />
+                      )}
+                    </div>
+
+                    {/* Action Row Under Message */}
+                    <div className="flex items-center gap-4 mt-2 px-1" dir="ltr">
+                      {m.role === "user" && !m.streaming && (
+                        <button
+                          onClick={() => handleEdit(i, m.content)}
+                          className="flex items-center gap-1.5 text-[11px] transition-colors hover:opacity-80"
+                          style={{ color: 'var(--text-muted)' }}
+                        >
+                          <Pencil size={12} />
+                          <span>Edit</span>
+                        </button>
+                      )}
+                      <button
+                        onClick={() => copyToClipboard(m.content, i)}
+                        className="flex items-center gap-1.5 text-[11px] transition-colors hover:opacity-80"
+                        style={{ color: 'var(--text-muted)' }}
+                      >
+                        {copiedId === i ? <Check size={12} className="text-emerald-500" /> : <Copy size={12} />}
+                        <span>{copiedId === i ? "Copied" : "Copy"}</span>
+                      </button>
+                      <button
+                        onClick={() => handleShare(m.content)}
+                        className="flex items-center gap-1.5 text-[11px] transition-colors hover:opacity-80"
+                        style={{ color: 'var(--text-muted)' }}
+                      >
+                        <Share size={12} />
+                        <span>Share</span>
+                      </button>
+                      
+                      {/* More options menu button (retained but moved to row) */}
+                      <div className="relative ml-auto">
+                        <button
+                          onClick={(e) => { e.stopPropagation(); setActiveMenu(activeMenu === i ? null : i); }}
+                          className="w-6 h-6 rounded-lg flex items-center justify-center transition-colors hover:bg-white/5"
+                          title="المزيد"
+                        >
+                          <MoreVertical size={13} style={{ color: 'var(--text-muted)' }} />
+                        </button>
+                        {activeMenu === i && (
+                          <div 
+                            className="absolute bottom-full mb-2 right-0 z-[60] min-w-[120px] glass-chat rounded-xl border p-1 shadow-2xl animate-in fade-in zoom-in-95 duration-100"
+                            style={{ borderColor: 'var(--glass-border)', direction: 'rtl' }}
+                          >
+                            <button
+                              onClick={() => deleteMessage(i)}
+                              className="w-full flex items-center gap-2 px-3 py-2 text-[11px] font-medium text-red-500 hover:bg-red-500/10 rounded-lg transition-colors"
+                            >
+                              <Trash2 size={12} />
+                              حذف الرسالة
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </>
+                )}
               </div>
               {m.role === "user" && (
                 <div className="w-6 h-6 rounded-full glass-elevated flex items-center justify-center shrink-0 mt-0.5">
