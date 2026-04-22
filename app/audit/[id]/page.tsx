@@ -63,9 +63,10 @@ export default function VideoDetailPage() {
     const filmInfo   = video.filming !== null && video.filming !== undefined ? ` | Filming: ${video.filming}/100` : "";
     const moodInfo   = video.mood ? ` | Mood: ${video.mood}` : "";
     const flagsInfo  = video.weaknessFlags?.length ? ` | Weakness Flags: ${video.weaknessFlags.join(", ")}` : "";
+    const appIssueInfo  = video.appearanceIssue ? ` | Appearance Issue: ${video.appearanceIssue}` : "";
+    const filmIssueInfo = video.filmingIssue    ? ` | Filming Issue: ${video.filmingIssue}`       : "";
     dispatchAgentPrompt(
-      `شوف الصورة دي وحلل الفيديو ده بالكامل واصلحه: "${video.title}" — سكور ${video.score}/100${toneInfo}${moodInfo}${riskInfo}${energyInfo}${pullInfo}${soundInfo}${appInfo}${filmInfo}${flagsInfo}. المشكلة: ${video.issue}. حلل الفيديو من الأول للآخر (هوك + منتصف + نهاية + صوت + مظهر + إضاءة + كاميرات)، واديني: 1) اعادة كتابة الهوك 2) كابشن أحسن من 100 حرف 3) 3 هاشتاقات مناسبة 4) تقييم الصوت والموسيقى 5) تقييم المظهر والإضاءة من الصورة (outfit + makeup + درجة حرارة الإضاءة + خلفية) 6) تقييم زوايا التصوير وحركة الكاميرا 7) ٣ تعديلات تحريرية تزيد المشاهدات.`,
-      video.coverUrl
+      `حلل الفيديو ده بالكامل واصلحه بناءً على بياناته: "${video.title}" — سكور ${video.score}/100${toneInfo}${moodInfo}${riskInfo}${energyInfo}${pullInfo}${soundInfo}${appInfo}${appIssueInfo}${filmInfo}${filmIssueInfo}${flagsInfo}. المشكلة: ${video.issue}. واديني: 1) اعادة كتابة الهوك 2) كابشن جديد أقل من 100 حرف 3) 3 هاشتاقات مناسبة 4) تقييم الصوت والموسيقى 5) تقييم المظهر والإضاءة بناءً على التحليل المحفوظ 6) توصيات زوايا الكاميرات الـ 3 للفيديو الجاي 7) ٣ تعديلات تحريرية تزيد المشاهدات.`
     );
     router.back();
   };
@@ -292,16 +293,66 @@ export default function VideoDetailPage() {
             ) : (
               <div className="text-center py-3">
                 <p className="text-[12px] mb-3" style={{ color: 'var(--text-muted)' }}>
-                  Visual assessment needed — the agent will evaluate outfit, makeup, lighting, background, and camera angles.
+                  Visual analysis not available yet — run sync to score appearance from the cover image.
                 </p>
                 <button
                   onClick={() => dispatchAgentPrompt(
-                    `شوف الصورة دي من فيديو "${video.title}" وحلل التكوين البصري بالكامل. قيّم: 1) الـ Outfit والألوان وملائمة الميكب للمشهد. 2) الـ Filming: الإضاءة (درجة حرارتها دافية/باردة وهل في ظلال حادة) وزوايا الكاميرا (Eye-level ولا زاوية مختلفة؟). 3) الخلفية. اديني Appearance Score من 100 و Filming Score من 100 بناءً على الصورة دي، مع حلول عملية للفيديو الجاي.`,
-                    video.coverUrl
+                    `بناءً على بيانات الفيديو "${video.title}" (Tone: ${video.tone || "?"}, Mood: ${video.mood || "?"}, Score: ${video.score}/100) — اديني توصيات المظهر العامة للفيديو الجاي: outfit مناسب للـ ${video.tone || "podcast"} content، إضاءة مقترحة (درجة حرارة + مكان الـ key light)، وخلفية مناسبة.`
                   )}
                   className="btn-secondary px-4 py-2 rounded-xl text-[12px] font-semibold"
                 >
-                  Analyze with Vision
+                  Get Appearance Advice
+                </button>
+              </div>
+            )}
+          </div>
+
+          {/* Filming & Camera Setup */}
+          <div className="glass-panel rounded-2xl p-5">
+            <div className="flex items-center justify-between mb-3">
+              <h2 className="text-[13px] font-bold" style={{ color: 'var(--text-primary)' }}>Filming & Camera Setup</h2>
+              {video.filming !== null && video.filming !== undefined ? (
+                <span className={`px-2.5 py-0.5 rounded-full text-[11px] font-bold ${scoreBg(video.filming)}`}>
+                  {video.filming}/100
+                </span>
+              ) : (
+                <span className="bg-zinc-500/15 text-zinc-400 px-2.5 py-0.5 rounded-full text-[11px] font-bold">Not scored</span>
+              )}
+            </div>
+            {video.filming !== null && video.filming !== undefined ? (
+              <>
+                <div className="h-1.5 rounded-full glass-elevated overflow-hidden mb-3">
+                  <div className="h-full rounded-full transition-all duration-700" style={{ width: `${video.filming}%`, backgroundColor: scoreColor(video.filming) }} />
+                </div>
+                {video.filmingIssue ? (
+                  <div className="glass-elevated rounded-xl p-2.5 mb-3">
+                    <span className="text-[10px] font-bold text-amber-500 uppercase tracking-wide">⚠ Issue  </span>
+                    <span className="text-[11px] leading-relaxed" style={{ color: 'var(--text-secondary)' }}>{video.filmingIssue}</span>
+                  </div>
+                ) : (
+                  <p className="text-[12px] mb-3" style={{ color: 'var(--text-muted)' }}>Camera setup and filming quality look good.</p>
+                )}
+                <button
+                  onClick={() => dispatchAgentPrompt(
+                    `اديني توصيات الكاميرا والإضاءة للفيديو "${video.title}" — Filming Score: ${video.filming}/100 | Issue: ${video.filmingIssue || "none"} | Appearance Issue: ${video.appearanceIssue || "none"} | Tone: ${video.tone || "?"} | Mood: ${video.mood || "?"}`
+                  )}
+                  className="btn-secondary px-4 py-2 rounded-xl text-[12px] font-semibold"
+                >
+                  Camera & Lighting Recommendations
+                </button>
+              </>
+            ) : (
+              <div className="text-center py-3">
+                <p className="text-[12px] mb-3" style={{ color: 'var(--text-muted)' }}>
+                  Visual analysis not available yet — run sync to score filming from the cover image.
+                </p>
+                <button
+                  onClick={() => dispatchAgentPrompt(
+                    `اديني توصيات عامة للكاميرا والإضاءة للفيديو "${video.title}" (Tone: ${video.tone || "?"}, Mood: ${video.mood || "?"}, Score: ${video.score}/100) — كاميرا مقترحة، زاوية تصوير، إضاءة (درجة حرارة + مكان الـ key light)، وأي إعداد تقني مهم.`
+                  )}
+                  className="btn-secondary px-4 py-2 rounded-xl text-[12px] font-semibold"
+                >
+                  Get Camera Advice
                 </button>
               </div>
             )}
