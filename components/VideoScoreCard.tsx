@@ -38,6 +38,7 @@ interface VideoData {
   appearance?: number | null;
   appearanceIssue?: string | null;
   filming?: number | null;
+  content?: number;
   mood?: string;
 }
 
@@ -125,7 +126,7 @@ export default function VideoScoreCard({ video, compact = false }: { video: Vide
 
         {!compact && (
           <div className="space-y-2.5 mb-3">
-            {(['hook', 'pacing', 'caption', 'hashtags', 'cta', 'sound', 'appearance', 'filming'] as const).map((key, i) => (
+            {(['hook', 'pacing', 'caption', 'hashtags', 'cta', 'sound', 'appearance', 'filming', 'content'] as const).map((key, i) => (
               <ScoreBar key={key} label={key.charAt(0).toUpperCase() + key.slice(1)} value={video[key] || 0} delay={i * 80} />
             ))}
           </div>
