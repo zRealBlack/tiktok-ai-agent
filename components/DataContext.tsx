@@ -72,10 +72,11 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
   // Load live competitor data from KV (populated by /api/competitors POST or cron)
   const fetchCompetitorsFromKV = async () => {
     try {
-      const res = await fetch("/api/competitors");
+      const res = await fetch("/api/competitors", { cache: "no-store" });
       if (!res.ok) return;
       const data = await res.json();
-      if (data.competitors && Array.isArray(data.competitors) && data.competitors.length > 0) {
+      // GET always returns all tracked competitors (with seeds for unscraped ones)
+      if (data.competitors && Array.isArray(data.competitors)) {
         setCompetitors(data.competitors);
       }
     } catch {
