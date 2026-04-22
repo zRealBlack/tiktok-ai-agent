@@ -38,6 +38,7 @@ interface VideoData {
   appearance?: number | null;
   appearanceIssue?: string | null;
   filming?: number | null;
+  filmingIssue?: string | null;
   content?: number;
   mood?: string;
 }
