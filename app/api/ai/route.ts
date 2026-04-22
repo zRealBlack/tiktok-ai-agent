@@ -52,7 +52,7 @@ export async function POST(req: Request) {
 
     // Streaming response
     const stream = client.messages.stream({
-      model: "claude-opus-4-5",
+      model: "claude-3-5-sonnet-latest",
       max_tokens: 2000,
       system: systemPrompt,
       messages: formattedMessages,

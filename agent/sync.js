@@ -136,7 +136,7 @@ async function evaluateVisuals(coverUrl, videoDownloadUrl, text) {
       : "You are viewing the video thumbnail (cover image).";
 
     const msg = await anthropic.messages.create({
-      model: "claude-3-5-sonnet-20241022",
+      model: "claude-3-5-sonnet-latest",
       max_tokens: 450,
       system: `You are an expert TikTok production analyst. ${frameContext}
 Analyze every visual element across the provided image(s).
