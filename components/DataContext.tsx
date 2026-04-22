@@ -39,9 +39,10 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
   const [error, setError] = useState<string | null>(null);
   const [scrapingHandles, setScrapingHandles] = useState<Set<string>>(new Set());
 
-  // On mount: read from Vercel KV via /api/data — instant, no Apify wait
+  // On mount: load account data AND competitor data from KV
   useEffect(() => {
     fetchFromKV();
+    fetchCompetitorsFromKV();
   }, []);
 
   const fetchFromKV = async () => {
@@ -55,19 +56,12 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
         }
         return;
       }
-
       const data = await res.json();
-
       if (data.account) setAccount(data.account);
       if (data.videos)  setVideos(data.videos);
       if (data.generations) setGenerations(data.generations);
       if (data.trends)  setTrends(data.trends);
       if (data.syncedAt) setSyncedAt(data.syncedAt);
-
-      // If KV has competitor data saved, merge it with our seed list
-      if (data.competitors && Array.isArray(data.competitors)) {
-        setCompetitors(data.competitors);
-      }
     } catch (err: any) {
       setError(err.message);
     } finally {
@@ -75,7 +69,21 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  // Scrape a single competitor via Apify — updates state live
+  // Load live competitor data from KV (populated by /api/competitors POST or cron)
+  const fetchCompetitorsFromKV = async () => {
+    try {
+      const res = await fetch("/api/competitors");
+      if (!res.ok) return;
+      const data = await res.json();
+      if (data.competitors && Array.isArray(data.competitors) && data.competitors.length > 0) {
+        setCompetitors(data.competitors);
+      }
+    } catch {
+      // silently fall back to mock seed data
+    }
+  };
+
+  // Scrape competitors via Apify REST (POST /api/competitors) — no SDK bundler issues
   const scrapeCompetitor = useCallback(async (handle: string) => {
     const cleanHandle = handle.replace("@", "").trim();
     setScrapingHandles(prev => new Set(prev).add(cleanHandle));
@@ -92,12 +100,11 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
         throw new Error(err.error || `HTTP ${res.status}`);
       }
 
-      const { competitor } = await res.json();
-
-      // Merge the live data into the competitors list
-      setCompetitors(prev =>
-        prev.map(c => c.handle.replace("@", "") === cleanHandle ? { ...c, ...competitor, needsScrape: false } : c)
-      );
+      const data = await res.json();
+      // The POST returns { competitors: [...all merged...] }
+      if (data.competitors && Array.isArray(data.competitors)) {
+        setCompetitors(data.competitors);
+      }
     } catch (err: any) {
       console.error("Competitor scrape failed:", err);
       throw err;
