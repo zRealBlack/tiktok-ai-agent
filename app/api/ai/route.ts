@@ -1,29 +1,16 @@
 import Anthropic from "@anthropic-ai/sdk";
+import { Redis } from "@upstash/redis";
 import { buildAgentContext, AGENT_SYSTEM_PROMPT } from "@/lib/agentContext";
 
 export const runtime = "nodejs";
 
-const KV_REST_API_URL   = "https://sure-shrew-104058.upstash.io";
-const KV_REST_API_TOKEN = "gQAAAAAAAZZ6AAIgcDE4OGQ5NzI3Y2NlMTI0MTk0OTA3NjhmMjZkY2RiYmRhOA";
+// Use the same Redis SDK that /api/data uses — proven to handle encoding correctly
+const redis = new Redis({
+  url: "https://sure-shrew-104058.upstash.io",
+  token: "gQAAAAAAAZZ6AAIgcDE4OGQ5NzI3Y2NlMTI0MTk0OTA3NjhmMjZkY2RiYmRhOA",
+});
 
 type SupportedMediaType = "image/jpeg" | "image/png" | "image/gif" | "image/webp";
-
-// Read data directly from KV — guaranteed to have the latest synced data
-async function kvGet(key: string) {
-  try {
-    const res = await fetch(`${KV_REST_API_URL}/get/${key}`, {
-      headers: { Authorization: `Bearer ${KV_REST_API_TOKEN}` },
-      cache: "no-store",
-    });
-    if (!res.ok) return null;
-    const json = await res.json();
-    const raw = json.result;
-    if (!raw) return null;
-    return typeof raw === "string" ? JSON.parse(raw) : raw;
-  } catch {
-    return null;
-  }
-}
 
 async function fetchImageAsBase64(url: string): Promise<{ data: string; mediaType: SupportedMediaType } | null> {
   try {
@@ -40,6 +27,23 @@ async function fetchImageAsBase64(url: string): Promise<{ data: string; mediaTyp
   }
 }
 
+// Parse KV result — handles multi-level encoding from sync.js
+// sync.js does kvSet(key, JSON.stringify(payload)) and kvSet does body: JSON.stringify(value)
+// So data is double-stringified. @upstash/redis auto-parses once. We need to keep parsing.
+function parseKV(raw: unknown): any {
+  if (!raw) return null;
+  let result = raw;
+  // Keep parsing until we have an object (handles any level of string-encoding)
+  for (let i = 0; i < 5 && typeof result === "string"; i++) {
+    try {
+      result = JSON.parse(result);
+    } catch {
+      return null;
+    }
+  }
+  return typeof result === "object" ? result : null;
+}
+
 export async function POST(req: Request) {
   try {
     const { messages, contextData } = await req.json();
@@ -49,14 +53,28 @@ export async function POST(req: Request) {
 
     const client = new Anthropic({ apiKey });
 
-    // ─── ALWAYS read from KV server-side for the freshest data ───
-    // Client-sent contextData is a backup, KV is the ground truth
-    const [kvAccountData, kvCompetitorData] = await Promise.all([
-      kvGet("tiktok_data"),
-      kvGet("competitor_data"),
-    ]);
+    // ─── Read DIRECTLY from KV using @upstash/redis (same SDK as /api/data) ───
+    // This is the same proven method the dashboard uses to show rasayel data
+    let kvAccountRaw: unknown = null;
+    let kvCompetitorRaw: unknown = null;
+    try {
+      [kvAccountRaw, kvCompetitorRaw] = await Promise.all([
+        redis.get("tiktok_data"),
+        redis.get("competitor_data"),
+      ]);
+    } catch (e) {
+      console.error("KV read failed in AI route:", e);
+    }
 
-    // Merge: KV is primary, client data fills gaps
+    const kvAccountData = parseKV(kvAccountRaw);
+    const kvCompetitorData = parseKV(kvCompetitorRaw);
+
+    // Debug log so we can verify on Vercel
+    console.log("[AI] KV account:", kvAccountData?.account?.username, "followers:", kvAccountData?.account?.followers);
+    console.log("[AI] KV competitors:", kvCompetitorData?.competitors?.length || 0);
+    console.log("[AI] Client account:", contextData?.account?.username);
+
+    // Merge: KV is primary (server-side, always fresh), client data fills gaps
     const mergedContext = {
       account:     kvAccountData?.account     || contextData?.account     || {},
       videos:      kvAccountData?.videos      || contextData?.videos      || [],
