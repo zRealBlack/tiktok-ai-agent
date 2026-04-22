@@ -1,21 +1,214 @@
 /**
  * TikTok AI Agent — Standalone Sync Script
- * 
- * This script runs separately from the web dashboard.
- * It fetches live data from TikTok via Apify and stores it in Vercel KV (Upstash Redis).
- * The web dashboard reads from KV instantly, no waiting for Apify.
- * 
+ *
+ * Downloads TikTok videos via Apify, extracts 10 frames (hook-weighted),
+ * sends them all to Claude Vision for full content analysis, stores to KV.
+ *
  * Usage: node agent/sync.js
  */
 
 const { ApifyClient } = require("apify-client");
+const Anthropic = require("@anthropic-ai/sdk").default;
 
 // ─── CONFIG ────────────────────────────────────────────────────────────────
-const TIKTOK_HANDLE = "rasayel_podcast";
-const APIFY_TOKEN = "apify_api_" + "g6bQyWvIy8xp0jseCouNiHrVh0pZ9A3kJuHg";
-const KV_REST_API_URL = "https://sure-shrew-104058.upstash.io";
-const KV_REST_API_TOKEN = "gQAAAAAAAZZ6AAIgcDE4OGQ5NzI3Y2NlMTI0MTk0OTA3NjhmMjZkY2RiYmRhOA";
+const TIKTOK_HANDLE    = "rasayel_podcast";
+const APIFY_TOKEN      = "apify_api_" + "g6bQyWvIy8xp0jseCouNiHrVh0pZ9A3kJuHg";
+const KV_REST_API_URL  = "https://sure-shrew-104058.upstash.io";
+const KV_REST_API_TOKEN= "gQAAAAAAAZZ6AAIgcDE4OGQ5NzI3Y2NlMTI0MTk0OTA3NjhmMjZkY2RiYmRhOA";
+const ANTHROPIC_API_KEY= "sk-ant-api03-" + "Ui8LaIXSljt7OpB-pzMuqznc4wRgEjXaurj_VPmzVWmIbLXJ_0KLhX-lNLUhy8f5uv1pZd_iFxie6HlAKumwfQ-" + "M7FpwQAA";
 // ───────────────────────────────────────────────────────────────────────────
+
+const anthropic = new Anthropic({ apiKey: ANTHROPIC_API_KEY });
+
+// Extract up to 10 frames: 4 hook frames (first 3s) + 4 mid + 2 end (CTA zone)
+async function extractFramesFromVideo(videoUrl, duration = 30) {
+  const { exec }    = require("child_process");
+  const { promisify } = require("util");
+  const execAsync   = promisify(exec);
+  const fs          = require("fs");
+  const path        = require("path");
+  const os          = require("os");
+
+  try {
+    await execAsync("ffmpeg -version", { timeout: 3000 });
+  } catch {
+    return null; // ffmpeg not installed — caller skips visual analysis
+  }
+
+  const tmpId     = `${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+  const videoPath = path.join(os.tmpdir(), `tiktok_${tmpId}.mp4`);
+  const framePaths = [];
+
+  try {
+    process.stdout.write("    ↓ Downloading video... ");
+    const res = await fetch(videoUrl, { signal: AbortSignal.timeout(60000) });
+    if (!res.ok) return null;
+    fs.writeFileSync(videoPath, Buffer.from(await res.arrayBuffer()));
+    console.log("done");
+
+    // Get real duration from the file
+    let d = duration;
+    try {
+      const { stdout } = await execAsync(
+        `ffprobe -v quiet -show_entries format=duration -of csv=p=0 "${videoPath}"`,
+        { timeout: 5000 }
+      );
+      d = parseFloat(stdout.trim()) || duration;
+    } catch {}
+
+    // Hook-weighted frame distribution:
+    //   Frames 1-4: first ~20% of video (critical scroll-stopper zone)
+    //   Frames 5-8: middle content
+    //   Frames 9-10: end / CTA zone
+    const rawTimestamps = [
+      Math.max(0.2, d * 0.02),  // hook: very start
+      Math.max(0.6, d * 0.07),  // hook: ~1s
+      Math.max(1.2, d * 0.12),  // hook: ~2s
+      Math.max(2.0, d * 0.18),  // hook: ~3s
+      d * 0.30,                  // mid 1
+      d * 0.45,                  // mid 2
+      d * 0.60,                  // mid 3
+      d * 0.73,                  // mid 4
+      d * 0.85,                  // end 1
+      d * 0.93,                  // end 2 (CTA zone)
+    ];
+
+    // Drop timestamps closer than 0.4s (handles very short videos)
+    const timestamps = rawTimestamps.filter((t, i, arr) =>
+      i === 0 || t - arr[i - 1] >= 0.4
+    );
+
+    for (let i = 0; i < timestamps.length; i++) {
+      const fp = path.join(os.tmpdir(), `frame_${tmpId}_${i}.jpg`);
+      try {
+        await execAsync(
+          `ffmpeg -ss ${timestamps[i].toFixed(2)} -i "${videoPath}" -vframes 1 -q:v 2 "${fp}" -y`,
+          { timeout: 10000 }
+        );
+        if (fs.existsSync(fp)) framePaths.push(fp);
+      } catch {}
+    }
+
+    if (framePaths.length === 0) return null;
+    console.log(`    ✓ ${framePaths.length} frames extracted`);
+
+    return framePaths.map(fp => ({
+      data: fs.readFileSync(fp).toString("base64"),
+      mediaType: "image/jpeg",
+    }));
+  } catch (err) {
+    console.warn(`    ⚠ Frame extraction failed: ${err.message}`);
+    return null;
+  } finally {
+    const fs2 = require("fs");
+    try { fs2.unlinkSync(videoPath); } catch {}
+    framePaths.forEach(fp => { try { fs2.unlinkSync(fp); } catch {} });
+  }
+}
+
+// Analyze a video using actual frames (if available) or caption/metadata via Claude text analysis
+async function analyzeFullVideo(videoDownloadUrl, text, hashtags, duration, musicMeta, views, likes, comments, shares) {
+  const hashtagStr = (hashtags || []).map(h => "#" + (h.name || h)).join(" ");
+  const soundLabel = !musicMeta?.musicName ? "No Audio"
+    : musicMeta?.musicOriginal             ? "Original Sound"
+    :                                         "Trending Audio";
+
+  // ── PASS 1: try real video frames via ffmpeg ──────────────────────────────
+  if (videoDownloadUrl) {
+    const frames = await extractFramesFromVideo(videoDownloadUrl, duration);
+    if (frames && frames.length > 0) {
+      process.stdout.write(`    🤖 Claude analyzing ${frames.length} video frames... `);
+      const imageContents  = frames.map(f => ({
+        type: "image",
+        source: { type: "base64", media_type: f.mediaType, data: f.data },
+      }));
+      const hookFrameCount = Math.min(4, Math.ceil(frames.length * 0.4));
+      try {
+        const msg = await anthropic.messages.create({
+          model: "claude-3-5-sonnet-20241022",
+          max_tokens: 900,
+          temperature: 0.1,
+          system: `You are an expert TikTok video strategist and content analyst.
+You are watching ${frames.length} sequential frames from a TikTok video:
+- Frames 1–${hookFrameCount}: the HOOK (first 2–3 seconds)
+- Frames ${hookFrameCount + 1}–${frames.length - 2}: middle content
+- Frames ${frames.length - 1}–${frames.length}: ending / CTA zone
+
+Return ONLY a raw JSON object:
+{
+  "hook": <0-100>,
+  "pacing": <0-100>,
+  "cta": <0-100>,
+  "appearance": <0-100>,
+  "filming": <0-100>,
+  "content": <0-100>,
+  "tone": <"Emotional / Shareable"|"Controversial / Discussion"|"Entertaining / Likeable"|"Flat / Boring"|"Informative / Valuable"|"Neutral">,
+  "mood": <"Energetic"|"Upbeat"|"Serious/Focus"|"Casual"|"Emotional"|"Neutral">,
+  "issue": <single most impactful problem — be specific>,
+  "suggestion": <one specific actionable fix>,
+  "appearanceIssue": <specific outfit/makeup/background issue or null>,
+  "filmingIssue": <specific lighting/camera issue with Kelvin if relevant or null>
+}`,
+          messages: [{
+            role: "user",
+            content: [
+              ...imageContents,
+              { type: "text", text: `Caption: "${(text || "").substring(0, 200)}"\nHashtags: ${hashtagStr || "None"}\nDuration: ${duration}s\nSound: ${soundLabel}\nReturn only the JSON.` },
+            ],
+          }],
+        });
+        const match = msg.content[0].text.match(/\{[\s\S]*\}/);
+        if (match) { console.log("done"); return JSON.parse(match[0]); }
+      } catch (err) { console.warn(`vision failed: ${err.message}`); }
+    }
+  }
+
+  // ── PASS 2: text-only analysis — Claude reads the actual caption ──────────
+  process.stdout.write(`    🤖 Claude analyzing caption & metadata... `);
+  const engRate   = views > 0 ? (((likes + comments) / views) * 100).toFixed(2) : "0";
+  const shareRate = views > 0 ? ((shares / views) * 100).toFixed(2) : "0";
+
+  try {
+    const msg = await anthropic.messages.create({
+      model: "claude-sonnet-4-6",
+      max_tokens: 900,
+      temperature: 0.1,
+      system: `You are an expert TikTok content strategist specializing in Arabic-language content for Egyptian and Arab audiences.
+Analyze this TikTok video based on its caption, metadata, and performance data.
+
+Return ONLY a raw JSON object — no markdown, no explanation:
+{
+  "hook": <0-100: how strong is the opening caption as a scroll-stopper? Does it create curiosity, tension, or an emotional trigger?>,
+  "pacing": <0-100: estimate based on duration — short videos (under 30s) with emotional captions score higher>,
+  "cta": <0-100: does the caption or content type typically end with a strong call to action? Podcast clips with 'شوف الحلقة' score high>,
+  "tone": <"Emotional / Shareable"|"Controversial / Discussion"|"Entertaining / Likeable"|"Flat / Boring"|"Informative / Valuable"|"Neutral">,
+  "mood": <"Energetic"|"Upbeat"|"Serious/Focus"|"Casual"|"Emotional"|"Neutral">,
+  "issue": <the single most impactful content problem based on caption + performance data — be specific and actionable>,
+  "suggestion": <one specific fix: rewrite the hook, change the caption structure, add a CTA, etc.>
+}
+
+Note: appearance and filming scores require actual video frames — leave those fields OUT of your response (they will remain null).`,
+      messages: [{
+        role: "user",
+        content: `Caption: "${(text || "No caption").substring(0, 400)}"
+Hashtags: ${hashtagStr || "None"}
+Duration: ${duration}s
+Sound: ${soundLabel} — "${musicMeta?.musicName || "Unknown"}"
+Views: ${views.toLocaleString()} | Likes: ${likes.toLocaleString()} | Comments: ${comments} | Shares: ${shares}
+Engagement rate: ${engRate}% | Share rate: ${shareRate}%
+
+Analyze this Arabic TikTok video and return the JSON.`,
+      }],
+    });
+    const match = msg.content[0].text.match(/\{[\s\S]*\}/);
+    if (match) { console.log("done"); return JSON.parse(match[0]); }
+    console.log("⚠ no JSON");
+    return null;
+  } catch (err) {
+    console.warn(`text analysis failed: ${err.message}`);
+    return null;
+  }
+}
 
 async function kvSet(key, value) {
   const res = await fetch(`${KV_REST_API_URL}/set/${key}`, {
@@ -32,122 +225,111 @@ async function kvSet(key, value) {
 
 async function run() {
   console.log(`\n🔍 Fetching live data for @${TIKTOK_HANDLE} via Apify...`);
-  console.log("   (This takes ~30–60 seconds — grab a coffee ☕)\n");
+  console.log("   (Claude will watch every video — takes 3–6 minutes ☕)\n");
 
   const client = new ApifyClient({ token: APIFY_TOKEN });
 
-  const run = await client.actor("clockworks/tiktok-profile-scraper").call({
+  const apifyRun = await client.actor("clockworks/tiktok-profile-scraper").call({
     profiles: [TIKTOK_HANDLE],
     resultsPerPage: 30,
+    downloadVideos: true,
   });
 
-  console.log("✅ Apify scrape complete. Processing data...");
+  console.log("✅ Apify done. Starting Claude analysis...\n");
 
-  const { items } = await client.dataset(run.defaultDatasetId).listItems();
+  const { items } = await client.dataset(apifyRun.defaultDatasetId).listItems();
 
   if (!items || items.length === 0) {
     throw new Error("No data returned. Is the account public and the handle correct?");
   }
 
   const profile = items[0]?.authorMeta || {};
-  const videos = items;
+  const videos  = items;
 
-  // Build structured account object
   const account = {
-    username: "@" + (profile.name || TIKTOK_HANDLE),
-    followers: profile.fans || 0,
-    followersGrowth: 0,
-    avgEngagement: profile.fans
-      ? parseFloat(
-          (
-            (videos.reduce((s, v) => s + (v.diggCount || 0), 0) /
-              videos.length /
-              profile.fans) *
-            100
-          ).toFixed(2)
-        )
+    username:         "@" + (profile.name || TIKTOK_HANDLE),
+    followers:        profile.fans      || 0,
+    followersGrowth:  0,
+    avgEngagement:    profile.fans
+      ? parseFloat(((videos.reduce((s, v) => s + (v.diggCount || 0), 0) / videos.length / profile.fans) * 100).toFixed(2))
       : 0,
     engagementChange: 0,
-    weeklyViews: videos.reduce((s, v) => s + (v.playCount || 0), 0),
+    weeklyViews:      videos.reduce((s, v) => s + (v.playCount || 0), 0),
     weeklyViewsChange: 0,
-    actionItems: videos.filter((v) => (v.playCount || 0) < 1000).length || 0,
-    bio: profile.signature || "",
-    profilePhoto: profile.avatar || "",
-    following: profile.following || 0,
-    totalLikes: profile.heart || 0,
-    verified: profile.verified || false,
+    actionItems:      videos.filter(v => (v.playCount || 0) < 1000).length || 0,
+    bio:              profile.signature || "",
+    profilePhoto:     profile.avatar    || "",
+    following:        profile.following || 0,
+    totalLikes:       profile.heart     || 0,
+    verified:         profile.verified  || false,
   };
 
-  // ─── SCORING ─────────────────────────────────────────────────────────────
-  // All scores are RELATIVE to the account's own best video (percentile-based)
-  // so every account sees a useful spread from ~20 to 100, not all zeros.
-  const maxViews    = Math.max(...videos.map((v) => v.playCount    || 0), 1);
-  const maxLikes    = Math.max(...videos.map((v) => v.diggCount    || 0), 1);
-  const maxComments = Math.max(...videos.map((v) => v.commentCount || 0), 1);
+  // Engagement-based component — relative to account's own best video
+  const maxViews    = Math.max(...videos.map(v => v.playCount    || 0), 1);
+  const maxLikes    = Math.max(...videos.map(v => v.diggCount    || 0), 1);
+  const maxComments = Math.max(...videos.map(v => v.commentCount || 0), 1);
 
-  const calcScore = (v) => {
+  const calcEngScore = (v) => {
     const views    = v.playCount    || 0;
     const likes    = v.diggCount    || 0;
     const comments = v.commentCount || 0;
     const engRate  = views > 0 ? ((likes + comments) / views) * 100 : 0;
-
-    // Weighted components (100pts total):
-    const viewScore    = Math.round((views    / maxViews)    * 35);  // 35pts — reach
-    const likeScore    = Math.round((likes    / maxLikes)    * 30);  // 30pts — resonance
-    const commentScore = Math.round((comments / maxComments) * 20);  // 20pts — discussion
-    const engScore     = Math.min(15, Math.round(engRate * 1.5));    // 15pts — engagement %
-
-    return Math.max(10, Math.min(100, viewScore + likeScore + commentScore + engScore));
+    return Math.max(10, Math.min(100,
+      Math.round((views    / maxViews)    * 35) +
+      Math.round((likes    / maxLikes)    * 30) +
+      Math.round((comments / maxComments) * 20) +
+      Math.min(15, Math.round(engRate * 1.5))
+    ));
   };
-  // ─────────────────────────────────────────────────────────────────────────
 
-  // Build structured videos array
-  const processedVideos = videos.map((v, i) => {
+  const processedVideos = [];
+
+  for (let i = 0; i < videos.length; i++) {
+    const v = videos[i];
+    console.log(`\n[${i + 1}/${videos.length}] "${(v.text || "").substring(0, 55)}..."`);
+
     const views    = v.playCount    || 0;
     const likes    = v.diggCount    || 0;
     const comments = v.commentCount || 0;
     const shares   = v.shareCount   || 0;
     const engRate  = views > 0 ? ((likes + comments) / views) * 100 : 0;
-    const totalScore = calcScore(v);
     const captionLen = (v.text || "").length;
-    const hashCount  = (v.hashtags || []).length;
+    const hashCount  = (v.hashtags  || []).length;
+    const duration   = v.videoMeta?.duration || 30;
 
-    // ─── DEEP CONTENT ANALYSIS ──────────────────────────────────────────────
-    const duration     = v.videoMeta?.duration || 30;
+    // ─── CLAUDE: full video analysis (frames if available, caption otherwise) ─
+    const analysis = await analyzeFullVideo(
+      v.videoMeta?.downloadAddr || "",
+      v.text,
+      v.hashtags,
+      duration,
+      v.musicMeta,
+      views,
+      likes,
+      comments,
+      shares
+    );
+    // ─────────────────────────────────────────────────────────────────────
+
+    // ─── ENGAGEMENT METRICS (things Claude can't see or hear) ─────────────
     const shareRatio   = views > 0 ? shares   / views : 0;
     const commentRatio = views > 0 ? comments / views : 0;
     const likeRatio    = views > 0 ? likes    / views : 0;
 
-    // Tone — derived from the engagement pattern (what emotion the content triggers)
-    let tone;
-    if (shareRatio > 0.03)                          tone = "Emotional / Shareable";
-    else if (commentRatio > 0.02)                   tone = "Controversial / Discussion";
-    else if (likeRatio > 0.1)                       tone = "Entertaining / Likeable";
-    else if (engRate < 1.5 && shareRatio < 0.005)   tone = "Flat / Boring";
-    else if (likeRatio > 0.04)                      tone = "Informative / Valuable";
-    else                                             tone = "Neutral";
-
-    // Emotional pull (0–100): shares are the strongest signal of emotional resonance
+    // Emotional pull: shares are the strongest emotional signal Claude can't measure
     const emotionalPull = Math.min(100, Math.round(shareRatio * 3000 + commentRatio * 1500));
 
-    // Content energy (0–100): short + high-engagement = high energy; long + low-eng = dead
+    // Content energy: short + high-engagement = high energy
     const energyBase = Math.max(0, 100 - (duration / 1.5));
     const energy     = Math.min(100, Math.round(energyBase * 0.6 + Math.min(40, engRate * 4)));
 
-    // Mood — aesthetic feeling based on energy and tone
-    let mood;
-    if (energy > 80 && tone === "Entertaining / Likeable") mood = "Energetic";
-    else if (energy > 70)                                    mood = "Upbeat";
-    else if (tone === "Informative / Valuable" && energy < 60) mood = "Serious / Focus";
-    else                                                     mood = "Casual";
-
-    // Retention risk: long videos with weak engagement signal early drop-off
+    // Retention risk
     let retentionRisk;
-    if ((duration > 120 && engRate < 3) || (duration > 90 && engRate < 2)) retentionRisk = "High";
-    else if ((duration > 60 && engRate < 5) || (duration > 30 && engRate < 2))  retentionRisk = "Medium";
+    if ((duration > 120 && engRate < 3) || (duration > 90 && engRate < 2))   retentionRisk = "High";
+    else if ((duration > 60 && engRate < 5) || (duration > 30 && engRate < 2)) retentionRisk = "Medium";
     else retentionRisk = "Low";
 
-    // Growth potential (0–100): how much upside this video has with fixes
+    // Growth potential
     const growthPotential = Math.min(100, Math.round(
       Math.min(30, shareRatio   * 2000) +
       Math.min(20, commentRatio * 1500) +
@@ -155,81 +337,71 @@ async function run() {
       (retentionRisk === "Low" ? 20 : retentionRisk === "Medium" ? 10 : 0)
     ));
 
-    // Specific weakness flags — a list of diagnosed problems
+    // Weakness flags
     const weaknessFlags = [];
-    if (likeRatio    < 0.02)              weaknessFlags.push("Low Likes");
-    if (shareRatio   < 0.003)             weaknessFlags.push("Not Shareable");
-    if (commentRatio < 0.005)             weaknessFlags.push("No Discussion");
-    if (duration > 90 && engRate < 4)     weaknessFlags.push("Too Long");
-    if (duration < 8)                     weaknessFlags.push("Too Short");
-    if (hashCount < 3)                    weaknessFlags.push("Few Hashtags");
-    if (captionLen < 15)                  weaknessFlags.push("Weak Caption");
-    if (engRate < 2)                      weaknessFlags.push("Low Engagement");
+    if (likeRatio    < 0.02)          weaknessFlags.push("Low Likes");
+    if (shareRatio   < 0.003)         weaknessFlags.push("Not Shareable");
+    if (commentRatio < 0.005)         weaknessFlags.push("No Discussion");
+    if (duration > 90 && engRate < 4) weaknessFlags.push("Too Long");
+    if (duration < 8)                 weaknessFlags.push("Too Short");
+    if (hashCount < 3)                weaknessFlags.push("Few Hashtags");
+    if (captionLen < 15)              weaknessFlags.push("Weak Caption");
+    if (engRate < 2)                  weaknessFlags.push("Low Engagement");
+    // ─────────────────────────────────────────────────────────────────────
 
-    // ─── SOUND ANALYSIS ───────────────────────────────────────────────────────
+    // ─── SOUND (metadata + engagement — Claude can't hear audio) ─────────
     const musicOriginal = v.musicMeta?.musicOriginal === true;
-    const musicName     = (v.musicMeta?.musicName   || "").trim();
-    const musicAuthor   = (v.musicMeta?.musicAuthor || "").trim();
+    const musicName     = (v.musicMeta?.musicName    || "").trim();
+    const musicAuthor   = (v.musicMeta?.musicAuthor  || "").trim();
     const soundType     = musicOriginal ? "Original Sound" : musicName ? "Trending Audio" : "No Audio";
-    const soundName     = musicName
-      ? `${musicName}${musicAuthor ? " — " + musicAuthor : ""}`
-      : "Unknown";
+    const soundName     = musicName ? `${musicName}${musicAuthor ? " — " + musicAuthor : ""}` : "Unknown";
 
-    // Sound score: trending audio gets a reach bonus, original needs high engagement to justify itself
     let sound;
-    if (!musicName) {
-      sound = Math.max(25, Math.min(50, Math.round(28 + engRate)));
-    } else if (musicOriginal) {
-      sound = Math.max(40, Math.min(88, Math.round(48 + engRate * 4)));
-    } else {
-      sound = Math.max(55, Math.min(92, Math.round(58 + engRate * 3)));
-    }
+    if (!musicName)         sound = Math.max(25, Math.min(50, Math.round(28 + engRate)));
+    else if (musicOriginal) sound = Math.max(40, Math.min(88, Math.round(48 + engRate * 4)));
+    else                    sound = Math.max(55, Math.min(92, Math.round(58 + engRate * 3)));
 
     let soundIssue, soundSuggestion;
     if (!musicName) {
-      soundIssue = "No background audio detected — missing a key TikTok discoverability signal on the For You page.";
-      soundSuggestion = "Add a soft lofi track from TikTok's Creator Tools library. Keep music at 10–15% volume relative to voice so speech stays clear.";
+      soundIssue       = "No background audio detected — missing a key TikTok discoverability signal on the For You page.";
+      soundSuggestion  = "Add a soft lofi track from TikTok's Creator Tools library. Keep music at 10–15% volume relative to voice so speech stays clear.";
       weaknessFlags.push("No Audio");
     } else if (musicOriginal && sound < 60) {
-      soundIssue = "Using original sound but engagement is weak — original audio only works when the hook is exceptionally strong.";
-      soundSuggestion = "Layer a low-volume trending background track under the original voice audio. Test a popular lofi or podcast instrumental.";
+      soundIssue       = "Using original sound but engagement is weak — original audio only works when the hook is exceptionally strong.";
+      soundSuggestion  = "Layer a low-volume trending background track under the original voice audio. Test a popular lofi or podcast instrumental.";
     } else if (!musicOriginal && sound < 65) {
-      soundIssue = `Trending audio ("${musicName.substring(0, 45)}") is present but not lifting results — likely a mismatch with the content energy.`;
-      soundSuggestion = "Ensure audio energy matches video mood. High-energy trending tracks on slow podcast clips create friction and hurt retention.";
+      soundIssue       = `Trending audio ("${musicName.substring(0, 45)}") is present but not lifting results — likely a mismatch with the content energy.`;
+      soundSuggestion  = "Ensure audio energy matches video mood. High-energy trending tracks on slow podcast clips create friction and hurt retention.";
     } else {
-      soundIssue = sound >= 75
+      soundIssue       = sound >= 75
         ? `Sound strategy is working — "${musicName.substring(0, 45)}" fits the content well.`
         : "Sound is present but there's room to optimize for reach.";
-      soundSuggestion = "Consider building a consistent audio identity — using the same lofi track across episodes creates recognizable branding.";
+      soundSuggestion  = "Consider building a consistent audio identity — using the same lofi track across episodes creates recognizable branding.";
     }
-    // ─────────────────────────────────────────────────────────────────────────
+    // ─────────────────────────────────────────────────────────────────────
 
-    // Issue and suggestion — specific to the diagnosed tone and risk
-    let issue, suggestion;
-    if (tone === "Flat / Boring") {
-      issue = views < 5000
-        ? "Flat content — near-zero emotional reaction. The video fails to trigger any share or comment behavior. Hook isn't stopping the scroll."
-        : "Content feels empty — decent views but nobody cared enough to share or comment. No emotional hook, no tension, no payoff.";
-      suggestion = "Rebuild video structure: shock/question hook in second 1, build tension or story in the middle, deliver an emotional payoff at the end. Add text overlays every 8–10s.";
-    } else if (retentionRisk === "High") {
-      issue = `Video is ${duration}s long but engagement is only ${engRate.toFixed(1)}% — viewers are dropping off early. Content isn't holding attention past the opening seconds.`;
-      suggestion = `Cut to ~${Math.round(duration * 0.6)}s. Lead with the most valuable moment. Use jump cuts every 8–10s. Add text overlays to reinforce key points and maintain energy.`;
-    } else if (shareRatio < 0.003 && views > 5000) {
-      issue = "Good reach but near-zero shares — content is watchable but forgettable. It isn't triggering any 'I need to send this' emotion.";
-      suggestion = "Add a relatable or surprising moment. End with a story payoff. Frame one key insight as 'send this to someone who needs it'. Make the ending emotionally memorable.";
-    } else if (commentRatio < 0.005 && views > 3000) {
-      issue = "Viewers are watching but not engaging — no CTA is triggering comments. Passive consumption with no community building.";
-      suggestion = "End with a direct question or controversial take. Ask something specific like 'Do you agree or think I'm wrong?' Give them a reason to respond.";
-    } else {
-      issue = views < 5000
-        ? "Low views — the opening hook likely needs a stronger first 2 seconds."
-        : engRate < 3
-        ? "Engagement ratio is weak — add a clear CTA or question to boost comments."
-        : "Good reach! Focus on turning viewers into commenters with a direct question.";
-      suggestion = "اسأل الأيجنت في الشات عشان يعيد كتابة الهوك والكابشن والهاشتاقات الخاصة بالفيديو ده.";
-    }
+    // ─── CAPTION & HASHTAG SCORES (text-based) ───────────────────────────
+    const captionScore = captionLen > 15 && captionLen < 180
+      ? Math.max(40, Math.min(95, Math.round(50 + (captionLen / 180) * 30 + (hashCount >= 3 ? 15 : 0))))
+      : Math.max(10, Math.min(35, Math.round(captionLen / 5)));
+    const hashtagScore = hashCount >= 3 && hashCount <= 8
+      ? Math.max(50, Math.min(95, Math.round(55 + hashCount * 5)))
+      : Math.max(10, Math.min(45, Math.round(hashCount * 12)));
+    // ─────────────────────────────────────────────────────────────────────
 
-    return {
+    // ─── OVERALL SCORE: 40% reach performance + 60% Claude quality ───────
+    const engScore  = calcEngScore(v);
+    const claudeNums = [analysis?.hook, analysis?.pacing, analysis?.cta, analysis?.content]
+      .filter(s => typeof s === "number" && !isNaN(s));
+    const claudeAvg = claudeNums.length > 0
+      ? Math.round(claudeNums.reduce((a, b) => a + b, 0) / claudeNums.length)
+      : null;
+    const totalScore = claudeAvg !== null
+      ? Math.max(10, Math.min(100, Math.round(engScore * 0.4 + claudeAvg * 0.6)))
+      : engScore;
+    // ─────────────────────────────────────────────────────────────────────
+
+    processedVideos.push({
       id:    v.id || String(i),
       title: (v.text || "No caption").substring(0, 80),
       views,
@@ -240,145 +412,112 @@ async function run() {
         ? new Date(v.createTime * 1000).toISOString().split("T")[0]
         : new Date().toISOString().split("T")[0],
       score: totalScore,
-      // Sub-scores (also relative/data-driven, not random)
-      hook:     Math.max(10, Math.min(98, Math.round(totalScore * (0.8 + Math.random() * 0.3)))),
-      pacing:   Math.max(10, Math.min(98, Math.round(totalScore * (0.85 + Math.random() * 0.2)))),
-      caption:  captionLen > 15 && captionLen < 180
-        ? Math.max(15, Math.min(95, Math.round(totalScore * (0.9 + Math.random() * 0.3))))
-        : Math.max(10, Math.min(40, Math.round(totalScore * 0.4))),
-      hashtags: hashCount >= 3 && hashCount <= 8
-        ? Math.max(15, Math.min(95, Math.round(totalScore * (0.9 + Math.random() * 0.2))))
-        : Math.max(10, Math.min(45, Math.round(totalScore * 0.5))),
-      cta: Math.max(10, Math.min(98, Math.round(totalScore * (0.75 + Math.random() * 0.4)))),
-      // Deep content analysis fields
+      // From Claude watching the actual video frames
+      hook:            analysis?.hook            ?? null,
+      pacing:          analysis?.pacing          ?? null,
+      cta:             analysis?.cta             ?? null,
+      appearance:      analysis?.appearance      ?? null,
+      appearanceIssue: analysis?.appearanceIssue ?? null,
+      filming:         analysis?.filming         ?? null,
+      filmingIssue:    analysis?.filmingIssue    ?? null,
+      content:         analysis?.content         ?? null,
+      tone:            analysis?.tone            ?? null,
+      mood:            analysis?.mood            ?? null,
+      issue:           analysis?.issue           ?? "No video available for analysis.",
+      suggestion:      analysis?.suggestion      ?? "اسأل الأيجنت في الشات.",
+      // Text-based (Claude can't read captions, he sees frames only)
+      caption:  captionScore,
+      hashtags: hashtagScore,
+      // Engagement-based (things Claude can't see)
       duration,
-      tone,
-      mood,
       emotionalPull,
       energy,
       retentionRisk,
       growthPotential,
       weaknessFlags,
-      issue,
-      suggestion,
-      // Sound analysis
-      sound: Math.max(15, Math.min(98, Math.round(totalScore * (0.8 + Math.random() * 0.3)))),
+      // Sound (Claude can't hear audio)
+      sound,
       soundType,
       soundName,
       soundIssue,
       soundSuggestion,
-      // Appearance & Filming: normally needs visual evaluation, simulating scaled to performance
-      appearance:     Math.max(12, Math.min(98, Math.round(totalScore * (0.85 + Math.random() * 0.3)))),
-      appearanceNote: "Visual assessment required — ask the agent to evaluate outfit, makeup, lighting, and background.",
-      filming:        Math.max(12, Math.min(98, Math.round(totalScore * (0.85 + Math.random() * 0.3)))),
-      isPinned:      v.isPinned || false,
-      videoUrl:      v.webVideoUrl || "",
-      coverUrl:      v.videoMeta?.coverUrl || v.videoMeta?.originalCoverUrl || "",
-      hashtags_list: (v.hashtags || []).map((h) => h.name),
-    };
-  });
+      // Misc
+      isPinned:  v.isPinned || false,
+      videoUrl:  v.webVideoUrl || "",
+      coverUrl:  v.videoMeta?.coverUrl || v.videoMeta?.originalCoverUrl || "",
+      hashtags_list: (v.hashtags || []).map(h => h.name),
+    });
+  }
 
-  // ─── AUDIENCE GENERATION ──────────────────────────────────────────────────
-  // TikTok doesn't expose age breakdowns via their public API/scraper.
-  // We derive an educated estimate from the account's follower count, content
-  // category, and creation date patterns (established podcast bias = older demo).
-  // Rasayel Podcast: Arabic/Egyptian, long-form interview/advice → skews 18-34.
-  const avgViews = processedVideos.reduce((s, v) => s + v.views, 0) / Math.max(processedVideos.length, 1);
-  const avgLikes = processedVideos.reduce((s, v) => s + v.likes, 0) / Math.max(processedVideos.length, 1);
-  const engRatio  = avgViews > 0 ? avgLikes / avgViews : 0;
+  // ─── AUDIENCE (estimated from engagement + content category) ─────────────
+  const avgLikes_ = processedVideos.reduce((s, v) => s + v.likes, 0) / Math.max(processedVideos.length, 1);
+  const avgViews_ = processedVideos.reduce((s, v) => s + v.views, 0) / Math.max(processedVideos.length, 1);
+  const engRatio  = avgViews_ > 0 ? avgLikes_ / avgViews_ : 0;
+  const engBoost  = engRatio > 0.05 ? 4 : engRatio > 0.03 ? 2 : 0;
 
-  // Podcast/interview content skews Millennials more than pure Gen Z entertainment.
-  // High follower count (279K+) with mid engagement = broad but loyalty → mixed demo.
-  const genZBase      = 38;   // 18-24 – TikTok majority but podcast skews older
-  const millennialBase = 40;  // 25-34 – core podcast/knowledge-content audience
-  const genXBase      = 16;   // 35-44 – present in professional/advice content
-  const boomerBase    = 6;    // 45+   – smallest but present
-
-  // Nudge based on engagement rate – high eng = younger audience is more active
-  const engBoost = engRatio > 0.05 ? 4 : engRatio > 0.03 ? 2 : 0;
-  const genZFinal      = Math.min(55, genZBase + engBoost);
-  const millennialFinal = Math.max(25, millennialBase - Math.floor(engBoost / 2));
-  const genXFinal      = Math.max(10, genXBase - Math.floor(engBoost / 4));
-  const boomerFinal    = Math.max(3,  100 - genZFinal - millennialFinal - genXFinal);
+  const genZFinal       = Math.min(55, 38 + engBoost);
+  const millennialFinal = Math.max(25, 40 - Math.floor(engBoost / 2));
+  const genXFinal       = Math.max(10, 16 - Math.floor(engBoost / 4));
+  const boomerFinal     = Math.max(3,  100 - genZFinal - millennialFinal - genXFinal);
 
   const generations = [
-    { label: "Gen Z (18-24)",      pct: genZFinal,      color: "#D4537E" },
-    { label: "Millennials (25-34)", pct: millennialFinal, color: "#378ADD" },
-    { label: "Gen X (35-44)",      pct: genXFinal,      color: "#5DCAA5" },
-    { label: "Boomers (45+)",      pct: boomerFinal,    color: "#888780" },
+    { label: "Gen Z (18-24)",       pct: genZFinal,       color: "#D4537E" },
+    { label: "Millennials (25-34)", pct: millennialFinal,  color: "#378ADD" },
+    { label: "Gen X (35-44)",       pct: genXFinal,        color: "#5DCAA5" },
+    { label: "Boomers (45+)",       pct: boomerFinal,      color: "#888780" },
   ];
+  // ─────────────────────────────────────────────────────────────────────────
 
-  // ─── TRENDING TOPICS (derived from account's actual content) ─────────────
-  // Extract the top hashtags from all videos by frequency + views
+  // ─── TRENDS (hashtag-driven) ──────────────────────────────────────────────
   const hashtagStats = {};
   for (const v of processedVideos) {
     for (const tag of (v.hashtags_list || [])) {
       if (!hashtagStats[tag]) hashtagStats[tag] = { count: 0, views: 0 };
-      hashtagStats[tag].count  += 1;
-      hashtagStats[tag].views  += v.views;
+      hashtagStats[tag].count += 1;
+      hashtagStats[tag].views += v.views;
     }
   }
-
-  const topHashtags = Object.entries(hashtagStats)
+  const topHashtags  = Object.entries(hashtagStats)
     .sort((a, b) => (b[1].views + b[1].count * 1000) - (a[1].views + a[1].count * 1000))
     .slice(0, 8)
     .map(([tag, stats]) => ({ tag, ...stats }));
+  const dominantTag  = topHashtags[0]?.tag?.toLowerCase() || "";
+  const allTags      = topHashtags.map(t => t.tag.toLowerCase()).join(" ");
 
-  // Determine the dominant niche from hashtags to pick relevant global trends
-  const dominantTag = topHashtags[0]?.tag?.toLowerCase() || "";
-  const allTags = topHashtags.map(t => t.tag.toLowerCase()).join(" ");
-  
-  let selectedTrends = [];
-
+  let trendList;
   if (allTags.includes("podcast") || allTags.includes("بودكاست")) {
-    selectedTrends = [
-      { name: "3-camera split screen clips", type: "format", views: "1.2B" },
-      { name: "Hook: 'The biggest lie you've been told about...'", type: "hook", views: "480M" },
-      { name: "Raw microphone setup aesthetic", type: "visual", views: "850M" },
-      { name: "Controversial guest cut-offs", type: "format", views: "2.1B" },
-      { name: "Lofi instrumental (background)", type: "sound", views: "920M" },
+    trendList = [
+      { name: "3-camera split screen clips",                      type: "format", views: "1.2B" },
+      { name: "Hook: 'The biggest lie you've been told about...'", type: "hook",   views: "480M" },
+      { name: "Raw microphone setup aesthetic",                    type: "visual", views: "850M" },
+      { name: "Controversial guest cut-offs",                      type: "format", views: "2.1B" },
     ];
-  } else if (allTags.includes("business") || allTags.includes("بزنس") || allTags.includes("marketing") || allTags.includes("تسويق")) {
-    selectedTrends = [
-      { name: "Income transparency reveals", type: "format", views: "3.4B" },
-      { name: "Hook: 'How I made X in 30 days'", type: "hook", views: "890M" },
-      { name: "Whiteboard/iPad breakdown", type: "visual", views: "1.1B" },
-      { name: "Day in the life of a CEO", type: "format", views: "2.8B" },
-      { name: "Fast-paced text on screen", type: "editing", views: "1.5B" },
+  } else if (allTags.includes("business") || allTags.includes("marketing") || allTags.includes("بزنس")) {
+    trendList = [
+      { name: "Income transparency reveals",       type: "format", views: "3.4B" },
+      { name: "Hook: 'How I made X in 30 days'",  type: "hook",   views: "890M" },
+      { name: "Whiteboard/iPad breakdown",         type: "visual", views: "1.1B" },
+      { name: "Day in the life of a CEO",          type: "format", views: "2.8B" },
     ];
   } else if (allTags.includes("tech") || allTags.includes("ai") || allTags.includes("تقنية")) {
-    selectedTrends = [
-      { name: "AI tools you're illegally ignoring", type: "hook", views: "4.1B" },
-      { name: "Screen recording with face-cam", type: "format", views: "880M" },
-      { name: "Tech desk setup tours", type: "visual", views: "2.2B" },
-      { name: "ChatGPT prompt secrets", type: "content", views: "5.5B" },
-      { name: "Futuristic synth wave", type: "sound", views: "400M" },
+    trendList = [
+      { name: "AI tools you're illegally ignoring", type: "hook",    views: "4.1B" },
+      { name: "Screen recording with face-cam",     type: "format",  views: "880M" },
+      { name: "Tech desk setup tours",              type: "visual",  views: "2.2B" },
+      { name: "ChatGPT prompt secrets",             type: "content", views: "5.5B" },
     ];
   } else {
-    // Fallback: General high-performing creator trends
-    selectedTrends = [
-      { name: "The 'Get Ready With Me' rant", type: "format", views: "6.2B" },
-      { name: "Hook: 'Stop scrolling if you...'", type: "hook", views: "1.8B" },
-      { name: "Rapid-fire jump cuts", type: "editing", views: "3.1B" },
-      { name: "Before and After transformation", type: "format", views: "4.5B" },
-      { name: "Trending capcut template", type: "format", views: "8.9B" },
+    trendList = [
+      { name: "Hook: 'Stop scrolling if you...'", type: "hook",    views: "1.8B" },
+      { name: "Rapid-fire jump cuts",             type: "editing", views: "3.1B" },
+      { name: "Before and After transformation",  type: "format",  views: "4.5B" },
+      { name: "Trending CapCut template",         type: "format",  views: "8.9B" },
     ];
   }
 
-  // Inject the account's top hashtag into rank 5 to keep it personalized
   const trends = [
-    ...selectedTrends.slice(0, 4).map((t, i) => ({
-      rank: i + 1,
-      name: t.name,
-      type: t.type,
-      views: t.views,
-    })),
-    {
-      rank: 5,
-      name: `Trending in #${dominantTag || "fyp"}`,
-      type: "hashtag",
-      views: "1.1B",
-    }
+    ...trendList.map((t, i) => ({ rank: i + 1, ...t })),
+    { rank: 5, name: `Trending in #${dominantTag || "fyp"}`, type: "hashtag", views: "1.1B" },
   ];
   // ─────────────────────────────────────────────────────────────────────────
 
@@ -390,19 +529,20 @@ async function run() {
     syncedAt: new Date().toISOString(),
   };
 
-  console.log(`📤 Uploading to Vercel KV...`);
+  console.log(`\n📤 Uploading to Vercel KV...`);
   await kvSet("tiktok_data", JSON.stringify(payload));
-  console.log(`\n✅ SUCCESS! Data for @${TIKTOK_HANDLE} is live in KV.`);
+
+  const analyzed = processedVideos.filter(v => v.hook !== null).length;
+  console.log(`\n✅ SUCCESS! @${TIKTOK_HANDLE} is live.`);
   console.log(`   Followers: ${account.followers.toLocaleString()}`);
-  console.log(`   Weekly Views: ${account.weeklyViews.toLocaleString()}`);
   console.log(`   Videos synced: ${processedVideos.length}`);
-  console.log(`   Top video score: ${Math.max(...processedVideos.map((v) => v.score))}`);
+  console.log(`   Analyzed by Claude: ${analyzed}/${processedVideos.length}`);
+  console.log(`   Top score: ${Math.max(...processedVideos.map(v => v.score))}`);
   console.log(`   Avg score: ${Math.round(processedVideos.reduce((s, v) => s + v.score, 0) / processedVideos.length)}`);
-  console.log(`   Synced at: ${payload.syncedAt}`);
-  console.log(`\n🌐 Your dashboard at https://tiktok-ai-agent.vercel.app now shows real data!\n`);
+  console.log(`   Synced at: ${payload.syncedAt}\n`);
 }
 
-run().catch((err) => {
+run().catch(err => {
   console.error("\n❌ Sync failed:", err.message);
   process.exit(1);
 });

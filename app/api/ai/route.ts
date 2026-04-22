@@ -53,7 +53,7 @@ export async function POST(req: Request) {
     // Streaming response
     const stream = client.messages.stream({
       model: "claude-opus-4-5",
-      max_tokens: 2000,
+      max_tokens: 4096,
       system: systemPrompt,
       messages: formattedMessages,
     });
