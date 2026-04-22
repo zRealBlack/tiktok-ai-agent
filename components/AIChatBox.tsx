@@ -3,7 +3,8 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import {
   MessageSquare, X, Send, Bot, User, Loader2,
-  ChevronDown, Trash2, AlertCircle, Maximize2, Minimize2
+  ChevronDown, Trash2, AlertCircle, Maximize2, Minimize2,
+  Copy, Check, MoreVertical
 } from "lucide-react";
 import { useData } from "@/components/DataContext";
 import MarkdownMessage from "@/components/MarkdownMessage";
@@ -33,6 +34,8 @@ export default function AIChatBox() {
   const bottomRef = useRef<HTMLDivElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const abortRef = useRef<AbortController | null>(null);
+  const [activeMenu, setActiveMenu] = useState<number | null>(null);
+  const [copiedId, setCopiedId] = useState<number | null>(null);
 
   const handleScroll = useCallback(() => {
     if (!scrollRef.current) return;
@@ -153,6 +156,30 @@ export default function AIChatBox() {
     });
   };
 
+  const deleteMessage = (index: number) => {
+    setMessages((prev) => {
+      const updated = prev.filter((_, i) => i !== index);
+      saveHistory(updated);
+      return updated;
+    });
+    setActiveMenu(null);
+  };
+
+  const copyToClipboard = (text: string, index: number) => {
+    navigator.clipboard.writeText(text).then(() => {
+      setCopiedId(index);
+      setTimeout(() => setCopiedId(null), 2000);
+    });
+  };
+
+  // Close menu on click outside
+  useEffect(() => {
+    if (activeMenu === null) return;
+    const clickHandler = () => setActiveMenu(null);
+    window.addEventListener("click", clickHandler);
+    return () => window.removeEventListener("click", clickHandler);
+  }, [activeMenu]);
+
   return (
     <>
       <button
@@ -226,27 +253,65 @@ export default function AIChatBox() {
                   <Image src={SarieAvatar} alt="Sarie" fill className="object-cover object-center" />
                 </div>
               )}
-              <div
-                className={`max-w-[82%] px-3 py-2.5 rounded-xl text-[13px] leading-relaxed whitespace-pre-wrap ${
-                  m.role === "user" ? "rounded-br-none" : "rounded-bl-none"
-                }`}
-                style={m.role === "user"
-                  ? { background: 'var(--glass-elevated)', color: 'var(--text-primary)', border: '1px solid var(--glass-elevated-border)' }
-                  : { background: 'var(--glass-elevated)', color: 'var(--text-secondary)', border: '1px solid var(--glass-elevated-border)' }}
-              >
-                {m.role === "user" && m.imageUrl && (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img src={m.imageUrl} alt="Video cover" className="w-full rounded-lg mb-2 object-cover" style={{ maxHeight: '80px' }} />
-                )}
-                {m.role === "assistant" ? (
-                  <MarkdownMessage content={m.content} />
-                ) : (
-                  m.content
-                )}
-                {m.streaming && (
-                  <span className="inline-block w-1.5 h-4 ml-0.5 animate-pulse rounded-sm align-middle"
-                    style={{ background: 'var(--text-muted)' }} />
-                )}
+              <div className="relative group max-w-[82%]">
+                <div
+                  className={`px-3 py-2.5 rounded-xl text-[13px] leading-relaxed whitespace-pre-wrap ${
+                    m.role === "user" ? "rounded-br-none" : "rounded-bl-none"
+                  }`}
+                  style={m.role === "user"
+                    ? { background: 'var(--glass-elevated)', color: 'var(--text-primary)', border: '1px solid var(--glass-elevated-border)' }
+                    : { background: 'var(--glass-elevated)', color: 'var(--text-secondary)', border: '1px solid var(--glass-elevated-border)' }}
+                >
+                  {m.role === "user" && m.imageUrl && (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={m.imageUrl} alt="Video cover" className="w-full rounded-lg mb-2 object-cover" style={{ maxHeight: '80px' }} />
+                  )}
+                  {m.role === "assistant" ? (
+                    <MarkdownMessage content={m.content} />
+                  ) : (
+                    m.content
+                  )}
+                  {m.streaming && (
+                    <span className="inline-block w-1.5 h-4 ml-0.5 animate-pulse rounded-sm align-middle"
+                      style={{ background: 'var(--text-muted)' }} />
+                  )}
+                </div>
+
+                {/* Message Actions */}
+                <div className={`absolute top-0 flex gap-1 transition-all duration-200 opacity-0 group-hover:opacity-100 ${
+                  m.role === "user" ? "right-full mr-2" : "left-full ml-2"
+                }`}>
+                  <button
+                    onClick={() => copyToClipboard(m.content, i)}
+                    className="w-7 h-7 rounded-lg flex items-center justify-center glass-elevated hover:bg-white/5"
+                    title="نسخ النص"
+                  >
+                    {copiedId === i ? <Check size={12} className="text-emerald-500" /> : <Copy size={12} style={{ color: 'var(--text-muted)' }} />}
+                  </button>
+                  <div className="relative">
+                    <button
+                      onClick={(e) => { e.stopPropagation(); setActiveMenu(activeMenu === i ? null : i); }}
+                      className="w-7 h-7 rounded-lg flex items-center justify-center glass-elevated hover:bg-white/5"
+                      title="المزيد"
+                    >
+                      <MoreVertical size={13} style={{ color: 'var(--text-muted)' }} />
+                    </button>
+                    {activeMenu === i && (
+                      <div 
+                        className="absolute bottom-full mb-2 left-0 z-[60] min-w-[100px] glass-chat rounded-xl border p-1 shadow-2xl animate-in fade-in zoom-in-95 duration-100"
+                        style={{ borderColor: 'var(--glass-border)' }}
+                      >
+                        <button
+                          onClick={() => deleteMessage(i)}
+                          className="w-full flex items-center gap-2 px-3 py-2 text-[11px] font-medium text-red-500 hover:bg-red-500/10 rounded-lg transition-colors"
+                        >
+                          <Trash2 size={12} />
+                          حذف الرسالة
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                </div>
               </div>
               {m.role === "user" && (
                 <div className="w-6 h-6 rounded-full glass-elevated flex items-center justify-center shrink-0 mt-0.5">
