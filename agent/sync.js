@@ -35,34 +35,140 @@ async function fetchImageAsBase64(url) {
   }
 }
 
-async function evaluateVisuals(coverUrl, text) {
+// Extract 3 representative frames from an mp4 URL using ffmpeg (if available)
+async function extractFramesFromVideo(videoUrl) {
+  const { exec } = require("child_process");
+  const { promisify } = require("util");
+  const execAsync = promisify(exec);
+  const fs = require("fs");
+  const path = require("path");
+  const os = require("os");
+
   try {
-    const imgParams = await fetchImageAsBase64(coverUrl);
-    if (!imgParams) return null;
+    await execAsync("ffmpeg -version", { timeout: 3000 });
+  } catch {
+    return null; // ffmpeg not installed — caller falls back to thumbnail
+  }
+
+  const tmpId = `${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+  const videoPath = path.join(os.tmpdir(), `tiktok_${tmpId}.mp4`);
+  const framePaths = [];
+
+  try {
+    process.stdout.write("    ↓ Downloading video for frame analysis... ");
+    const res = await fetch(videoUrl, { signal: AbortSignal.timeout(40000) });
+    if (!res.ok) return null;
+    fs.writeFileSync(videoPath, Buffer.from(await res.arrayBuffer()));
+    console.log("done");
+
+    // Get duration so we can pick meaningful timestamps
+    let duration = 30;
+    try {
+      const { stdout } = await execAsync(
+        `ffprobe -v quiet -show_entries format=duration -of csv=p=0 "${videoPath}"`,
+        { timeout: 5000 }
+      );
+      duration = parseFloat(stdout.trim()) || 30;
+    } catch {}
+
+    // Frame 1: hook (5% in), Frame 2: mid content (40% in), Frame 3: near end (80% in)
+    const timestamps = [
+      Math.max(0.5, duration * 0.05),
+      duration * 0.40,
+      duration * 0.80,
+    ];
+
+    for (let i = 0; i < timestamps.length; i++) {
+      const fp = path.join(os.tmpdir(), `frame_${tmpId}_${i}.jpg`);
+      try {
+        await execAsync(
+          `ffmpeg -ss ${timestamps[i].toFixed(2)} -i "${videoPath}" -vframes 1 -q:v 2 "${fp}" -y`,
+          { timeout: 10000 }
+        );
+        if (fs.existsSync(fp)) framePaths.push(fp);
+      } catch {}
+    }
+
+    if (framePaths.length === 0) return null;
+    console.log(`    ✓ ${framePaths.length} frames extracted (hook / mid / end)`);
+
+    return framePaths.map(fp => ({
+      data: fs.readFileSync(fp).toString("base64"),
+      mediaType: "image/jpeg",
+    }));
+  } catch (err) {
+    console.warn(`    ⚠ Frame extraction failed: ${err.message}`);
+    return null;
+  } finally {
+    const fs2 = require("fs");
+    try { fs2.unlinkSync(videoPath); } catch {}
+    framePaths.forEach(fp => { try { fs2.unlinkSync(fp); } catch {} });
+  }
+}
+
+// Run Claude Vision on 3 video frames (or thumbnail as fallback) and return scored analysis
+async function evaluateVisuals(coverUrl, videoDownloadUrl, text) {
+  try {
+    let imageContents = [];
+
+    // Primary: extract real frames from the downloaded video
+    if (videoDownloadUrl) {
+      const frames = await extractFramesFromVideo(videoDownloadUrl);
+      if (frames?.length > 0) {
+        imageContents = frames.map(f => ({
+          type: "image",
+          source: { type: "base64", media_type: f.mediaType, data: f.data },
+        }));
+      }
+    }
+
+    // Fallback: use the cover/thumbnail image
+    if (imageContents.length === 0 && coverUrl) {
+      const img = await fetchImageAsBase64(coverUrl);
+      if (!img) return null;
+      imageContents = [{ type: "image", source: { type: "base64", media_type: img.mediaType, data: img.data } }];
+    }
+
+    if (imageContents.length === 0) return null;
+
+    const frameContext = imageContents.length > 1
+      ? `You are viewing ${imageContents.length} frames from the actual video (beginning/hook, mid-content, and near-end).`
+      : "You are viewing the video thumbnail (cover image).";
 
     const msg = await anthropic.messages.create({
       model: "claude-3-5-sonnet-20241022",
-      max_tokens: 300,
-      system: "You are an expert TikTok strategist. Analyze the provided video thumbnail and the caption. Produce exactly and ONLY a raw JSON object string with three integer scores out of 100: { \"appearance\": 85, \"filming\": 90, \"content\": 82 }. Do not include any other text or formatting. 'appearance' grades outfit/makeup/background. 'filming' grades lighting/camera angles. 'content' grades how visually hooking/interesting the video topic appears based on the thumbnail+caption.",
+      max_tokens: 450,
+      system: `You are an expert TikTok production analyst. ${frameContext}
+Analyze every visual element across the provided image(s).
+Return ONLY a raw JSON object — no other text, no markdown:
+{
+  "appearance": 82,
+  "filming": 78,
+  "content": 85,
+  "appearanceIssue": "One-sentence specific diagnosis of the biggest appearance problem visible, or null if fine.",
+  "filmingIssue": "One-sentence specific diagnosis of the biggest filming/lighting problem visible (include color temperature if relevant), or null if fine.",
+  "mood": "Energetic"
+}
+appearance (0-100): outfit style/color fit + grooming + makeup (shine/matte) + background cleanliness.
+filming (0-100): lighting quality + color temperature (warm/cool/neutral) + key-light placement + shadows + camera angle + framing.
+content (0-100): visual hook strength + topic clarity from the frames.
+mood: exactly one of — Energetic, Upbeat, Serious/Focus, Casual, Emotional, Neutral.`,
       temperature: 0.1,
-      messages: [
-        {
-          role: "user",
-          content: [
-            { type: "image", source: { type: "base64", media_type: imgParams.mediaType, data: imgParams.data } },
-            { type: "text", text: `Caption: ${text || "None"}. \nReturn ONLY the raw JSON string.` }
-          ]
-        }
-      ]
+      messages: [{
+        role: "user",
+        content: [
+          ...imageContents,
+          { type: "text", text: `Caption: "${text || "None"}". Return ONLY the raw JSON string.` },
+        ],
+      }],
     });
-    
-    // Attempt to parse JSON safely
+
     const rawRes = msg.content[0].text;
     const jsonMatch = rawRes.match(/\{[\s\S]*\}/);
     if (jsonMatch) return JSON.parse(jsonMatch[0]);
     return null;
   } catch (err) {
-    console.warn("Vision API failed for a video:", err.message);
+    console.warn("  ⚠ Vision API failed:", err.message);
     return null;
   }
 }
@@ -86,14 +192,15 @@ async function run() {
 
   const client = new ApifyClient({ token: APIFY_TOKEN });
 
-  const run = await client.actor("clockworks/tiktok-profile-scraper").call({
+  const apifyRun = await client.actor("clockworks/tiktok-profile-scraper").call({
     profiles: [TIKTOK_HANDLE],
     resultsPerPage: 30,
+    downloadVideos: true,
   });
 
   console.log("✅ Apify scrape complete. Processing data...");
 
-  const { items } = await client.dataset(run.defaultDatasetId).listItems();
+  const { items } = await client.dataset(apifyRun.defaultDatasetId).listItems();
 
   if (!items || items.length === 0) {
     throw new Error("No data returned. Is the account public and the handle correct?");
@@ -165,9 +272,12 @@ async function run() {
     const totalScore = calcScore(v);
     const captionLen = (v.text || "").length;
     const hashCount  = (v.hashtags || []).length;
-    const coverUrl   = v.videoMeta?.coverUrl || v.videoMeta?.originalCoverUrl || "";
+    const coverUrl        = v.videoMeta?.coverUrl || v.videoMeta?.originalCoverUrl || "";
+    const videoDownloadUrl = v.videoMeta?.downloadAddr || "";
 
-    const visualScores = coverUrl ? await evaluateVisuals(coverUrl, v.text) : null;
+    const visualScores = (coverUrl || videoDownloadUrl)
+      ? await evaluateVisuals(coverUrl, videoDownloadUrl, v.text)
+      : null;
 
     // ─── DEEP CONTENT ANALYSIS ──────────────────────────────────────────────
     const duration     = v.videoMeta?.duration || 30;
@@ -310,7 +420,7 @@ async function run() {
       // Deep content analysis fields
       duration,
       tone,
-      mood,
+      mood: visualScores?.mood ?? mood,
       emotionalPull,
       energy,
       retentionRisk,
@@ -319,16 +429,17 @@ async function run() {
       issue,
       suggestion,
       // Sound analysis
-      sound: Math.max(15, Math.min(98, Math.round(totalScore * (0.8 + Math.random() * 0.3)))),
+      sound,
       soundType,
       soundName,
       soundIssue,
       soundSuggestion,
       // Appearance, Filming & Content: using native Anthropic Vision
-      appearance:     visualScores?.appearance || Math.max(12, Math.min(98, Math.round(totalScore * (0.85 + Math.random() * 0.3)))),
-      appearanceNote: "Evaluated by Mas Agent.",
-      filming:        visualScores?.filming    || Math.max(12, Math.min(98, Math.round(totalScore * (0.85 + Math.random() * 0.3)))),
-      content:        visualScores?.content    || Math.max(15, Math.min(98, Math.round(totalScore * (0.80 + Math.random() * 0.3)))),
+      appearance:     visualScores?.appearance     ?? null,
+      appearanceIssue: visualScores?.appearanceIssue ?? null,
+      filming:        visualScores?.filming         ?? null,
+      filmingIssue:   visualScores?.filmingIssue    ?? null,
+      content:        visualScores?.content         ?? null,
       isPinned:      v.isPinned || false,
       videoUrl:      v.webVideoUrl || "",
       coverUrl:      v.videoMeta?.coverUrl || v.videoMeta?.originalCoverUrl || "",

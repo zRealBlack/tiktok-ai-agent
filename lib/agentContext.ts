@@ -29,7 +29,9 @@ VIDEO: "${v.title}" [Score: ${v.score}/100]
   Retention Risk: ${v.retentionRisk || "Unknown"} | Growth Potential: ${v.growthPotential ?? "?"}/100
   Sound Score: ${v.sound ?? "?"}/100 | Sound Type: ${v.soundType || "Unknown"} | Track: ${v.soundName || "Unknown"}
   Sound Issue: ${v.soundIssue || "—"}
-  Appearance Score: ${v.appearance !== null && v.appearance !== undefined ? v.appearance + "/100" : "Not scored — needs visual assessment"}${v.appearanceIssue ? " | Issue: " + v.appearanceIssue : ""}
+  Appearance Score: ${v.appearance !== null && v.appearance !== undefined ? v.appearance + "/100" : "Not scored"}${v.appearanceIssue ? " | Issue: " + v.appearanceIssue : ""}
+  Filming Score: ${v.filming !== null && v.filming !== undefined ? v.filming + "/100" : "Not scored"}${v.filmingIssue ? " | Issue: " + v.filmingIssue : ""}
+  Content Score: ${v.content !== null && v.content !== undefined ? v.content + "/100" : "Not scored"}
   Weakness Flags: ${v.weaknessFlags?.length ? v.weaknessFlags.join(", ") : "None"}
   ⚠ Issue: ${v.issue}
   ✦ Fix: ${v.suggestion}
