@@ -160,13 +160,13 @@ export default function VideoDetailPage() {
             <h2 className="text-[13px] font-bold mb-4" style={{ color: 'var(--text-primary)' }}>AI Score Breakdown</h2>
             <div className="space-y-3">
               {([
-                ["Hook",       video.hook],
-                ["Pacing",     video.pacing],
-                ["Caption",    video.caption],
-                ["Hashtags",   video.hashtags],
-                ["CTA",        video.cta],
-                ...(video.sound      !== undefined              ? [["Sound",      video.sound]]      : []),
-                ...(video.appearance !== null && video.appearance !== undefined ? [["Appearance", video.appearance]] : []),
+                ["Hook",       video.hook || 0],
+                ["Pacing",     video.pacing || 0],
+                ["Caption",    video.caption || 0],
+                ["Hashtags",   video.hashtags || 0],
+                ["CTA",        video.cta || 0],
+                ["Sound",      video.sound || 0],
+                ["Appearance", video.appearance || 0],
               ] as [string, number][]).map(([label, val], i) => (
                 <ScoreBar key={label} label={label} value={val} delay={i * 80} />
               ))}
