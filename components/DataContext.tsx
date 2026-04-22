@@ -84,16 +84,25 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  // Scrape competitors via Apify REST (POST /api/competitors) — no SDK bundler issues
+  // Scrape competitors via Apify REST (POST /api/competitors)
+  // pass "__all__" to scrape everyone in one request (no race conditions)
   const scrapeCompetitor = useCallback(async (handle: string) => {
+    const isAll = handle === "__all__";
     const cleanHandle = handle.replace("@", "").trim();
-    setScrapingHandles(prev => new Set(prev).add(cleanHandle));
+
+    if (isAll) {
+      // Mark all handles as scraping
+      setScrapingHandles(new Set(competitors.map((c: any) => c.handle.replace("@", ""))));
+    } else {
+      setScrapingHandles(prev => new Set(prev).add(cleanHandle));
+    }
 
     try {
+      const body = isAll ? {} : { handle: cleanHandle };
       const res = await fetch("/api/competitors", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ handle: cleanHandle }),
+        body: JSON.stringify(body),
       });
 
       if (!res.ok) {
@@ -102,7 +111,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
       }
 
       const data = await res.json();
-      // The POST returns { competitors: [...all merged...] }
+      // POST always returns ALL competitors (merged with existing KV data)
       if (data.competitors && Array.isArray(data.competitors)) {
         setCompetitors(data.competitors);
       }
@@ -110,13 +119,9 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
       console.error("Competitor scrape failed:", err);
       throw err;
     } finally {
-      setScrapingHandles(prev => {
-        const next = new Set(prev);
-        next.delete(cleanHandle);
-        return next;
-      });
+      setScrapingHandles(new Set());
     }
-  }, []);
+  }, [competitors]);
 
   // refreshData is kept for manual re-reads from KV (not Apify)
   const refreshData = async (_handle: string) => {
