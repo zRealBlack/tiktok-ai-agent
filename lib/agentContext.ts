@@ -38,12 +38,13 @@ Known Weaknesses: ${CLIENT_PROFILE.knownWeaknesses}
 Managed by: ${CLIENT_PROFILE.agency}
 `
   + `
-=== LIVE ACCOUNT DATA (from KV sync) ===
+=== LIVE ACCOUNT DATA (from KV sync — updated when agent runs node agent/sync.js) ===
 Username: ${clientUsername}
-Followers: ${clientFollowers > 0 ? clientFollowers.toLocaleString() + " (+" + (account.followersGrowth || 0).toLocaleString() + " this week)" : "Not synced yet — refer to permanent memory above"}
-Avg Engagement Rate: ${account.avgEngagement || "Not synced"}${account.avgEngagement ? "% (" + (account.engagementChange > 0 ? "+" : "") + (account.engagementChange || 0) + "% change)" : ""}
-Weekly Views: ${account.weeklyViews ? (account.weeklyViews || 0).toLocaleString() + " (" + (account.weeklyViewsChange || 0) + "% change)" : "Not synced yet"}
+Followers: ${clientFollowers > 0 ? clientFollowers.toLocaleString() + " (+" + (account.followersGrowth || 0).toLocaleString() + " this week)" : "Live sync pending — use permanent memory above for strategy"}
+Avg Engagement Rate: ${account.avgEngagement ? account.avgEngagement + "% (" + (account.engagementChange > 0 ? "+" : "") + (account.engagementChange || 0) + "% change)" : "Live sync pending"}
+Weekly Views: ${account.weeklyViews ? account.weeklyViews.toLocaleString() + " (" + (account.weeklyViewsChange || 0) + "% change)" : "Live sync pending"}
 Open Action Items: ${account.actionItems || 0}
+Note: لو بيانات الأكاونت مش متزامنة، استخدمي الذاكرة الدائمة في الأعلى عشان تعرفي العميل.
 
 === AUDIENCE BREAKDOWN ===
 ${gens.map((g: any) => `- ${g.label}: ${g.pct}%`).join("\n") || "No data"}

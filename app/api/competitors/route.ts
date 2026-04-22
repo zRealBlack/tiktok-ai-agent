@@ -7,14 +7,42 @@ const APIFY_TOKEN       = "apify_api_" + "g6bQyWvIy8xp0jseCouNiHrVh0pZ9A3kJuHg";
 const KV_REST_API_URL   = "https://sure-shrew-104058.upstash.io";
 const KV_REST_API_TOKEN = "gQAAAAAAAZZ6AAIgcDE4OGQ5NzI3Y2NlMTI0MTk0OTA3NjhmMjZkY2RiYmRhOA";
 
-const COMPETITORS = [
+// Source of truth — all tracked competitors. Handle = exact TikTok handle (no @)
+const TRACKED_COMPETITORS = [
   { handle: "dina_aamer",   name: "Dina Aamer" },
   { handle: "lamiaa.fahmy", name: "Lamiaa Fahmy" },
 ];
 
+// Empty seed for a competitor not yet scraped
+function emptySeed(handle: string, name: string) {
+  return {
+    handle: `@${handle}`,
+    name,
+    followers: 0,
+    postsThisWeek: 0,
+    viewChange: "—",
+    status: "stable",
+    avgViews: 0,
+    topFormat: "—",
+    bio: "",
+    scrapedAt: null,
+    needsScrape: true,
+    pros: [],
+    cons: [],
+    contentStrategy: "—",
+    postingFrequency: "—",
+    avgEngagement: "—",
+    topVideoTitle: "—",
+    topVideoViews: 0,
+    threatLevel: "Medium",
+    opportunity: "Click 'Analyze Live' to scrape real data",
+  };
+}
+
 async function kvGet(key: string) {
   const res = await fetch(`${KV_REST_API_URL}/get/${key}`, {
     headers: { Authorization: `Bearer ${KV_REST_API_TOKEN}` },
+    cache: "no-store",
   });
   if (!res.ok) return null;
   const json = await res.json();
@@ -31,6 +59,25 @@ async function kvSet(key: string, value: string) {
     body: JSON.stringify(value),
   });
   if (!res.ok) throw new Error(`KV set failed: ${res.status}`);
+}
+
+// Always return full competitor list — KV data merged with empty seeds for missing ones
+async function getFullCompetitorList(): Promise<any[]> {
+  const raw = await kvGet("competitor_data");
+  let kvCompetitors: any[] = [];
+  if (raw) {
+    const parsed = typeof raw === "string" ? JSON.parse(raw) : raw;
+    kvCompetitors = parsed.competitors || [];
+  }
+
+  // Build a map keyed by handle (with @)
+  const kvMap = new Map(kvCompetitors.map((c: any) => [c.handle, c]));
+
+  // Ensure every tracked competitor exists in the result
+  return TRACKED_COMPETITORS.map(tc => {
+    const key = `@${tc.handle}`;
+    return kvMap.get(key) || emptySeed(tc.handle, tc.name);
+  });
 }
 
 function fmtNum(n: number) {
@@ -52,7 +99,14 @@ function detectStatus(videos: any[]): "spiking" | "stable" | "dropping" {
 
 function detectTopFormat(videos: any[]): string {
   const descs = videos.map((v: any) => (v.text || v.desc || "").toLowerCase());
-  const c: Record<string, number> = { "Day in the life / DITL": 0, "Educational / Tips": 0, "Behind the scenes": 0, "Storytelling / Vlog": 0, "Transformation": 0, "Q&A / Comment reply": 0 };
+  const c: Record<string, number> = {
+    "Day in the life / DITL": 0,
+    "Educational / Tips": 0,
+    "Behind the scenes": 0,
+    "Storytelling / Vlog": 0,
+    "Transformation": 0,
+    "Q&A / Comment reply": 0,
+  };
   for (const d of descs) {
     if (d.includes("يوم") || d.includes("day in") || d.includes("routine") || d.includes("روتين")) c["Day in the life / DITL"]++;
     if (d.includes("كيف") || d.includes("طريقة") || d.includes("tip") || d.includes("how to")) c["Educational / Tips"]++;
@@ -76,26 +130,42 @@ function buildAnalysis(profile: any, videos: any[]) {
   const pros: string[] = [];
   const cons: string[] = [];
 
-  if (avgViews > 50000) pros.push("High average views — strong organic reach");
-  if (parseFloat(engRate) > 5) pros.push("High engagement rate — active audience");
-  if (followers > 100000) pros.push("Large follower base — established presence");
+  if (avgViews > 200000) pros.push("Extremely high average views — dominant FYP presence");
+  else if (avgViews > 50000) pros.push("High average views — strong organic reach");
+  else if (avgViews > 20000) pros.push("Above-average FYP penetration");
 
-  const datesRaw = videos.map((v: any) => v.createTime ? new Date(v.createTime * 1000).toISOString() : null).filter(Boolean) as string[];
+  const engNum = parseFloat(engRate);
+  if (engNum > 8) pros.push("Exceptional engagement rate — highly active audience");
+  else if (engNum > 5) pros.push("High engagement rate — audience is active");
+
+  if (followers > 500000) pros.push("Massive follower base — industry authority");
+  else if (followers > 100000) pros.push("Large follower base — established presence");
+  else if (followers > 50000) pros.push("Sizable following in the niche");
+
+  const datesRaw = videos
+    .map((v: any) => v.createTime ? new Date(v.createTime * 1000).toISOString() : null)
+    .filter(Boolean) as string[];
   let postsPerWeek = 0;
   if (datesRaw.length >= 2) {
-    const weeks = Math.max((new Date(datesRaw[0]).getTime() - new Date(datesRaw[datesRaw.length - 1]).getTime()) / (7 * 86400000), 1);
+    const weeks = Math.max(
+      (new Date(datesRaw[0]).getTime() - new Date(datesRaw[datesRaw.length - 1]).getTime()) / (7 * 86400000),
+      1
+    );
     postsPerWeek = parseFloat((datesRaw.length / weeks).toFixed(1));
-    if (postsPerWeek >= 3) pros.push(`Consistent posting (~${postsPerWeek}x/week)`);
-    else cons.push(`Low posting frequency (~${postsPerWeek}x/week)`);
+    if (postsPerWeek >= 5) pros.push(`Very consistent posting (${postsPerWeek}x/week)`);
+    else if (postsPerWeek >= 3) pros.push(`Regular posting cadence (~${postsPerWeek}x/week)`);
+    else cons.push(`Low posting frequency (~${postsPerWeek}x/week) — inconsistent`);
   }
 
-  if (avgViews < 10000) cons.push("Low avg views — not breaking through FYP");
-  if (followers > 0 && avgViews / followers < 0.05) cons.push("Low FYP reach vs follower count");
+  if (avgViews < 10000) cons.push("Low avg views — content not breaking through FYP");
+  if (followers > 0 && avgViews / followers < 0.05) cons.push("Low FYP reach relative to follower count");
+
   const trendingRatio = videos.filter((v: any) => v.musicMeta?.musicName && !v.musicMeta?.musicOriginal).length / videos.length;
-  if (trendingRatio > 0.6) pros.push("Consistently uses trending audio for reach");
+  if (trendingRatio > 0.6) pros.push("Consistently uses trending audio for algorithmic boost");
+  else if (trendingRatio < 0.2 && videos.length > 3) cons.push("Rarely uses trending audio — missing reach opportunities");
 
   if (pros.length < 2) pros.push("Active presence in the niche");
-  if (cons.length < 1) cons.push("Hard to find weaknesses — monitor closely");
+  if (cons.length < 1) cons.push("Hard to find clear weaknesses — monitor closely");
 
   let threatLevel: "High" | "Medium" | "Low" = "Low";
   if (followers > 200000 || avgViews > 100000) threatLevel = "High";
@@ -113,13 +183,12 @@ function buildAnalysis(profile: any, videos: any[]) {
     opportunity: threatLevel === "High"
       ? "Study their top hooks and formats — replicate structure, not content"
       : threatLevel === "Medium"
-      ? "Content gap exists — target their underserved topics"
+      ? "Content gap exists — target their underserved topics to capture their audience"
       : "Outrank them with consistent, higher-quality production",
   };
 }
 
 async function scrapeOne(handle: string, name: string) {
-  // Start Apify actor run via REST API (avoids bundler issues with the SDK)
   const startRes = await fetch(
     `https://api.apify.com/v2/acts/clockworks~tiktok-profile-scraper/runs?token=${APIFY_TOKEN}`,
     {
@@ -138,7 +207,6 @@ async function scrapeOne(handle: string, name: string) {
   const runId = runData.id;
   const datasetId = runData.defaultDatasetId;
 
-  // Poll until finished (max 240s)
   let status = runData.status;
   const deadline = Date.now() + 240_000;
   while (status !== "SUCCEEDED" && status !== "FAILED" && status !== "ABORTED" && Date.now() < deadline) {
@@ -151,17 +219,16 @@ async function scrapeOne(handle: string, name: string) {
 
   if (status !== "SUCCEEDED") throw new Error(`Apify run ended with status: ${status}`);
 
-  // Fetch results
   const itemsRes = await fetch(
-    `https://api.apify.com/v2/datasets/${datasetId}/items?token=${APIFY_TOKEN}&format=json`,
+    `https://api.apify.com/v2/datasets/${datasetId}/items?token=${APIFY_TOKEN}&format=json`
   );
   if (!itemsRes.ok) throw new Error(`Dataset fetch failed: ${itemsRes.status}`);
 
   const items: any[] = await itemsRes.json();
   if (!items || items.length === 0) throw new Error(`No data found for @${handle}`);
 
-  const videos  = items;
-  const profile = videos[0]?.authorMeta || {};
+  const videos   = items;
+  const profile  = videos[0]?.authorMeta || {};
   const followers = profile.fans || profile.followerCount || 0;
   const totalViews = videos.reduce((s: number, v: any) => s + (v.playCount || 0), 0);
   const avgViews   = videos.length > 0 ? Math.round(totalViews / videos.length) : 0;
@@ -195,64 +262,53 @@ async function scrapeOne(handle: string, name: string) {
   };
 }
 
-// GET — read cached competitor data from KV
+// GET — always returns ALL tracked competitors (KV data + empty seeds for unscraped ones)
 export async function GET() {
   try {
-    const raw = await kvGet("competitor_data");
-    if (!raw) return NextResponse.json({ competitors: [] });
-    const data = typeof raw === "string" ? JSON.parse(raw) : raw;
-    return NextResponse.json(data);
+    const competitors = await getFullCompetitorList();
+    return NextResponse.json({ competitors, syncedAt: null });
   } catch (err: any) {
     return NextResponse.json({ error: err.message }, { status: 500 });
   }
 }
 
-// POST — trigger a fresh scrape of all competitors (or a specific handle)
+// POST — scrape one or all competitors, always persist ALL to KV, always return ALL
 export async function POST(req: Request) {
   try {
     const body = await req.json().catch(() => ({}));
-    const handles = body.handle
-      ? COMPETITORS.filter(c => c.handle === body.handle.replace("@", ""))
-      : COMPETITORS;
+    const toScrape = body.handle
+      ? TRACKED_COMPETITORS.filter(c => c.handle === body.handle.replace("@", "").trim())
+      : TRACKED_COMPETITORS;
 
-    // Read existing data to merge partial updates
-    const raw = await kvGet("competitor_data");
-    let existing: any[] = [];
-    if (raw) {
-      const parsed = typeof raw === "string" ? JSON.parse(raw) : raw;
-      existing = parsed.competitors || [];
-    }
+    // Get the current full list (ensures we never drop existing data)
+    const currentList = await getFullCompetitorList();
+    const merged = new Map(currentList.map(c => [c.handle, c]));
 
-    const results: any[] = [];
     const errors: string[] = [];
 
-    for (const comp of handles) {
+    for (const comp of toScrape) {
       try {
         console.log(`Scraping @${comp.handle}...`);
         const data = await scrapeOne(comp.handle, comp.name);
-        results.push(data);
+        merged.set(data.handle, data); // Override with fresh data
       } catch (err: any) {
         console.error(`Failed @${comp.handle}: ${err.message}`);
         errors.push(`@${comp.handle}: ${err.message}`);
-        // Keep existing data for this competitor if scrape fails
-        const prev = existing.find((c: any) => c.handle === `@${comp.handle}`);
-        if (prev) results.push(prev);
+        // Existing entry stays in merged (not overwritten) — data preserved
       }
     }
 
-    // Merge: new scraped results override existing ones by handle
-    const mergedMap = new Map(existing.map((c: any) => [c.handle, c]));
-    for (const r of results) mergedMap.set(r.handle, r);
-    const merged = Array.from(mergedMap.values());
+    const allCompetitors = Array.from(merged.values());
+    const payload = { competitors: allCompetitors, syncedAt: new Date().toISOString() };
 
-    const payload = { competitors: merged, syncedAt: new Date().toISOString() };
+    // Persist to KV — same pattern as tiktok_data
     await kvSet("competitor_data", JSON.stringify(payload));
 
     return NextResponse.json({
       success: true,
-      scraped: results.length,
+      scraped: toScrape.length - errors.length,
       errors: errors.length > 0 ? errors : undefined,
-      competitors: merged,
+      competitors: allCompetitors,
       syncedAt: payload.syncedAt,
     });
   } catch (err: any) {
