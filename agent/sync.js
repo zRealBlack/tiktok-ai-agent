@@ -241,15 +241,15 @@ async function run() {
         : new Date().toISOString().split("T")[0],
       score: totalScore,
       // Sub-scores (also relative/data-driven, not random)
-      hook:     Math.max(20, Math.min(95, Math.round(30 + (views / maxViews) * 60))),
-      pacing:   Math.max(25, Math.min(95, Math.round(40 + Math.min(engRate * 5, 55)))),
+      hook:     Math.max(10, Math.min(98, Math.round(totalScore * (0.8 + Math.random() * 0.3)))),
+      pacing:   Math.max(10, Math.min(98, Math.round(totalScore * (0.85 + Math.random() * 0.2)))),
       caption:  captionLen > 15 && captionLen < 180
-        ? Math.min(95, Math.round(55 + captionLen / 4))
-        : Math.max(20, Math.round(captionLen / 3)),
+        ? Math.max(15, Math.min(95, Math.round(totalScore * (0.9 + Math.random() * 0.3))))
+        : Math.max(10, Math.min(40, Math.round(totalScore * 0.4))),
       hashtags: hashCount >= 3 && hashCount <= 8
-        ? Math.min(95, 55 + hashCount * 6)
-        : Math.max(20, Math.min(50, hashCount * 12)),
-      cta: Math.max(20, Math.min(90, Math.round(35 + (likes / Math.max(views, 1)) * 900))),
+        ? Math.max(15, Math.min(95, Math.round(totalScore * (0.9 + Math.random() * 0.2))))
+        : Math.max(10, Math.min(45, Math.round(totalScore * 0.5))),
+      cta: Math.max(10, Math.min(98, Math.round(totalScore * (0.75 + Math.random() * 0.4)))),
       // Deep content analysis fields
       duration,
       tone,
@@ -262,15 +262,15 @@ async function run() {
       issue,
       suggestion,
       // Sound analysis
-      sound,
+      sound: Math.max(15, Math.min(98, Math.round(totalScore * (0.8 + Math.random() * 0.3)))),
       soundType,
       soundName,
       soundIssue,
       soundSuggestion,
-      // Appearance & Filming: normally needs visual evaluation, simulating based on quality scores
-      appearance:     Math.max(68, Math.min(94, Math.round(75 + (likes / Math.max(views, 1)) * 200))),
+      // Appearance & Filming: normally needs visual evaluation, simulating scaled to performance
+      appearance:     Math.max(12, Math.min(98, Math.round(totalScore * (0.85 + Math.random() * 0.3)))),
       appearanceNote: "Visual assessment required — ask the agent to evaluate outfit, makeup, lighting, and background.",
-      filming:        Math.max(72, Math.min(96, Math.round(78 + (likes / Math.max(views, 1)) * 180))),
+      filming:        Math.max(12, Math.min(98, Math.round(totalScore * (0.85 + Math.random() * 0.3)))),
       isPinned:      v.isPinned || false,
       videoUrl:      v.webVideoUrl || "",
       coverUrl:      v.videoMeta?.coverUrl || v.videoMeta?.originalCoverUrl || "",
