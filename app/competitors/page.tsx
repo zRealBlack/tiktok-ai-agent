@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import CompetitorCard from "@/components/CompetitorCard";
 import { Plus, Search, RefreshCw, Zap } from "lucide-react";
 import { dispatchAgentPrompt } from "@/components/AIChatBox";
@@ -10,6 +10,21 @@ export default function CompetitorsPage() {
   const { competitors, scrapeCompetitor, scrapingHandles } = useData();
   const [newHandle, setNewHandle] = useState("");
   const [isScrapeAll, setIsScrapeAll] = useState(false);
+  const [autoScrapeTriggered, setAutoScrapeTriggered] = useState(false);
+
+  // Auto-scrape any competitor that still has no data (needsScrape: true)
+  useEffect(() => {
+    if (autoScrapeTriggered) return;
+    const needsData = competitors.filter((c: any) => c.needsScrape || c.followers === 0);
+    if (needsData.length === 0) return;
+    setAutoScrapeTriggered(true);
+    // Stagger scrapes by 2s so we don't hit Apify concurrency limits
+    needsData.forEach((c: any, i: number) => {
+      setTimeout(() => {
+        scrapeCompetitor(c.handle).catch(console.error);
+      }, i * 2000);
+    });
+  }, [competitors, autoScrapeTriggered, scrapeCompetitor]);
 
   const handleCustomSpy = () => {
     if (!newHandle.trim()) return;

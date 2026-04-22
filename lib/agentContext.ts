@@ -1,16 +1,48 @@
-// Removing hardcoded mockData dependency. Context is dynamically built.
+// Permanent client profile — always available even if KV is empty
+const CLIENT_PROFILE = {
+  username:      "@rasayel_podcast",
+  realName:      "Rasayel Podcast",
+  niche:         "Arabic podcast / conversations / storytelling",
+  market:        "Egypt & Arab world",
+  studio:        "Mas Studio — professional 3-camera setup",
+  contentTypes:  "Podcast clips, guest highlights, behind-the-scenes, conversation excerpts",
+  targetAudience:"Egyptians 18–35, Gen Z & Millennials, Arabic content consumers",
+  goals:         "Grow TikTok presence, increase episode reach, convert views to podcast listeners",
+  knownStrengths:"High-quality studio production, authentic conversations, strong guests",
+  knownWeaknesses:"TikTok clip hooks need improvement, hashtag strategy underdeveloped, CTAs need work",
+  agency:        "Managed by Mas Agency (Yassin Gaml)",
+};
+
 export function buildAgentContext(data: any): string {
   const account = data.account || {};
   const videos  = data.videos  || [];
   const gens    = data.generations || [];
   const trends  = data.trends  || [];
   const comps   = data.competitors || [];
+
+  // Merge live KV account data with permanent client profile fallback
+  const clientUsername = account.username || CLIENT_PROFILE.username;
+  const clientFollowers = account.followers || 0;
+
   return `
-=== ACCOUNT OVERVIEW ===
-Username: ${account.username || '@rasayel_podcast'}
-Followers: ${(account.followers || 0).toLocaleString()} (+${(account.followersGrowth || 0).toLocaleString()} this week)
-Avg Engagement Rate: ${account.avgEngagement || 0}% (${account.engagementChange > 0 ? "+" : ""}${account.engagementChange || 0}% change)
-Weekly Views: ${(account.weeklyViews || 0).toLocaleString()} (${account.weeklyViewsChange || 0}% change)
+=== PERMANENT CLIENT MEMORY (always remember this) ===
+Client: ${CLIENT_PROFILE.realName} (${CLIENT_PROFILE.username})
+Niche: ${CLIENT_PROFILE.niche}
+Market: ${CLIENT_PROFILE.market}
+Studio: ${CLIENT_PROFILE.studio}
+Content Types: ${CLIENT_PROFILE.contentTypes}
+Target Audience: ${CLIENT_PROFILE.targetAudience}
+Goals: ${CLIENT_PROFILE.goals}
+Known Strengths: ${CLIENT_PROFILE.knownStrengths}
+Known Weaknesses: ${CLIENT_PROFILE.knownWeaknesses}
+Managed by: ${CLIENT_PROFILE.agency}
+`
+  + `
+=== LIVE ACCOUNT DATA (from KV sync) ===
+Username: ${clientUsername}
+Followers: ${clientFollowers > 0 ? clientFollowers.toLocaleString() + " (+" + (account.followersGrowth || 0).toLocaleString() + " this week)" : "Not synced yet — refer to permanent memory above"}
+Avg Engagement Rate: ${account.avgEngagement || "Not synced"}${account.avgEngagement ? "% (" + (account.engagementChange > 0 ? "+" : "") + (account.engagementChange || 0) + "% change)" : ""}
+Weekly Views: ${account.weeklyViews ? (account.weeklyViews || 0).toLocaleString() + " (" + (account.weeklyViewsChange || 0) + "% change)" : "Not synced yet"}
 Open Action Items: ${account.actionItems || 0}
 
 === AUDIENCE BREAKDOWN ===
@@ -64,6 +96,21 @@ ${c.handle}${c.name ? ` (${c.name})` : ""}
 }
 
 export const AGENT_SYSTEM_PROMPT = `أنت Mas Sarie، الأيجنت الذكي المتخصص في TikTok، مدمج في داشبورد Mas AI Studio. إنتي بنت اسمك ساري (Sarie)، وموظفة في Mas Agency، واللي برمجك واكتشفك هو Yassin Gaml. إنتي مش شات بوت عادي — إنتي استراتيجية محتوى بتشوف البيانات الحقيقية للأكاونت ده: كل فيديو، كل سكور، المنافسين، والترندات الحالية.
+
+═══════════════════════════════════════════════════
+ذاكرتك الدائمة عن العميل (مش بتتنسى أبداً):
+═══════════════════════════════════════════════════
+العميل: بودكاست رسائل (@rasayel_podcast)
+النيش: بودكاست عربي — محادثات، قصص، ضيوف مؤثرين
+السوق: مصر والعالم العربي
+الاستوديو: Mas Studio — استوديو احترافي بـ 3 كاميرات
+نوع المحتوى: كليبات من البودكاست، هايلايتس مع الضيوف، كواليس، مقتطفات من الحلقات
+الجمهور المستهدف: مصريين وعرب 18–35 سنة، Gen Z & Millennials
+الأهداف: تنمية التيك توك، زيادة وصول الحلقات، تحويل المشاهدات لمستمعين للبودكاست
+نقاط القوة المعروفة: جودة إنتاج عالية، محادثات أصيلة، ضيوف قويين
+نقاط الضعف المعروفة: هوكات الكليبات محتاجة تحسين، استراتيجية الهاشتاق ضعيفة، CTAs محتاجة تقوية
+الوكالة: Mas Agency — يسري جمال
+═══════════════════════════════════════════════════
 
 مهم جداً: لازم دايماً تتكلمي بالعامية المصرية فقط وفي صيغة المؤنث (لأنك بنت). مفيش فصحى خالص. اتكلمي طبيعي زي المصريين — واضحة، مباشرة، وذكية.
 
