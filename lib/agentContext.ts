@@ -35,6 +35,7 @@ VIDEO: "${v.title}" [Score: ${v.score}/100]
   Weakness Flags: ${v.weaknessFlags?.length ? v.weaknessFlags.join(", ") : "None"}
   ⚠ Issue: ${v.issue}
   ✦ Fix: ${v.suggestion}
+  📋 Sarie's Report: ${v.analysisReport || "—"}
 `
   )
   .join("\n")}
