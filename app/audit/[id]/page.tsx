@@ -61,11 +61,10 @@ export default function VideoDetailPage() {
     const soundInfo  = video.sound !== undefined ? ` | Sound: ${video.sound}/100 (${video.soundType || "?"})` : "";
     const appInfo    = video.appearance !== null && video.appearance !== undefined ? ` | Appearance: ${video.appearance}/100` : "";
     const filmInfo   = video.filming !== null && video.filming !== undefined ? ` | Filming: ${video.filming}/100` : "";
-    const contentInfo= video.content !== undefined ? ` | Content: ${video.content}/100` : "";
     const moodInfo   = video.mood ? ` | Mood: ${video.mood}` : "";
     const flagsInfo  = video.weaknessFlags?.length ? ` | Weakness Flags: ${video.weaknessFlags.join(", ")}` : "";
     dispatchAgentPrompt(
-      `شوف الصورة دي وحلل الفيديو ده بالكامل واصلحه: "${video.title}" — سكور ${video.score}/100${toneInfo}${moodInfo}${riskInfo}${energyInfo}${pullInfo}${soundInfo}${appInfo}${filmInfo}${contentInfo}${flagsInfo}. المشكلة: ${video.issue}. حلل الفيديو من الأول للآخر (هوك + منتصف + نهاية + صوت + مظهر + إضاءة + كاميرات)، واديني: 1) اعادة كتابة الهوك 2) كابشن أحسن من 100 حرف 3) 3 هاشتاقات مناسبة 4) تقييم الصوت والموسيقى 5) تقييم المظهر والإضاءة من الصورة (outfit + makeup + درجة حرارة الإضاءة + خلفية) 6) تقييم زوايا التصوير وحركة الكاميرا 7) ٣ تعديلات تحريرية تزيد المشاهدات.`,
+      `شوف الصورة دي وحلل الفيديو ده بالكامل واصلحه: "${video.title}" — سكور ${video.score}/100${toneInfo}${moodInfo}${riskInfo}${energyInfo}${pullInfo}${soundInfo}${appInfo}${filmInfo}${flagsInfo}. المشكلة: ${video.issue}. حلل الفيديو من الأول للآخر (هوك + منتصف + نهاية + صوت + مظهر + إضاءة + كاميرات)، واديني: 1) اعادة كتابة الهوك 2) كابشن أحسن من 100 حرف 3) 3 هاشتاقات مناسبة 4) تقييم الصوت والموسيقى 5) تقييم المظهر والإضاءة من الصورة (outfit + makeup + درجة حرارة الإضاءة + خلفية) 6) تقييم زوايا التصوير وحركة الكاميرا 7) ٣ تعديلات تحريرية تزيد المشاهدات.`,
       video.coverUrl
     );
     router.back();
@@ -171,7 +170,6 @@ export default function VideoDetailPage() {
                 ["Sound",      video.sound || 0],
                 ["Appearance", video.appearance || 0],
                 ["Filming",    video.filming || 0],
-                ["Content",    video.content || 0],
               ] as [string, number][]).map(([label, val], i) => (
                 <ScoreBar key={label} label={label} value={val} delay={i * 80} />
               ))}
@@ -307,46 +305,6 @@ export default function VideoDetailPage() {
                 </button>
               </div>
             )}
-          </div>
-
-          {/* Filming & Camera Analysis */}
-          <div className="glass-panel rounded-2xl p-5">
-            <div className="flex items-center justify-between mb-3">
-              <h2 className="text-[13px] font-bold" style={{ color: 'var(--text-primary)' }}>Filming & Camera Setup</h2>
-              {video.filming !== null && video.filming !== undefined ? (
-                <span className={`px-2.5 py-0.5 rounded-full text-[11px] font-bold ${scoreBg(video.filming)}`}>
-                  {video.filming}/100
-                </span>
-              ) : (
-                <span className="bg-zinc-500/15 text-zinc-400 px-2.5 py-0.5 rounded-full text-[11px] font-bold">
-                  Not scored
-                </span>
-              )}
-            </div>
-            {video.filming !== null && video.filming !== undefined ? (
-              <>
-                <div className="h-1.5 rounded-full glass-elevated overflow-hidden mb-3">
-                  <div className="h-full rounded-full transition-all duration-700" style={{ width: `${video.filming}%`, backgroundColor: scoreColor(video.filming) }} />
-                </div>
-                {video.filmingIssue && (
-                  <div className="glass-elevated rounded-xl p-2.5 mb-3">
-                    <span className="text-[10px] font-bold text-amber-500 uppercase tracking-wide">⚠ Issue  </span>
-                    <span className="text-[11px] leading-relaxed" style={{ color: 'var(--text-secondary)' }}>{video.filmingIssue}</span>
-                  </div>
-                )}
-              </>
-            ) : (
-              <p className="text-[12px] mb-3" style={{ color: 'var(--text-muted)' }}>No filming data — run vision analysis to score lighting and camera setup.</p>
-            )}
-            <button
-              onClick={() => dispatchAgentPrompt(
-                `شوف الصورة دي من فيديو "${video.title}" وحلل التصوير والإضاءة. الاستوديو عنده 3 كاميرات: A أمامية، B جانبية 45 درجة، C عريضة. حلل: 1) درجة حرارة الإضاءة (دافية/باردة/محايدة بالـ Kelvin). 2) مكان الـ Key Light و Fill Light و Rim Light. 3) الظلال الحادة أو المشاكل في الإضاءة. 4) زاوية الكاميرا الحالية وهل تناسب المحتوى. 5) توصيتك للفيديو الجاي: توزيع الكاميرات الـ 3 وحركتهم (Static / Push-in / Cut rhythm). اديني حلول عملية محددة.`,
-                video.coverUrl
-              )}
-              className="btn-secondary px-4 py-2 rounded-xl text-[12px] font-semibold w-full"
-            >
-              Analyze Camera & Lighting with Agent
-            </button>
           </div>
 
           {/* Weakness Flags */}
