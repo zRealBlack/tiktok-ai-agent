@@ -47,10 +47,16 @@ ${trends.map((t: any) => `#${t.rank} "${t.name}" — Type: ${t.type} — Views: 
 ${comps
   .map(
     (c: any) => `
-${c.handle}
+${c.handle}${c.name ? ` (${c.name})` : ""}
   Followers: ${(c.followers || 0).toLocaleString()} | Status: ${c.status} | Posts/week: ${c.postsThisWeek}
-  View Change: ${c.viewChange} | Avg Views: ${(c.avgViews || 0).toLocaleString()}
-  Top Format: ${c.topFormat}
+  View Change: ${c.viewChange} | Avg Views: ${(c.avgViews || 0).toLocaleString()} | Engagement: ${c.avgEngagement || "—"}
+  Top Format: ${c.topFormat} | Posting Frequency: ${c.postingFrequency || "—"}
+  Threat Level: ${c.threatLevel || "—"}
+  Top Video: "${c.topVideoTitle || "—"}" (${(c.topVideoViews || 0).toLocaleString()} views)
+  Strengths: ${(c.pros || []).join("; ") || "—"}
+  Weaknesses: ${(c.cons || []).join("; ") || "—"}
+  Opportunity vs them: ${c.opportunity || "—"}
+  Bio: ${c.bio || "—"}
 `
   )
   .join("\n") || "No data"}
