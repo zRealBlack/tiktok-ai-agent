@@ -51,46 +51,46 @@
 
 .dark {
   /* Background */
-  --bg-base: #07070b;
+  --bg-base: #0c0c0c;
   --bg-gradient-a: transparent;
   --bg-gradient-b: transparent;
 
   /* Glass panels */
-  --glass-bg: rgba(18, 18, 26, 0.65);
-  --glass-border: rgba(255, 255, 255, 0.08);
-  --glass-shadow: 0 8px 40px rgba(0, 0, 0, 0.45), 0 1px 2px rgba(0, 0, 0, 0.3);
-  --glass-inner: rgba(255, 255, 255, 0.06);
+  --glass-bg: rgba(24, 24, 24, 0.8);
+  --glass-border: rgba(255, 255, 255, 0.05);
+  --glass-shadow: 0 8px 30px rgba(0, 0, 0, 0.5), 0 1px 2px rgba(0, 0, 0, 0.3);
+  --glass-inner: rgba(255, 255, 255, 0.02);
 
   /* Sidebar */
-  --sidebar-bg: rgba(8, 8, 14, 0.78);
-  --sidebar-border: rgba(255, 255, 255, 0.07);
+  --sidebar-bg: rgba(16, 16, 16, 0.9);
+  --sidebar-border: rgba(255, 255, 255, 0.05);
 
   /* Chat */
-  --chat-bg: rgba(12, 12, 20, 0.8);
+  --chat-bg: rgba(20, 20, 20, 0.9);
 
   /* Input */
-  --input-bg: rgba(255, 255, 255, 0.05);
-  --input-border: rgba(255, 255, 255, 0.1);
+  --input-bg: rgba(30, 30, 30, 0.5);
+  --input-border: rgba(255, 255, 255, 0.08);
 
   /* Text */
-  --text-primary: #f4f4f6;
+  --text-primary: #ececec;
   --text-secondary: #a1a1aa;
-  --text-muted: #52525b;
+  --text-muted: #6b7280;
   --text-faint: #3f3f46;
 
   /* Elevated glass */
-  --glass-elevated: rgba(255, 255, 255, 0.04);
-  --glass-elevated-border: rgba(255, 255, 255, 0.07);
+  --glass-elevated: rgba(36, 36, 36, 0.5);
+  --glass-elevated-border: rgba(255, 255, 255, 0.06);
 
   /* Button */
-  --btn-primary-bg: #f4f4f6;
-  --btn-primary-text: #0f0f10;
-  --btn-secondary-bg: rgba(255, 255, 255, 0.07);
-  --btn-secondary-text: #a1a1aa;
+  --btn-primary-bg: #ef4444;
+  --btn-primary-text: #ffffff;
+  --btn-secondary-bg: rgba(255, 255, 255, 0.08);
+  --btn-secondary-text: #d4d4d8;
   --btn-secondary-border: rgba(255, 255, 255, 0.1);
 
   /* Scrollbar */
-  --scroll-thumb: rgba(255, 255, 255, 0.12);
+  --scroll-thumb: rgba(255, 255, 255, 0.1);
 }
 
 /* ─── Base Reset ────────────────────────────────────────────── */

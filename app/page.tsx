@@ -25,7 +25,7 @@ export default function OverviewPage() {
           </p>
         </div>
         {(account?.actionItems || 0) > 0 && (
-          <div className="flex items-center gap-2 px-3 py-2 rounded-xl glass-panel text-amber-500 text-[12px] font-semibold">
+          <div className="flex items-center gap-2 px-3 py-2 rounded-xl glass-panel text-red-500 text-[12px] font-semibold">
             <AlertTriangle size={14} /> {account?.actionItems} action items
           </div>
         )}
