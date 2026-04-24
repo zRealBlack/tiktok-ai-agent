@@ -108,13 +108,14 @@ export async function POST(req: Request) {
 
     // Streaming response
     const stream = client.messages.stream({
-      model: "claude-3-haiku-20240307",
+      model: "claude-haiku-4-5",
       max_tokens: 4096,
       system: systemPrompt,
       messages: formattedMessages,
     });
 
     const encoder = new TextEncoder();
+    let chunkCount = 0;
     const readable = new ReadableStream({
       async start(controller) {
         try {
@@ -123,9 +124,14 @@ export async function POST(req: Request) {
               chunk.type === "content_block_delta" &&
               chunk.delta.type === "text_delta"
             ) {
+              chunkCount++;
               controller.enqueue(encoder.encode(chunk.delta.text));
             }
           }
+          console.log(`[AI] Stream complete. Total chunks: ${chunkCount}`);
+        } catch (streamErr) {
+          console.error("[AI] Stream error:", streamErr);
+          controller.error(streamErr);
         } finally {
           controller.close();
         }
