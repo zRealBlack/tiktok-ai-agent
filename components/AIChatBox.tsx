@@ -333,7 +333,13 @@ export default function AIChatBox() {
   const startMediaRecorder = (stream: MediaStream) => {
     if (mediaRecorderRef.current && mediaRecorderRef.current.state === "recording") return;
     
-    const mediaRecorder = new MediaRecorder(stream, { mimeType: "audio/webm" });
+    const options = typeof MediaRecorder !== 'undefined' 
+      ? (MediaRecorder.isTypeSupported('audio/webm') ? { mimeType: 'audio/webm' } 
+         : MediaRecorder.isTypeSupported('audio/mp4') ? { mimeType: 'audio/mp4' } 
+         : undefined)
+      : undefined;
+
+    const mediaRecorder = new MediaRecorder(stream, options);
     mediaRecorderRef.current = mediaRecorder;
     audioChunksRef.current = [];
 
@@ -342,22 +348,37 @@ export default function AIChatBox() {
     };
 
     mediaRecorder.onstop = async () => {
-      if (audioChunksRef.current.length === 0) return;
+      if (audioChunksRef.current.length === 0) {
+        setIsProcessingVoice(false);
+        return;
+      }
       setIsProcessingVoice(true);
-      const audioBlob = new Blob(audioChunksRef.current, { type: "audio/webm" });
+      
+      const mimeType = options?.mimeType || 'audio/webm';
+      const ext = mimeType.includes('mp4') ? 'mp4' : 'webm';
+      const audioBlob = new Blob(audioChunksRef.current, { type: mimeType });
       const formData = new FormData();
-      formData.append("file", audioBlob, "voice.webm");
+      formData.append("file", audioBlob, `voice.${ext}`);
 
       try {
         const res = await fetch("/api/ai/stt", { method: "POST", body: formData });
         if (!res.ok) throw new Error("STT failed");
         const data = await res.json();
-        if (data.text) {
-          sendMessage(data.text, undefined, undefined, true);
+        
+        let transcript = (data.text || "").trim();
+        // Filter out common Whisper hallucinations when it hears background noise/breathing
+        const hallucinations = ["شكرا", "شكراً", "إلى اللقاء", ".", "أم", "اه", "امم", "...", "Thank you.", "Thank you"];
+        if (hallucinations.includes(transcript) || transcript.length < 2) {
+           transcript = "";
+        }
+
+        if (transcript) {
+          sendMessage(transcript, undefined, undefined, true);
         } else {
-          setIsProcessingVoice(false); // Empty transcript, just resume
+          setIsProcessingVoice(false); // Empty or hallucinated transcript, just resume listening
         }
       } catch (err) {
+        console.error("STT Error:", err);
         setError("Failed to transcribe voice");
         setIsProcessingVoice(false);
       }
