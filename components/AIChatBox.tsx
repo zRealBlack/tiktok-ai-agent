@@ -275,16 +275,30 @@ export default function AIChatBox() {
     const dataArray = new Uint8Array(analyser.frequencyBinCount);
     let isSpeaking = false;
     let silenceStart = Date.now();
-    const threshold = 5; // Very low volume threshold
+    const threshold = 15; // Increased threshold to avoid background noise triggering it
     const silenceDelay = 1500; // 1.5s of silence triggers stop
 
     const detectSilence = () => {
       if (!isVoiceMode) return;
       
       analyser.getByteFrequencyData(dataArray);
-      const volume = dataArray.reduce((a, b) => a + b, 0) / dataArray.length;
+      // Use the maximum frequency bin value as the volume indicator (more reliable than average)
+      let maxVolume = 0;
+      for (let i = 0; i < dataArray.length; i++) {
+        if (dataArray[i] > maxVolume) maxVolume = dataArray[i];
+      }
 
-      if (volume > threshold) {
+      // Animate the audio waves directly using DOM to avoid expensive React re-renders
+      const waveBars = document.querySelectorAll('.audio-wave-bar');
+      if (waveBars.length > 0) {
+        waveBars.forEach((bar, index) => {
+          // Add some randomness based on the index to make it look like a real waveform
+          const barHeight = Math.max(0.1, (maxVolume / 255) * (1 + (index % 3) * 0.5));
+          (bar as HTMLElement).style.transform = `scaleY(${barHeight})`;
+        });
+      }
+
+      if (maxVolume > threshold) {
         // Only start recording if not already speaking, not processing STT/TTS, and Sarie is not speaking
         const isSarieSpeaking = currentAudioRef.current && !currentAudioRef.current.paused && !currentAudioRef.current.ended;
         
@@ -661,7 +675,24 @@ export default function AIChatBox() {
                 <div className="text-sm font-bold text-white mb-1">
                   {isProcessingVoice ? "Sarie is thinking..." : isRecording ? "Listening..." : "Waiting for you to speak..."}
                 </div>
-                <div className="text-[11px] text-white/50 mb-6">Hands-free mode active</div>
+                <div className="text-[11px] text-white/50 mb-4">Hands-free mode active</div>
+                
+                {/* Audio Visualizer Waves */}
+                <div className="flex items-center gap-1 h-8 mb-6">
+                  {[...Array(5)].map((_, i) => (
+                    <div 
+                      key={i} 
+                      className={`audio-wave-bar w-1.5 rounded-full ${isRecording ? 'bg-emerald-400' : 'bg-white/20'}`}
+                      style={{ 
+                        height: '100%', 
+                        transformOrigin: 'bottom',
+                        transition: 'transform 0.05s ease-out',
+                        transform: 'scaleY(0.1)'
+                      }}
+                    />
+                  ))}
+                </div>
+
                 <button 
                   onClick={stopVoiceMode}
                   className="px-6 py-2.5 rounded-full bg-red-500/80 text-white font-bold text-xs hover:bg-red-500 transition-colors shadow-lg"
