@@ -436,26 +436,42 @@ export default function AIChatBox() {
             });
             setStreaming(false);
 
-            // Play TTS response
-            if (accumulated && persistentAudioRef.current) {
-              const ttsRes = await fetch("/api/ai/tts", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ text: accumulated, voice: sarieVoiceRef.current })
-              });
-              if (ttsRes.ok) {
-                const blob = await ttsRes.blob();
-                const url = URL.createObjectURL(blob);
-                persistentAudioRef.current.src = url;
-                persistentAudioRef.current.onended = () => {
-                  setIsProcessingVoice(false);
-                  isProcessingVoiceRef.current = false;
-                };
-                persistentAudioRef.current.play().catch(() => {
-                  setIsProcessingVoice(false);
-                  isProcessingVoiceRef.current = false;
+            // Play TTS - only speak first 2 sentences to keep response snappy
+            // Full text is still shown in the chat bubble
+            const ttsText = accumulated
+              .split(/(?<=[.!?؟])\s+/)
+              .slice(0, 2)
+              .join(" ")
+              .slice(0, 400);
+
+            if (ttsText && persistentAudioRef.current) {
+              try {
+                const ttsController = new AbortController();
+                const ttsTimeout = setTimeout(() => ttsController.abort(), 10000); // 10s max
+                
+                const ttsRes = await fetch("/api/ai/tts", {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({ text: ttsText, voice: sarieVoiceRef.current }),
+                  signal: ttsController.signal
                 });
-              } else {
+                clearTimeout(ttsTimeout);
+
+                if (ttsRes.ok) {
+                  const blob = await ttsRes.blob();
+                  const url = URL.createObjectURL(blob);
+                  persistentAudioRef.current.src = url;
+                  persistentAudioRef.current.onended = () => {
+                    setIsProcessingVoice(false);
+                    isProcessingVoiceRef.current = false;
+                  };
+                  await persistentAudioRef.current.play();
+                } else {
+                  setIsProcessingVoice(false);
+                  isProcessingVoiceRef.current = false;
+                }
+              } catch {
+                // TTS failed or timed out — just reset and keep going
                 setIsProcessingVoice(false);
                 isProcessingVoiceRef.current = false;
               }
