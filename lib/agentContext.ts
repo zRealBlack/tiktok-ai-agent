@@ -69,9 +69,14 @@ VIDEO: "${v.title}" [Score: ${v.score}/100]
   Tone: ${v.tone || "Unknown"} | Emotional Pull: ${v.emotionalPull ?? "?"}/100 | Energy: ${v.energy ?? "?"}/100
   Retention Risk: ${v.retentionRisk || "Unknown"} | Growth Potential: ${v.growthPotential ?? "?"}/100
   Sound Score: ${v.sound ?? "?"}/100 | Sound Type: ${v.soundType || "Unknown"} | Track: ${v.soundName || "Unknown"}
-  Sound Issue: ${v.soundIssue || "—"}
+  Sound Issue: ${v.soundIssue || "—"}${v.voiceClarity !== null && v.voiceClarity !== undefined ? `
+  🎧 Sarie's Ears (GPT): Voice ${v.voiceClarity}/100 | Music Energy ${v.musicEnergy ?? "?"}/100 | Balance: ${v.volumeBalance || "?"} | Noise: ${v.backgroundNoise || "?"} | Pace: ${v.speechPace || "?"} | Tone: ${v.audioEmotionalTone || "?"}
+  🎧 Hook Audio: ${v.hookAudioStrength ?? "?"}/100 | Audio↔Engagement: ${v.audioEngagementMatch || "?"}
+  🎧 Ears Summary: ${v.audioSummary || "—"}` : ""}
   Appearance Score: ${v.appearance !== null && v.appearance !== undefined ? v.appearance + "/100" : "Not scored"}${v.appearanceIssue ? " | Issue: " + v.appearanceIssue : ""}
   Filming Score: ${v.filming !== null && v.filming !== undefined ? v.filming + "/100" : "Not scored"}${v.filmingIssue ? " | Issue: " + v.filmingIssue : ""}
+  Visual Flow: ${v.visualFlow || "—"}
+  Camera Cuts: ${v.cutCount ?? "?"}
   Content Score: ${v.content !== null && v.content !== undefined ? v.content + "/100" : "Not scored"}
   Weakness Flags: ${v.weaknessFlags?.length ? v.weaknessFlags.join(", ") : "None"}
   ⚠ Issue: ${v.issue}
@@ -157,10 +162,14 @@ export const AGENT_SYSTEM_PROMPT = `أنت Mas Sarie، الأيجنت الذكي
 - Entertaining / Likeable: لايكات عالية + مشاركات وسط
 - Informative / Valuable: تفاعل معقول بس مشاركات منخفضة = قيّم بس مش قابل للانتشار
 
-تحليل الصوت والموسيقى:
+تحليل الصوت والموسيقى (عندك بيانات حقيقية من GPT-4o اللي سمع الصوت):
+- دلوقتي عندك بيانات صوت حقيقية — GPT-4o سمع الأوديو وقالك: Voice Clarity, Music Energy, Volume Balance, Background Noise, Speech Pace, Emotional Tone
+- استخدمي البيانات دي في تحليلك — مش تقديرات، ده GPT فعلاً سمع الفيديو
+- لو الـ Voice Clarity قليل، ده مشكلة ميكروفون أو صوت منخفض
+- لو الـ Volume Balance = music_dominant، الموسيقى غالبة على الكلام
+- لو الـ Background Noise = noisy، في ضوضاء خلفية محتاجة تتنظف
 - هل في موسيقى خلفية؟ هل هي Trending Audio أم Original Sound؟
 - الصوت مناسب لنوع المحتوى؟ (بودكاست = lofi هادية، مش موسيقى صاخبة)
-- هل مستوى الصوت متوازن — الموسيقى مش غالبة على الكلام؟
 - هل الـ Sound Type بيساعد في الـ reach على TikTok؟ (Trending Audio = reach أكتر)
 - لو مفيش صوت أو الصوت ضعيف، قدمي بديل محدد
 
