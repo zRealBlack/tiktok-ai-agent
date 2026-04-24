@@ -16,7 +16,8 @@ export async function POST(req: Request) {
     const openaiFormData = new FormData();
     openaiFormData.append("file", file, "audio.webm");
     openaiFormData.append("model", "whisper-1");
-    // You can optionally add "language": "ar" to enforce Arabic, but Whisper usually auto-detects.
+    openaiFormData.append("language", "ar");
+    openaiFormData.append("prompt", "المستخدم يتحدث باللهجة المصرية العامية. يلا بينا.");
 
     const res = await fetch("https://api.openai.com/v1/audio/transcriptions", {
       method: "POST",

@@ -43,10 +43,15 @@ export default function AIChatBox() {
   const [isRecording, setIsRecording] = useState(false);
   const [isProcessingVoice, setIsProcessingVoice] = useState(false);
   const [sarieVoice, setSarieVoice] = useState("nova"); // default voice
-  const [showVoiceSettings, setShowVoiceSettings] = useState(false);
+  const [isVoiceMode, setIsVoiceMode] = useState(false); // Continuous Voice Mode
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
   const currentAudioRef = useRef<HTMLAudioElement | null>(null);
+  const audioContextRef = useRef<AudioContext | null>(null);
+  const silenceTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const analyserRef = useRef<AnalyserNode | null>(null);
+  const streamRef = useRef<MediaStream | null>(null);
+  const animationFrameRef = useRef<number | null>(null);
 
   const handleScroll = useCallback(() => {
     if (!scrollRef.current) return;
@@ -227,51 +232,133 @@ export default function AIChatBox() {
     return () => window.removeEventListener("click", clickHandler);
   }, [activeMenu]);
 
+  // Voice mode cleanup
+  useEffect(() => {
+    return () => {
+      if (animationFrameRef.current) cancelAnimationFrame(animationFrameRef.current);
+      if (streamRef.current) streamRef.current.getTracks().forEach(t => t.stop());
+      if (currentAudioRef.current) {
+        currentAudioRef.current.pause();
+        currentAudioRef.current.src = "";
+      }
+      if (audioContextRef.current && audioContextRef.current.state !== "closed") {
+        audioContextRef.current.close();
+      }
+    };
+  }, []);
+
   // Voice Interaction Logic
-  const startRecording = async () => {
+  const startVoiceMode = async () => {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      const mediaRecorder = new MediaRecorder(stream, { mimeType: "audio/webm" });
-      mediaRecorderRef.current = mediaRecorder;
-      audioChunksRef.current = [];
-
-      mediaRecorder.ondataavailable = (e) => {
-        if (e.data.size > 0) audioChunksRef.current.push(e.data);
-      };
-
-      mediaRecorder.onstop = async () => {
-        setIsProcessingVoice(true);
-        const audioBlob = new Blob(audioChunksRef.current, { type: "audio/webm" });
-        const formData = new FormData();
-        formData.append("file", audioBlob, "voice.webm");
-
-        try {
-          const res = await fetch("/api/ai/stt", { method: "POST", body: formData });
-          if (!res.ok) throw new Error("STT failed");
-          const data = await res.json();
-          if (data.text) {
-            sendMessage(data.text, undefined, undefined, true); // We'll modify sendMessage to handle autoPlayTTS
-          }
-        } catch (err) {
-          setError("Failed to transcribe voice");
-        } finally {
-          setIsProcessingVoice(false);
-          stream.getTracks().forEach(track => track.stop());
-        }
-      };
-
-      mediaRecorder.start();
-      setIsRecording(true);
+      streamRef.current = stream;
+      setIsVoiceMode(true);
+      startListeningLoop(stream);
     } catch (err) {
       setError("Microphone access denied");
     }
   };
 
-  const stopRecording = () => {
+  const startListeningLoop = (stream: MediaStream) => {
+    if (!audioContextRef.current) {
+      audioContextRef.current = new (window.AudioContext || (window as any).webkitAudioContext)();
+    }
+    const audioCtx = audioContextRef.current;
+    if (audioCtx.state === 'suspended') audioCtx.resume();
+
+    const source = audioCtx.createMediaStreamSource(stream);
+    const analyser = audioCtx.createAnalyser();
+    analyser.fftSize = 512;
+    source.connect(analyser);
+    analyserRef.current = analyser;
+
+    const dataArray = new Uint8Array(analyser.frequencyBinCount);
+    let isSpeaking = false;
+    let silenceStart = Date.now();
+    const threshold = 5; // Very low volume threshold
+    const silenceDelay = 1500; // 1.5s of silence triggers stop
+
+    const detectSilence = () => {
+      if (!isVoiceMode) return;
+      
+      analyser.getByteFrequencyData(dataArray);
+      const volume = dataArray.reduce((a, b) => a + b, 0) / dataArray.length;
+
+      if (volume > threshold) {
+        // Only start recording if not already speaking, not processing STT/TTS, and Sarie is not speaking
+        const isSarieSpeaking = currentAudioRef.current && !currentAudioRef.current.paused && !currentAudioRef.current.ended;
+        
+        if (!isSpeaking && !isProcessingVoice && !isSarieSpeaking) {
+           isSpeaking = true;
+           startMediaRecorder(stream);
+        }
+        silenceStart = Date.now();
+      } else {
+        if (isSpeaking && Date.now() - silenceStart > silenceDelay) {
+          isSpeaking = false;
+          stopMediaRecorder(); // This triggers STT
+        }
+      }
+      animationFrameRef.current = requestAnimationFrame(detectSilence);
+    };
+
+    detectSilence();
+  };
+
+  const startMediaRecorder = (stream: MediaStream) => {
+    if (mediaRecorderRef.current && mediaRecorderRef.current.state === "recording") return;
+    
+    const mediaRecorder = new MediaRecorder(stream, { mimeType: "audio/webm" });
+    mediaRecorderRef.current = mediaRecorder;
+    audioChunksRef.current = [];
+
+    mediaRecorder.ondataavailable = (e) => {
+      if (e.data.size > 0) audioChunksRef.current.push(e.data);
+    };
+
+    mediaRecorder.onstop = async () => {
+      if (audioChunksRef.current.length === 0) return;
+      setIsProcessingVoice(true);
+      const audioBlob = new Blob(audioChunksRef.current, { type: "audio/webm" });
+      const formData = new FormData();
+      formData.append("file", audioBlob, "voice.webm");
+
+      try {
+        const res = await fetch("/api/ai/stt", { method: "POST", body: formData });
+        if (!res.ok) throw new Error("STT failed");
+        const data = await res.json();
+        if (data.text) {
+          sendMessage(data.text, undefined, undefined, true);
+        } else {
+          setIsProcessingVoice(false); // Empty transcript, just resume
+        }
+      } catch (err) {
+        setError("Failed to transcribe voice");
+        setIsProcessingVoice(false);
+      }
+    };
+
+    mediaRecorder.start();
+    setIsRecording(true);
+  };
+
+  const stopMediaRecorder = () => {
     if (mediaRecorderRef.current && isRecording) {
       mediaRecorderRef.current.stop();
       setIsRecording(false);
     }
+  };
+
+  const stopVoiceMode = () => {
+    setIsVoiceMode(false);
+    setIsRecording(false);
+    setIsProcessingVoice(false);
+    if (mediaRecorderRef.current && mediaRecorderRef.current.state === "recording") {
+      mediaRecorderRef.current.stop();
+    }
+    if (animationFrameRef.current) cancelAnimationFrame(animationFrameRef.current);
+    if (streamRef.current) streamRef.current.getTracks().forEach(t => t.stop());
+    if (currentAudioRef.current) currentAudioRef.current.pause();
   };
 
   const playTTS = async (text: string) => {
@@ -289,9 +376,15 @@ export default function AIChatBox() {
       const url = URL.createObjectURL(blob);
       const audio = new Audio(url);
       currentAudioRef.current = audio;
+      
+      audio.onended = () => {
+        setIsProcessingVoice(false); // Audio finished, resume listening!
+      };
+      
       audio.play();
     } catch (err) {
       console.error("Audio playback failed", err);
+      setIsProcessingVoice(false); // Fallback
     }
   };
 
@@ -553,25 +646,42 @@ export default function AIChatBox() {
                 style={{ color: 'var(--text-primary)', maxHeight: '96px', fieldSizing: 'content', direction: 'rtl' } as React.CSSProperties}
               />
             </div>
-            {isProcessingVoice ? (
-              <button disabled className="w-9 h-9 rounded-xl glass-elevated flex items-center justify-center shrink-0 opacity-50">
-                <Loader2 size={14} className="animate-spin text-purple-500" />
-              </button>
-            ) : isRecording ? (
-              <button 
-                onClick={stopRecording}
-                className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0 transition-all hover:opacity-90 bg-red-500/20 text-red-500 border border-red-500/30 animate-pulse"
-              >
-                <Square size={12} fill="currentColor" />
-              </button>
+            {isVoiceMode ? (
+              <div className="absolute inset-0 z-10 glass-panel flex flex-col items-center justify-center rounded-b-2xl bg-black/60 backdrop-blur-md border-t border-white/10 animate-in fade-in duration-300">
+                <div className="mb-4 relative">
+                  <div className={`w-16 h-16 rounded-full flex items-center justify-center ${isProcessingVoice ? 'bg-purple-500/20' : isRecording ? 'bg-red-500/20' : 'bg-emerald-500/20'} ${!isProcessingVoice && 'animate-pulse'}`}>
+                    {isProcessingVoice ? (
+                      <Loader2 size={24} className="animate-spin text-purple-400" />
+                    ) : (
+                      <Mic size={24} className={isRecording ? "text-red-400" : "text-emerald-400"} />
+                    )}
+                  </div>
+                  {isRecording && <div className="absolute inset-0 rounded-full border-2 border-red-500 animate-ping opacity-50" />}
+                </div>
+                <div className="text-sm font-bold text-white mb-1">
+                  {isProcessingVoice ? "Sarie is thinking..." : isRecording ? "Listening..." : "Waiting for you to speak..."}
+                </div>
+                <div className="text-[11px] text-white/50 mb-6">Hands-free mode active</div>
+                <button 
+                  onClick={stopVoiceMode}
+                  className="px-6 py-2.5 rounded-full bg-red-500/80 text-white font-bold text-xs hover:bg-red-500 transition-colors shadow-lg"
+                >
+                  End Call
+                </button>
+              </div>
             ) : (
               <button 
-                onClick={startRecording}
-                disabled={streaming || isProcessingVoice}
-                className="w-9 h-9 rounded-xl glass-elevated flex items-center justify-center shrink-0 transition-all hover:opacity-90 disabled:opacity-30"
+                onClick={startVoiceMode}
+                disabled={streaming}
+                className="w-9 h-9 rounded-xl glass-elevated flex items-center justify-center shrink-0 transition-all hover:opacity-90 disabled:opacity-30 relative group"
                 style={{ color: 'var(--text-secondary)' }}
+                title="Start Hands-Free Voice Mode"
               >
                 <Mic size={14} />
+                <span className="absolute -top-1 -right-1 flex h-2.5 w-2.5">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                  <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500"></span>
+                </span>
               </button>
             )}
 
