@@ -270,6 +270,14 @@ export default function AIChatBox() {
     const analyser = audioCtx.createAnalyser();
     analyser.fftSize = 512;
     source.connect(analyser);
+    
+    // WebKit/Chrome bug fix: The analyser will output 0s if the stream isn't connected to a destination.
+    // We connect it to a muted gain node, then to the destination to force audio processing.
+    const gainNode = audioCtx.createGain();
+    gainNode.gain.value = 0;
+    analyser.connect(gainNode);
+    gainNode.connect(audioCtx.destination);
+    
     analyserRef.current = analyser;
 
     const dataArray = new Uint8Array(analyser.frequencyBinCount);
@@ -279,8 +287,6 @@ export default function AIChatBox() {
     const silenceDelay = 1500; // 1.5s of silence triggers stop
 
     const detectSilence = () => {
-      if (!isVoiceMode) return;
-      
       analyser.getByteFrequencyData(dataArray);
       // Use the maximum frequency bin value as the volume indicator (more reliable than average)
       let maxVolume = 0;
