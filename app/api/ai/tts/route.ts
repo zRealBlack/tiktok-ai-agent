@@ -31,11 +31,10 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: `OpenAI error: ${res.status}` }, { status: res.status });
     }
 
-    // Return the audio buffer directly as a stream
-    return new Response(res.body, {
+    const arrayBuffer = await res.arrayBuffer();
+    return new Response(arrayBuffer, {
       headers: {
         "Content-Type": "audio/mpeg",
-        "Transfer-Encoding": "chunked",
       },
     });
   } catch (error: any) {

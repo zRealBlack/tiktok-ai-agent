@@ -46,7 +46,7 @@ export default function AIChatBox() {
   const [isVoiceMode, setIsVoiceMode] = useState(false); // Continuous Voice Mode
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
-  const currentAudioRef = useRef<HTMLAudioElement | null>(null);
+  const persistentAudioRef = useRef<HTMLAudioElement | null>(null);
   const audioContextRef = useRef<AudioContext | null>(null);
   const silenceTimerRef = useRef<NodeJS.Timeout | null>(null);
   const analyserRef = useRef<AnalyserNode | null>(null);
@@ -237,9 +237,9 @@ export default function AIChatBox() {
     return () => {
       if (animationFrameRef.current) cancelAnimationFrame(animationFrameRef.current);
       if (streamRef.current) streamRef.current.getTracks().forEach(t => t.stop());
-      if (currentAudioRef.current) {
-        currentAudioRef.current.pause();
-        currentAudioRef.current.src = "";
+      if (persistentAudioRef.current) {
+        persistentAudioRef.current.pause();
+        persistentAudioRef.current.src = "";
       }
       if (audioContextRef.current && audioContextRef.current.state !== "closed") {
         audioContextRef.current.close();
@@ -250,6 +250,11 @@ export default function AIChatBox() {
   // Voice Interaction Logic
   const startVoiceMode = async () => {
     try {
+      if (persistentAudioRef.current) {
+        // Play a silent snippet to unlock the audio element during a user-initiated click
+        persistentAudioRef.current.src = "data:audio/mp3;base64,//OwgAAAAAAAAAAAAAAAAAAAAA";
+        persistentAudioRef.current.play().catch(() => {});
+      }
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       streamRef.current = stream;
       setIsVoiceMode(true);
@@ -306,7 +311,7 @@ export default function AIChatBox() {
 
       if (maxVolume > threshold) {
         // Only start recording if not already speaking, not processing STT/TTS, and Sarie is not speaking
-        const isSarieSpeaking = currentAudioRef.current && !currentAudioRef.current.paused && !currentAudioRef.current.ended;
+        const isSarieSpeaking = persistentAudioRef.current && !persistentAudioRef.current.paused && !persistentAudioRef.current.ended;
         
         if (!isSpeaking && !isProcessingVoice && !isSarieSpeaking) {
            isSpeaking = true;
@@ -378,12 +383,12 @@ export default function AIChatBox() {
     }
     if (animationFrameRef.current) cancelAnimationFrame(animationFrameRef.current);
     if (streamRef.current) streamRef.current.getTracks().forEach(t => t.stop());
-    if (currentAudioRef.current) currentAudioRef.current.pause();
+    if (persistentAudioRef.current) persistentAudioRef.current.pause();
   };
 
   const playTTS = async (text: string) => {
-    if (currentAudioRef.current) {
-      currentAudioRef.current.pause();
+    if (persistentAudioRef.current) {
+      persistentAudioRef.current.pause();
     }
     try {
       const res = await fetch("/api/ai/tts", {
@@ -394,14 +399,14 @@ export default function AIChatBox() {
       if (!res.ok) throw new Error("TTS failed");
       const blob = await res.blob();
       const url = URL.createObjectURL(blob);
-      const audio = new Audio(url);
-      currentAudioRef.current = audio;
       
-      audio.onended = () => {
-        setIsProcessingVoice(false); // Audio finished, resume listening!
-      };
-      
-      audio.play();
+      if (persistentAudioRef.current) {
+        persistentAudioRef.current.src = url;
+        persistentAudioRef.current.onended = () => {
+          setIsProcessingVoice(false); // Audio finished, resume listening!
+        };
+        await persistentAudioRef.current.play();
+      }
     } catch (err) {
       console.error("Audio playback failed", err);
       setIsProcessingVoice(false); // Fallback
@@ -739,6 +744,7 @@ export default function AIChatBox() {
           </div>
         </div>
       </div>
+      <audio ref={persistentAudioRef} className="hidden" />
     </>
   );
 }
