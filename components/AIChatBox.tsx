@@ -58,6 +58,8 @@ export default function AIChatBox() {
   const isVoiceModeRef = useRef(false);
   const messagesRef = useRef<Message[]>([]);
   const sarieVoiceRef = useRef("nova");
+  // Always points to the latest sendMessage — callable from stale closures
+  const sendMessageRef = useRef<typeof sendMessage>(async () => {});
 
   const handleScroll = useCallback(() => {
     if (!scrollRef.current) return;
@@ -177,6 +179,9 @@ export default function AIChatBox() {
       setStreaming(false);
     }
   }, [input, messages, streaming, account, videos, competitors, ideas, trends, generations, saveHistory, sarieVoice]);
+
+  // Keep sendMessageRef always pointing to the latest version (no stale closure)
+  useEffect(() => { sendMessageRef.current = sendMessage; }, [sendMessage]);
 
   const stop = () => {
     abortRef.current?.abort();
@@ -363,9 +368,11 @@ export default function AIChatBox() {
     mediaRecorder.onstop = async () => {
       if (audioChunksRef.current.length === 0) {
         setIsProcessingVoice(false);
+        isProcessingVoiceRef.current = false;
         return;
       }
       setIsProcessingVoice(true);
+      isProcessingVoiceRef.current = true;
       
       const mimeType = options?.mimeType || 'audio/webm';
       const ext = mimeType.includes('mp4') ? 'mp4' : 'webm';
@@ -379,121 +386,22 @@ export default function AIChatBox() {
         const data = await res.json();
         
         let transcript = (data.text || "").trim();
-        // Filter out common Whisper hallucinations when it hears background noise/breathing
         const hallucinations = ["شكرا", "شكراً", "إلى اللقاء", ".", "أم", "اه", "امم", "...", "Thank you.", "Thank you"];
         if (hallucinations.includes(transcript) || transcript.length < 2) {
-           transcript = "";
+          transcript = "";
         }
 
         if (transcript) {
-          // Use messagesRef to avoid stale closure with sendMessage
-          const currentMessages = messagesRef.current;
-          const msgText = transcript;
-          const userMsg: Message = { role: "user", content: msgText };
-          const newMessages = [...currentMessages, userMsg];
-          setMessages(newMessages);
-          setIsProcessingVoice(true);
-          isProcessingVoiceRef.current = true;
-          
-          // Call the chat API directly to avoid stale sendMessage closure
-          const ctrl = new AbortController();
-          abortRef.current = ctrl;
-          setStreaming(true);
-          setMessages(prev => [...prev, { role: "assistant", content: "", streaming: true }]);
-
-          try {
-            const chatRes = await fetch("/api/ai", {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({
-                messages: newMessages.map(m => ({ role: m.role, content: m.content })),
-                contextData: { account, videos, competitors, ideas, trends, generations }
-              }),
-              signal: ctrl.signal
-            });
-
-            if (!chatRes.ok) throw new Error(`HTTP ${chatRes.status}`);
-
-            const reader = chatRes.body!.getReader();
-            const decoder = new TextDecoder();
-            let accumulated = "";
-
-            while (true) {
-              const { done, value } = await reader.read();
-              if (done) break;
-              accumulated += decoder.decode(value, { stream: true });
-              setMessages(prev => {
-                const u = [...prev];
-                u[u.length - 1] = { role: "assistant", content: accumulated, streaming: true };
-                return u;
-              });
-            }
-
-            setMessages(prev => {
-              const u = [...prev];
-              u[u.length - 1] = { role: "assistant", content: accumulated };
-              return u;
-            });
-            setStreaming(false);
-
-            // Play TTS - only speak first 2 sentences to keep response snappy
-            // Full text is still shown in the chat bubble
-            const ttsText = accumulated
-              .split(/(?<=[.!?؟])\s+/)
-              .slice(0, 2)
-              .join(" ")
-              .slice(0, 400);
-
-            if (ttsText && persistentAudioRef.current) {
-              try {
-                const ttsController = new AbortController();
-                const ttsTimeout = setTimeout(() => ttsController.abort(), 10000); // 10s max
-                
-                const ttsRes = await fetch("/api/ai/tts", {
-                  method: "POST",
-                  headers: { "Content-Type": "application/json" },
-                  body: JSON.stringify({ text: ttsText, voice: sarieVoiceRef.current }),
-                  signal: ttsController.signal
-                });
-                clearTimeout(ttsTimeout);
-
-                if (ttsRes.ok) {
-                  const blob = await ttsRes.blob();
-                  const url = URL.createObjectURL(blob);
-                  persistentAudioRef.current.src = url;
-                  persistentAudioRef.current.onended = () => {
-                    setIsProcessingVoice(false);
-                    isProcessingVoiceRef.current = false;
-                  };
-                  await persistentAudioRef.current.play();
-                } else {
-                  setIsProcessingVoice(false);
-                  isProcessingVoiceRef.current = false;
-                }
-              } catch {
-                // TTS failed or timed out — just reset and keep going
-                setIsProcessingVoice(false);
-                isProcessingVoiceRef.current = false;
-              }
-            } else {
-              setIsProcessingVoice(false);
-              isProcessingVoiceRef.current = false;
-            }
-          } catch (err) {
-            if ((err as Error).name !== "AbortError") {
-              console.error("Chat error:", err);
-            }
-            setStreaming(false);
-            setIsProcessingVoice(false);
-            isProcessingVoiceRef.current = false;
-          }
+          // sendMessageRef always points to the LATEST sendMessage — no stale closure!
+          sendMessageRef.current(transcript, undefined, undefined, true);
         } else {
-          setIsProcessingVoice(false); // Empty or hallucinated transcript, just resume listening
+          setIsProcessingVoice(false);
+          isProcessingVoiceRef.current = false;
         }
       } catch (err) {
         console.error("STT Error:", err);
-        setError("Failed to transcribe voice");
         setIsProcessingVoice(false);
+        isProcessingVoiceRef.current = false;
       }
     };
 
@@ -524,29 +432,44 @@ export default function AIChatBox() {
   };
 
   const playTTS = async (text: string) => {
-    if (persistentAudioRef.current) {
-      persistentAudioRef.current.pause();
+    if (!persistentAudioRef.current) {
+      setIsProcessingVoice(false);
+      isProcessingVoiceRef.current = false;
+      return;
     }
     try {
+      // Speak only the first ~2 sentences so response starts quickly
+      const ttsText = text
+        .replace(/[*_`#]/g, "")  // strip markdown
+        .split(/(?<=[.!?؟])\s+/)
+        .slice(0, 2)
+        .join(" ")
+        .slice(0, 400);
+
+      const ttsController = new AbortController();
+      const ttsTimeout = setTimeout(() => ttsController.abort(), 12000);
+
       const res = await fetch("/api/ai/tts", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ text, voice: sarieVoice })
+        body: JSON.stringify({ text: ttsText || text.slice(0, 400), voice: sarieVoiceRef.current }),
+        signal: ttsController.signal
       });
+      clearTimeout(ttsTimeout);
+
       if (!res.ok) throw new Error("TTS failed");
       const blob = await res.blob();
       const url = URL.createObjectURL(blob);
-      
-      if (persistentAudioRef.current) {
-        persistentAudioRef.current.src = url;
-        persistentAudioRef.current.onended = () => {
-          setIsProcessingVoice(false); // Audio finished, resume listening!
-        };
-        await persistentAudioRef.current.play();
-      }
+      persistentAudioRef.current.src = url;
+      persistentAudioRef.current.onended = () => {
+        setIsProcessingVoice(false);
+        isProcessingVoiceRef.current = false;
+      };
+      await persistentAudioRef.current.play();
     } catch (err) {
-      console.error("Audio playback failed", err);
-      setIsProcessingVoice(false); // Fallback
+      console.error("TTS error:", err);
+      setIsProcessingVoice(false);
+      isProcessingVoiceRef.current = false;
     }
   };
 
