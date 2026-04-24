@@ -60,6 +60,9 @@ export default function AIChatBox() {
   const sarieVoiceRef = useRef("nova");
   // Always points to the latest sendMessage — callable from stale closures
   const sendMessageRef = useRef<typeof sendMessage>(async () => {});
+  // TTS streaming queue — sentences are spoken as they arrive, not after full response
+  const ttsQueueRef = useRef<string[]>([]);
+  const ttsPlayingRef = useRef(false);
 
   const handleScroll = useCallback(() => {
     if (!scrollRef.current) return;
@@ -151,11 +154,34 @@ export default function AIChatBox() {
       const reader = res.body!.getReader();
       const decoder = new TextDecoder();
       let accumulated = "";
+      let sentenceBuffer = ""; // Holds partial sentence being built
 
       while (true) {
         const { done, value } = await reader.read();
-        if (done) break;
-        accumulated += decoder.decode(value, { stream: true });
+        if (done) {
+          // Flush any remaining partial sentence to TTS
+          if (autoPlayTTS && sentenceBuffer.trim().length > 4) {
+            queueTTS(sentenceBuffer.trim());
+          }
+          break;
+        }
+        const newChunk = decoder.decode(value, { stream: true });
+        accumulated += newChunk;
+        sentenceBuffer += newChunk;
+
+        // Detect completed sentences: ends with . ! ? ؟ followed by space or newline
+        const sentenceRegex = /(.+?[.!?؟\n])(?:\s|$)/g;
+        let match;
+        let lastIndex = 0;
+        while ((match = sentenceRegex.exec(sentenceBuffer)) !== null) {
+          const sentence = match[1].trim();
+          if (autoPlayTTS && sentence.length > 4) {
+            queueTTS(sentence);
+          }
+          lastIndex = sentenceRegex.lastIndex;
+        }
+        if (lastIndex > 0) sentenceBuffer = sentenceBuffer.slice(lastIndex);
+
         setMessages((prev) => {
           const updated = [...prev];
           updated[updated.length - 1] = { role: "assistant", content: accumulated, streaming: true };
@@ -168,9 +194,6 @@ export default function AIChatBox() {
         saveHistory(updated);
         return updated;
       });
-      if (autoPlayTTS) {
-        playTTS(accumulated);
-      }
     } catch (err: unknown) {
       if ((err as Error).name === "AbortError") return;
       setError(err instanceof Error ? err.message : "Unknown error");
@@ -423,6 +446,9 @@ export default function AIChatBox() {
     setIsVoiceMode(false);
     setIsRecording(false);
     setIsProcessingVoice(false);
+    isProcessingVoiceRef.current = false;
+    ttsQueueRef.current = []; // Clear any pending speech
+    ttsPlayingRef.current = false;
     if (mediaRecorderRef.current && mediaRecorderRef.current.state === "recording") {
       mediaRecorderRef.current.stop();
     }
@@ -431,46 +457,54 @@ export default function AIChatBox() {
     if (persistentAudioRef.current) persistentAudioRef.current.pause();
   };
 
-  const playTTS = async (text: string) => {
-    if (!persistentAudioRef.current) {
-      setIsProcessingVoice(false);
-      isProcessingVoiceRef.current = false;
-      return;
-    }
+  // Plays a single sentence and returns a Promise that resolves when done
+  const playTTSRaw = async (text: string): Promise<void> => {
+    if (!persistentAudioRef.current) return;
+    const clean = text.replace(/[*_`#>]/g, "").trim();
+    if (!clean || clean.length < 2) return;
+
     try {
-      // Speak only the first ~2 sentences so response starts quickly
-      const ttsText = text
-        .replace(/[*_`#]/g, "")  // strip markdown
-        .split(/(?<=[.!?؟])\s+/)
-        .slice(0, 2)
-        .join(" ")
-        .slice(0, 400);
-
-      const ttsController = new AbortController();
-      const ttsTimeout = setTimeout(() => ttsController.abort(), 12000);
-
+      const ctrl = new AbortController();
+      const timeout = setTimeout(() => ctrl.abort(), 12000);
       const res = await fetch("/api/ai/tts", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ text: ttsText || text.slice(0, 400), voice: sarieVoiceRef.current }),
-        signal: ttsController.signal
+        body: JSON.stringify({ text: clean.slice(0, 500), voice: sarieVoiceRef.current }),
+        signal: ctrl.signal
       });
-      clearTimeout(ttsTimeout);
-
-      if (!res.ok) throw new Error("TTS failed");
+      clearTimeout(timeout);
+      if (!res.ok) return;
       const blob = await res.blob();
       const url = URL.createObjectURL(blob);
-      persistentAudioRef.current.src = url;
-      persistentAudioRef.current.onended = () => {
-        setIsProcessingVoice(false);
-        isProcessingVoiceRef.current = false;
-      };
-      await persistentAudioRef.current.play();
-    } catch (err) {
-      console.error("TTS error:", err);
-      setIsProcessingVoice(false);
-      isProcessingVoiceRef.current = false;
+      await new Promise<void>((resolve) => {
+        persistentAudioRef.current!.src = url;
+        persistentAudioRef.current!.onended = () => resolve();
+        persistentAudioRef.current!.onerror = () => resolve();
+        persistentAudioRef.current!.play().catch(() => resolve());
+      });
+    } catch {
+      // Timed out or failed — skip silently
     }
+  };
+
+  // Processes the TTS queue serially
+  const processTTSQueue = async () => {
+    if (ttsPlayingRef.current) return;
+    ttsPlayingRef.current = true;
+    while (ttsQueueRef.current.length > 0) {
+      const sentence = ttsQueueRef.current.shift()!;
+      await playTTSRaw(sentence);
+    }
+    ttsPlayingRef.current = false;
+    // After all sentences spoken, release the voice mode lock
+    setIsProcessingVoice(false);
+    isProcessingVoiceRef.current = false;
+  };
+
+  // Add a sentence to the queue and kick off processing
+  const queueTTS = (sentence: string) => {
+    ttsQueueRef.current.push(sentence);
+    processTTSQueue();
   };
 
   return (

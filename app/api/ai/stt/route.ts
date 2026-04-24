@@ -17,7 +17,8 @@ export async function POST(req: Request) {
     openaiFormData.append("file", file, "audio.webm");
     openaiFormData.append("model", "whisper-1");
     openaiFormData.append("language", "ar");
-    openaiFormData.append("prompt", "المستخدم يتحدث باللهجة المصرية العامية. يلا بينا.");
+    // Rich Egyptian dialect prompt with phonetic examples so Whisper biases correctly
+    openaiFormData.append("prompt", "المستخدم يتحدث باللهجة المصرية العامية. كلمات شائعة: إيه، عايز، مش، كده، جيت، بقى، خلاص، تمام، كويس، يلا، ازيك، عندي، بتاعي، اللي، ليه، فين، امتى، ازاي، ممكن، لازم، مش عارف، هو ده، ايوه، لا، زي ما إنت شايف، والنبي، يعني، طب.");
 
     const res = await fetch("https://api.openai.com/v1/audio/transcriptions", {
       method: "POST",
