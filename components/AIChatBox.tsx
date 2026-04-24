@@ -52,13 +52,26 @@ export default function AIChatBox() {
   const analyserRef = useRef<AnalyserNode | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const animationFrameRef = useRef<number | null>(null);
+  // Ref mirrors — these are accessible inside closures/rAF loops without stale state
+  const isRecordingRef = useRef(false);
+  const isProcessingVoiceRef = useRef(false);
+  const isVoiceModeRef = useRef(false);
+  const messagesRef = useRef<Message[]>([]);
+  const sarieVoiceRef = useRef("nova");
 
   const handleScroll = useCallback(() => {
     if (!scrollRef.current) return;
     const { scrollTop, scrollHeight, clientHeight } = scrollRef.current;
     const isScrolledUp = scrollHeight - scrollTop - clientHeight > 60;
     setIsUserScrolled(isScrolledUp);
-  }, []);
+  
+  // Keep refs in sync with React state so voice loop closures always have current values
+  useEffect(() => { isRecordingRef.current = isRecording; }, [isRecording]);
+  useEffect(() => { isProcessingVoiceRef.current = isProcessingVoice; }, [isProcessingVoice]);
+  useEffect(() => { isVoiceModeRef.current = isVoiceMode; }, [isVoiceMode]);
+  useEffect(() => { messagesRef.current = messages; }, [messages]);
+  useEffect(() => { sarieVoiceRef.current = sarieVoice; }, [sarieVoice]);
+}, []);
 
   // Load chat from sessionStorage on mount (same tab/session only)
   useEffect(() => {
@@ -310,10 +323,10 @@ export default function AIChatBox() {
       }
 
       if (maxVolume > threshold) {
-        // Only start recording if not already speaking, not processing STT/TTS, and Sarie is not speaking
+        // Only start recording if not already speaking, not processing, and Sarie is not speaking
         const isSarieSpeaking = persistentAudioRef.current && !persistentAudioRef.current.paused && !persistentAudioRef.current.ended;
         
-        if (!isSpeaking && !isProcessingVoice && !isSarieSpeaking) {
+        if (!isSpeaking && !isProcessingVoiceRef.current && !isSarieSpeaking) {
            isSpeaking = true;
            startMediaRecorder(stream);
         }
@@ -373,7 +386,91 @@ export default function AIChatBox() {
         }
 
         if (transcript) {
-          sendMessage(transcript, undefined, undefined, true);
+          // Use messagesRef to avoid stale closure with sendMessage
+          const currentMessages = messagesRef.current;
+          const msgText = transcript;
+          const userMsg: Message = { role: "user", content: msgText };
+          const newMessages = [...currentMessages, userMsg];
+          setMessages(newMessages);
+          setIsProcessingVoice(true);
+          isProcessingVoiceRef.current = true;
+          
+          // Call the chat API directly to avoid stale sendMessage closure
+          const ctrl = new AbortController();
+          abortRef.current = ctrl;
+          setStreaming(true);
+          setMessages(prev => [...prev, { role: "assistant", content: "", streaming: true }]);
+
+          try {
+            const chatRes = await fetch("/api/ai", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                messages: newMessages.map(m => ({ role: m.role, content: m.content })),
+                contextData: { account, videos, competitors, ideas, trends, generations }
+              }),
+              signal: ctrl.signal
+            });
+
+            if (!chatRes.ok) throw new Error(`HTTP ${chatRes.status}`);
+
+            const reader = chatRes.body!.getReader();
+            const decoder = new TextDecoder();
+            let accumulated = "";
+
+            while (true) {
+              const { done, value } = await reader.read();
+              if (done) break;
+              accumulated += decoder.decode(value, { stream: true });
+              setMessages(prev => {
+                const u = [...prev];
+                u[u.length - 1] = { role: "assistant", content: accumulated, streaming: true };
+                return u;
+              });
+            }
+
+            setMessages(prev => {
+              const u = [...prev];
+              u[u.length - 1] = { role: "assistant", content: accumulated };
+              return u;
+            });
+            setStreaming(false);
+
+            // Play TTS response
+            if (accumulated && persistentAudioRef.current) {
+              const ttsRes = await fetch("/api/ai/tts", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ text: accumulated, voice: sarieVoiceRef.current })
+              });
+              if (ttsRes.ok) {
+                const blob = await ttsRes.blob();
+                const url = URL.createObjectURL(blob);
+                persistentAudioRef.current.src = url;
+                persistentAudioRef.current.onended = () => {
+                  setIsProcessingVoice(false);
+                  isProcessingVoiceRef.current = false;
+                };
+                persistentAudioRef.current.play().catch(() => {
+                  setIsProcessingVoice(false);
+                  isProcessingVoiceRef.current = false;
+                });
+              } else {
+                setIsProcessingVoice(false);
+                isProcessingVoiceRef.current = false;
+              }
+            } else {
+              setIsProcessingVoice(false);
+              isProcessingVoiceRef.current = false;
+            }
+          } catch (err) {
+            if ((err as Error).name !== "AbortError") {
+              console.error("Chat error:", err);
+            }
+            setStreaming(false);
+            setIsProcessingVoice(false);
+            isProcessingVoiceRef.current = false;
+          }
         } else {
           setIsProcessingVoice(false); // Empty or hallucinated transcript, just resume listening
         }
@@ -386,12 +483,15 @@ export default function AIChatBox() {
 
     mediaRecorder.start();
     setIsRecording(true);
+    isRecordingRef.current = true;
   };
 
   const stopMediaRecorder = () => {
-    if (mediaRecorderRef.current && isRecording) {
+    // Use ref — not state — to avoid stale closure bug
+    if (mediaRecorderRef.current && mediaRecorderRef.current.state === "recording") {
       mediaRecorderRef.current.stop();
       setIsRecording(false);
+      isRecordingRef.current = false;
     }
   };
 
