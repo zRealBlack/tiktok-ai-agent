@@ -4,7 +4,7 @@ import { useState, useRef, useEffect, useCallback } from "react";
 import {
   MessageSquare, X, Send, Bot, User, Loader2,
   ChevronDown, Trash2, AlertCircle, Maximize2, Minimize2,
-  Copy, Check, MoreVertical, Pencil, Share
+  Copy, Check, MoreVertical, Pencil, Share, Mic, Square, Volume2
 } from "lucide-react";
 import { useData } from "@/components/DataContext";
 import MarkdownMessage from "@/components/MarkdownMessage";
@@ -38,6 +38,15 @@ export default function AIChatBox() {
   const [copiedId, setCopiedId] = useState<number | null>(null);
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
   const [editValue, setEditValue] = useState("");
+  
+  // Voice Integration State
+  const [isRecording, setIsRecording] = useState(false);
+  const [isProcessingVoice, setIsProcessingVoice] = useState(false);
+  const [sarieVoice, setSarieVoice] = useState("nova"); // default voice
+  const [showVoiceSettings, setShowVoiceSettings] = useState(false);
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const audioChunksRef = useRef<Blob[]>([]);
+  const currentAudioRef = useRef<HTMLAudioElement | null>(null);
 
   const handleScroll = useCallback(() => {
     if (!scrollRef.current) return;
@@ -88,7 +97,7 @@ export default function AIChatBox() {
     }
   }, [messages, isUserScrolled, streaming]);
 
-  const sendMessage = useCallback(async (text?: string, imageUrl?: string, baseMessages?: Message[]) => {
+  const sendMessage = useCallback(async (text?: string, imageUrl?: string, baseMessages?: Message[], autoPlayTTS?: boolean) => {
     const msgText = (text ?? input).trim();
     if (!msgText || streaming) return;
     if (!text) setInput("");
@@ -139,6 +148,9 @@ export default function AIChatBox() {
         saveHistory(updated);
         return updated;
       });
+      if (autoPlayTTS) {
+        playTTS(accumulated);
+      }
     } catch (err: unknown) {
       if ((err as Error).name === "AbortError") return;
       setError(err instanceof Error ? err.message : "Unknown error");
@@ -146,7 +158,7 @@ export default function AIChatBox() {
     } finally {
       setStreaming(false);
     }
-  }, [input, messages, streaming, account, videos, competitors, ideas, trends, generations, saveHistory]);
+  }, [input, messages, streaming, account, videos, competitors, ideas, trends, generations, saveHistory, sarieVoice]);
 
   const stop = () => {
     abortRef.current?.abort();
@@ -215,6 +227,74 @@ export default function AIChatBox() {
     return () => window.removeEventListener("click", clickHandler);
   }, [activeMenu]);
 
+  // Voice Interaction Logic
+  const startRecording = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const mediaRecorder = new MediaRecorder(stream, { mimeType: "audio/webm" });
+      mediaRecorderRef.current = mediaRecorder;
+      audioChunksRef.current = [];
+
+      mediaRecorder.ondataavailable = (e) => {
+        if (e.data.size > 0) audioChunksRef.current.push(e.data);
+      };
+
+      mediaRecorder.onstop = async () => {
+        setIsProcessingVoice(true);
+        const audioBlob = new Blob(audioChunksRef.current, { type: "audio/webm" });
+        const formData = new FormData();
+        formData.append("file", audioBlob, "voice.webm");
+
+        try {
+          const res = await fetch("/api/ai/stt", { method: "POST", body: formData });
+          if (!res.ok) throw new Error("STT failed");
+          const data = await res.json();
+          if (data.text) {
+            sendMessage(data.text, undefined, undefined, true); // We'll modify sendMessage to handle autoPlayTTS
+          }
+        } catch (err) {
+          setError("Failed to transcribe voice");
+        } finally {
+          setIsProcessingVoice(false);
+          stream.getTracks().forEach(track => track.stop());
+        }
+      };
+
+      mediaRecorder.start();
+      setIsRecording(true);
+    } catch (err) {
+      setError("Microphone access denied");
+    }
+  };
+
+  const stopRecording = () => {
+    if (mediaRecorderRef.current && isRecording) {
+      mediaRecorderRef.current.stop();
+      setIsRecording(false);
+    }
+  };
+
+  const playTTS = async (text: string) => {
+    if (currentAudioRef.current) {
+      currentAudioRef.current.pause();
+    }
+    try {
+      const res = await fetch("/api/ai/tts", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ text, voice: sarieVoice })
+      });
+      if (!res.ok) throw new Error("TTS failed");
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const audio = new Audio(url);
+      currentAudioRef.current = audio;
+      audio.play();
+    } catch (err) {
+      console.error("Audio playback failed", err);
+    }
+  };
+
   return (
     <>
       <button
@@ -253,6 +333,19 @@ export default function AIChatBox() {
             </div>
           </div>
           <div className="flex items-center gap-1">
+            <select 
+              value={sarieVoice} 
+              onChange={(e) => setSarieVoice(e.target.value)}
+              className="text-[11px] rounded-lg px-1 py-1 mr-1 glass-elevated outline-none"
+              style={{ color: 'var(--text-muted)', background: 'transparent' }}
+            >
+              <option value="nova">Nova</option>
+              <option value="alloy">Alloy</option>
+              <option value="echo">Echo</option>
+              <option value="fable">Fable</option>
+              <option value="onyx">Onyx</option>
+              <option value="shimmer">Shimmer</option>
+            </select>
             {messages.length > 1 && (
               <button
                 onClick={() => {
@@ -460,6 +553,28 @@ export default function AIChatBox() {
                 style={{ color: 'var(--text-primary)', maxHeight: '96px', fieldSizing: 'content', direction: 'rtl' } as React.CSSProperties}
               />
             </div>
+            {isProcessingVoice ? (
+              <button disabled className="w-9 h-9 rounded-xl glass-elevated flex items-center justify-center shrink-0 opacity-50">
+                <Loader2 size={14} className="animate-spin text-purple-500" />
+              </button>
+            ) : isRecording ? (
+              <button 
+                onClick={stopRecording}
+                className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0 transition-all hover:opacity-90 bg-red-500/20 text-red-500 border border-red-500/30 animate-pulse"
+              >
+                <Square size={12} fill="currentColor" />
+              </button>
+            ) : (
+              <button 
+                onClick={startRecording}
+                disabled={streaming || isProcessingVoice}
+                className="w-9 h-9 rounded-xl glass-elevated flex items-center justify-center shrink-0 transition-all hover:opacity-90 disabled:opacity-30"
+                style={{ color: 'var(--text-secondary)' }}
+              >
+                <Mic size={14} />
+              </button>
+            )}
+
             {streaming ? (
               <button onClick={stop}
                 className="w-9 h-9 rounded-xl glass-elevated flex items-center justify-center shrink-0 hover:opacity-80 transition-all">
