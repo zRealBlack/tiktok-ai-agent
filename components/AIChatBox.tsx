@@ -52,9 +52,10 @@ export default function AIChatBox() {
   const sarieVoiceRef = useRef("nova");
   const sendMessageRef = useRef<typeof sendMessage>(async () => {});
   const recognitionRef = useRef<any>(null);
-  // TTS streaming queue — sentences spoken as they arrive
-  const ttsQueueRef = useRef<string[]>([]);
+  // TTS streaming queue — holds pre-fetched audio URL promises (no gap between sentences)
+  const ttsQueueRef = useRef<Promise<string | null>[]>([]);
   const ttsPlayingRef = useRef(false);
+  const ttsSpokenCountRef = useRef(0); // Caps spoken output to 2 sentences per response
 
   const handleScroll = useCallback(() => {
     if (!scrollRef.current) return;
@@ -150,10 +151,12 @@ export default function AIChatBox() {
       while (true) {
         const { done, value } = await reader.read();
         if (done) {
-          // Flush any remaining partial sentence to TTS
-          if (autoPlayTTS && sentenceBuffer.trim().length > 4) {
+          // Flush remaining partial sentence (only if under 2-sentence cap)
+          if (autoPlayTTS && sentenceBuffer.trim().length > 4 && ttsSpokenCountRef.current < 2) {
+            ttsSpokenCountRef.current++;
             queueTTS(sentenceBuffer.trim());
           }
+          ttsSpokenCountRef.current = 0; // Reset for next message
           break;
         }
         const newChunk = decoder.decode(value, { stream: true });
@@ -166,7 +169,9 @@ export default function AIChatBox() {
         let lastIndex = 0;
         while ((match = sentenceRegex.exec(sentenceBuffer)) !== null) {
           const sentence = match[1].trim();
-          if (autoPlayTTS && sentence.length > 4) {
+          // Only speak the first 2 sentences — rest shown in text only (summary mode)
+          if (autoPlayTTS && sentence.length > 4 && ttsSpokenCountRef.current < 2) {
+            ttsSpokenCountRef.current++;
             queueTTS(sentence);
           }
           lastIndex = sentenceRegex.lastIndex;
@@ -368,11 +373,10 @@ export default function AIChatBox() {
     if (persistentAudioRef.current) persistentAudioRef.current.pause();
   };
 
-  // Plays one sentence, returns when done
-  const playTTSRaw = async (text: string): Promise<void> => {
-    if (!persistentAudioRef.current) return;
+  // Pre-fetch TTS audio and return a URL promise immediately
+  const fetchTTSAudio = async (text: string): Promise<string | null> => {
     const clean = text.replace(/[*_`#>]/g, "").trim();
-    if (!clean || clean.length < 2) return;
+    if (!clean || clean.length < 2) return null;
     try {
       const ctrl = new AbortController();
       const timeout = setTimeout(() => ctrl.abort(), 12000);
@@ -383,27 +387,33 @@ export default function AIChatBox() {
         signal: ctrl.signal,
       });
       clearTimeout(timeout);
-      if (!res.ok) return;
+      if (!res.ok) return null;
       const blob = await res.blob();
-      const url = URL.createObjectURL(blob);
-      await new Promise<void>((resolve) => {
-        persistentAudioRef.current!.src = url;
-        persistentAudioRef.current!.onended = () => resolve();
-        persistentAudioRef.current!.onerror = () => resolve();
-        persistentAudioRef.current!.play().catch(() => resolve());
-      });
+      return URL.createObjectURL(blob);
     } catch {
-      // Timed out or failed — skip silently
+      return null;
     }
   };
 
-  // Drain the TTS queue, then resume listening
+  // Plays one pre-fetched audio URL, returns when done
+  const playTTSRaw = async (audioUrl: string): Promise<void> => {
+    if (!persistentAudioRef.current) return;
+    await new Promise<void>((resolve) => {
+      persistentAudioRef.current!.src = audioUrl;
+      persistentAudioRef.current!.onended = () => resolve();
+      persistentAudioRef.current!.onerror = () => resolve();
+      persistentAudioRef.current!.play().catch(() => resolve());
+    });
+  };
+
+  // Drain the TTS queue — audio was pre-fetched so no gap between sentences
   const processTTSQueue = async () => {
     if (ttsPlayingRef.current) return;
     ttsPlayingRef.current = true;
     while (ttsQueueRef.current.length > 0) {
-      const sentence = ttsQueueRef.current.shift()!;
-      await playTTSRaw(sentence);
+      const audioPromise = ttsQueueRef.current.shift()!;
+      const url = await audioPromise; // Already fetching in parallel — resolves quickly
+      if (url) await playTTSRaw(url);
     }
     ttsPlayingRef.current = false;
     setIsProcessingVoice(false);
@@ -414,9 +424,9 @@ export default function AIChatBox() {
     }
   };
 
-  // Add a sentence to the TTS queue and start processing
+  // Queue a sentence: start fetching its audio immediately, process queue
   const queueTTS = (sentence: string) => {
-    ttsQueueRef.current.push(sentence);
+    ttsQueueRef.current.push(fetchTTSAudio(sentence)); // Non-blocking fetch starts now
     processTTSQueue();
   };
 
