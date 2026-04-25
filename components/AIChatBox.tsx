@@ -42,25 +42,17 @@ export default function AIChatBox() {
   // Voice Integration State
   const [isRecording, setIsRecording] = useState(false);
   const [isProcessingVoice, setIsProcessingVoice] = useState(false);
-  const [sarieVoice, setSarieVoice] = useState("nova"); // default voice
-  const [isVoiceMode, setIsVoiceMode] = useState(false); // Continuous Voice Mode
-  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
-  const audioChunksRef = useRef<Blob[]>([]);
+  const [sarieVoice, setSarieVoice] = useState("nova");
+  const [isVoiceMode, setIsVoiceMode] = useState(false);
   const persistentAudioRef = useRef<HTMLAudioElement | null>(null);
-  const audioContextRef = useRef<AudioContext | null>(null);
-  const silenceTimerRef = useRef<NodeJS.Timeout | null>(null);
-  const analyserRef = useRef<AnalyserNode | null>(null);
-  const streamRef = useRef<MediaStream | null>(null);
-  const animationFrameRef = useRef<number | null>(null);
-  // Ref mirrors — these are accessible inside closures/rAF loops without stale state
+  // Ref mirrors — always current, readable from any closure
   const isRecordingRef = useRef(false);
   const isProcessingVoiceRef = useRef(false);
   const isVoiceModeRef = useRef(false);
-  const messagesRef = useRef<Message[]>([]);
   const sarieVoiceRef = useRef("nova");
-  // Always points to the latest sendMessage — callable from stale closures
   const sendMessageRef = useRef<typeof sendMessage>(async () => {});
-  // TTS streaming queue — sentences are spoken as they arrive, not after full response
+  const recognitionRef = useRef<any>(null);
+  // TTS streaming queue — sentences spoken as they arrive
   const ttsQueueRef = useRef<string[]>([]);
   const ttsPlayingRef = useRef(false);
 
@@ -69,14 +61,13 @@ export default function AIChatBox() {
     const { scrollTop, scrollHeight, clientHeight } = scrollRef.current;
     const isScrolledUp = scrollHeight - scrollTop - clientHeight > 60;
     setIsUserScrolled(isScrolledUp);
-  
-  // Keep refs in sync with React state so voice loop closures always have current values
+  }, []);
+
+  // Keep refs in sync with React state
   useEffect(() => { isRecordingRef.current = isRecording; }, [isRecording]);
   useEffect(() => { isProcessingVoiceRef.current = isProcessingVoice; }, [isProcessingVoice]);
   useEffect(() => { isVoiceModeRef.current = isVoiceMode; }, [isVoiceMode]);
-  useEffect(() => { messagesRef.current = messages; }, [messages]);
   useEffect(() => { sarieVoiceRef.current = sarieVoice; }, [sarieVoice]);
-}, []);
 
   // Load chat from sessionStorage on mount (same tab/session only)
   useEffect(() => {
@@ -273,196 +264,115 @@ export default function AIChatBox() {
     return () => window.removeEventListener("click", clickHandler);
   }, [activeMenu]);
 
-  // Voice mode cleanup
   useEffect(() => {
     return () => {
-      if (animationFrameRef.current) cancelAnimationFrame(animationFrameRef.current);
-      if (streamRef.current) streamRef.current.getTracks().forEach(t => t.stop());
+      if (recognitionRef.current) recognitionRef.current.abort();
       if (persistentAudioRef.current) {
         persistentAudioRef.current.pause();
         persistentAudioRef.current.src = "";
       }
-      if (audioContextRef.current && audioContextRef.current.state !== "closed") {
-        audioContextRef.current.close();
-      }
     };
   }, []);
 
-  // Voice Interaction Logic
-  const startVoiceMode = async () => {
-    try {
-      if (persistentAudioRef.current) {
-        // Play a silent snippet to unlock the audio element during a user-initiated click
-        persistentAudioRef.current.src = "data:audio/mp3;base64,//OwgAAAAAAAAAAAAAAAAAAAAA";
-        persistentAudioRef.current.play().catch(() => {});
-      }
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      streamRef.current = stream;
-      setIsVoiceMode(true);
-      startListeningLoop(stream);
-    } catch (err) {
-      setError("Microphone access denied");
+  // Start a single speech recognition session
+  const startRecognition = () => {
+    if (!isVoiceModeRef.current || isProcessingVoiceRef.current) return;
+
+    const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+    if (!SpeechRecognition) {
+      setError("Voice mode requires Chrome or Edge browser.");
+      return;
     }
-  };
 
-  const startListeningLoop = (stream: MediaStream) => {
-    if (!audioContextRef.current) {
-      audioContextRef.current = new (window.AudioContext || (window as any).webkitAudioContext)();
-    }
-    const audioCtx = audioContextRef.current;
-    if (audioCtx.state === 'suspended') audioCtx.resume();
+    const recognition = new SpeechRecognition();
+    recognitionRef.current = recognition;
+    recognition.lang = "ar-EG"; // Egyptian Arabic — Google's dialect-specific model
+    recognition.continuous = false;
+    recognition.interimResults = false;
+    recognition.maxAlternatives = 1;
 
-    const source = audioCtx.createMediaStreamSource(stream);
-    const analyser = audioCtx.createAnalyser();
-    analyser.fftSize = 512;
-    source.connect(analyser);
-    
-    // WebKit/Chrome bug fix: The analyser will output 0s if the stream isn't connected to a destination.
-    // We connect it to a muted gain node, then to the destination to force audio processing.
-    const gainNode = audioCtx.createGain();
-    gainNode.gain.value = 0;
-    analyser.connect(gainNode);
-    gainNode.connect(audioCtx.destination);
-    
-    analyserRef.current = analyser;
-
-    const dataArray = new Uint8Array(analyser.frequencyBinCount);
-    let isSpeaking = false;
-    let silenceStart = Date.now();
-    const threshold = 15; // Increased threshold to avoid background noise triggering it
-    const silenceDelay = 1500; // 1.5s of silence triggers stop
-
-    const detectSilence = () => {
-      analyser.getByteFrequencyData(dataArray);
-      // Use the maximum frequency bin value as the volume indicator (more reliable than average)
-      let maxVolume = 0;
-      for (let i = 0; i < dataArray.length; i++) {
-        if (dataArray[i] > maxVolume) maxVolume = dataArray[i];
-      }
-
-      // Animate the audio waves directly using DOM to avoid expensive React re-renders
-      const waveBars = document.querySelectorAll('.audio-wave-bar');
-      if (waveBars.length > 0) {
-        waveBars.forEach((bar, index) => {
-          // Add some randomness based on the index to make it look like a real waveform
-          const barHeight = Math.max(0.1, (maxVolume / 255) * (1 + (index % 3) * 0.5));
-          (bar as HTMLElement).style.transform = `scaleY(${barHeight})`;
-        });
-      }
-
-      if (maxVolume > threshold) {
-        // Only start recording if not already speaking, not processing, and Sarie is not speaking
-        const isSarieSpeaking = persistentAudioRef.current && !persistentAudioRef.current.paused && !persistentAudioRef.current.ended;
-        
-        if (!isSpeaking && !isProcessingVoiceRef.current && !isSarieSpeaking) {
-           isSpeaking = true;
-           startMediaRecorder(stream);
-        }
-        silenceStart = Date.now();
-      } else {
-        if (isSpeaking && Date.now() - silenceStart > silenceDelay) {
-          isSpeaking = false;
-          stopMediaRecorder(); // This triggers STT
-        }
-      }
-      animationFrameRef.current = requestAnimationFrame(detectSilence);
+    recognition.onstart = () => {
+      setIsRecording(true);
+      isRecordingRef.current = true;
+      // Animate wave bars with CSS while listening
+      document.querySelectorAll(".audio-wave-bar").forEach((b) => {
+        (b as HTMLElement).style.animationPlayState = "running";
+      });
     };
 
-    detectSilence();
-  };
-
-  const startMediaRecorder = (stream: MediaStream) => {
-    if (mediaRecorderRef.current && mediaRecorderRef.current.state === "recording") return;
-    
-    const options = typeof MediaRecorder !== 'undefined' 
-      ? (MediaRecorder.isTypeSupported('audio/webm') ? { mimeType: 'audio/webm' } 
-         : MediaRecorder.isTypeSupported('audio/mp4') ? { mimeType: 'audio/mp4' } 
-         : undefined)
-      : undefined;
-
-    const mediaRecorder = new MediaRecorder(stream, options);
-    mediaRecorderRef.current = mediaRecorder;
-    audioChunksRef.current = [];
-
-    mediaRecorder.ondataavailable = (e) => {
-      if (e.data.size > 0) audioChunksRef.current.push(e.data);
-    };
-
-    mediaRecorder.onstop = async () => {
-      if (audioChunksRef.current.length === 0) {
-        setIsProcessingVoice(false);
-        isProcessingVoiceRef.current = false;
-        return;
-      }
-      setIsProcessingVoice(true);
-      isProcessingVoiceRef.current = true;
-      
-      const mimeType = options?.mimeType || 'audio/webm';
-      const ext = mimeType.includes('mp4') ? 'mp4' : 'webm';
-      const audioBlob = new Blob(audioChunksRef.current, { type: mimeType });
-      const formData = new FormData();
-      formData.append("file", audioBlob, `voice.${ext}`);
-
-      try {
-        const res = await fetch("/api/ai/stt", { method: "POST", body: formData });
-        if (!res.ok) throw new Error("STT failed");
-        const data = await res.json();
-        
-        let transcript = (data.text || "").trim();
-        const hallucinations = ["شكرا", "شكراً", "إلى اللقاء", ".", "أم", "اه", "امم", "...", "Thank you.", "Thank you"];
-        if (hallucinations.includes(transcript) || transcript.length < 2) {
-          transcript = "";
-        }
-
-        if (transcript) {
-          // sendMessageRef always points to the LATEST sendMessage — no stale closure!
-          sendMessageRef.current(transcript, undefined, undefined, true);
-        } else {
-          setIsProcessingVoice(false);
-          isProcessingVoiceRef.current = false;
-        }
-      } catch (err) {
-        console.error("STT Error:", err);
-        setIsProcessingVoice(false);
-        isProcessingVoiceRef.current = false;
+    recognition.onresult = (event: any) => {
+      const transcript = event.results[0][0].transcript.trim();
+      if (transcript && transcript.length > 1) {
+        setIsRecording(false);
+        isRecordingRef.current = false;
+        setIsProcessingVoice(true);
+        isProcessingVoiceRef.current = true;
+        sendMessageRef.current(transcript, undefined, undefined, true);
       }
     };
 
-    mediaRecorder.start();
-    setIsRecording(true);
-    isRecordingRef.current = true;
-  };
-
-  const stopMediaRecorder = () => {
-    // Use ref — not state — to avoid stale closure bug
-    if (mediaRecorderRef.current && mediaRecorderRef.current.state === "recording") {
-      mediaRecorderRef.current.stop();
+    recognition.onerror = (event: any) => {
+      // "no-speech" is normal — just restart
       setIsRecording(false);
       isRecordingRef.current = false;
+      if (isVoiceModeRef.current && event.error !== "aborted") {
+        setTimeout(() => startRecognition(), 300);
+      }
+    };
+
+    recognition.onend = () => {
+      setIsRecording(false);
+      isRecordingRef.current = false;
+      document.querySelectorAll(".audio-wave-bar").forEach((b) => {
+        (b as HTMLElement).style.animationPlayState = "paused";
+      });
+      // Auto-restart if still in voice mode and not processing a reply
+      if (isVoiceModeRef.current && !isProcessingVoiceRef.current) {
+        setTimeout(() => startRecognition(), 300);
+      }
+    };
+
+    recognition.start();
+  };
+
+  // Voice Interaction Logic
+  const startVoiceMode = () => {
+    const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+    if (!SpeechRecognition) {
+      setError("Voice mode requires Chrome or Edge browser.");
+      return;
     }
+    // Unlock audio element on user click gesture (required by browsers)
+    if (persistentAudioRef.current) {
+      persistentAudioRef.current.src = "data:audio/mp3;base64,//OwgAAAAAAAAAAAAAAAAAAAAA";
+      persistentAudioRef.current.play().catch(() => {});
+    }
+    setIsVoiceMode(true);
+    isVoiceModeRef.current = true;
+    startRecognition();
   };
 
   const stopVoiceMode = () => {
+    isVoiceModeRef.current = false;
     setIsVoiceMode(false);
     setIsRecording(false);
+    isRecordingRef.current = false;
     setIsProcessingVoice(false);
     isProcessingVoiceRef.current = false;
-    ttsQueueRef.current = []; // Clear any pending speech
+    ttsQueueRef.current = [];
     ttsPlayingRef.current = false;
-    if (mediaRecorderRef.current && mediaRecorderRef.current.state === "recording") {
-      mediaRecorderRef.current.stop();
+    if (recognitionRef.current) {
+      recognitionRef.current.abort();
+      recognitionRef.current = null;
     }
-    if (animationFrameRef.current) cancelAnimationFrame(animationFrameRef.current);
-    if (streamRef.current) streamRef.current.getTracks().forEach(t => t.stop());
     if (persistentAudioRef.current) persistentAudioRef.current.pause();
   };
 
-  // Plays a single sentence and returns a Promise that resolves when done
+  // Plays one sentence, returns when done
   const playTTSRaw = async (text: string): Promise<void> => {
     if (!persistentAudioRef.current) return;
     const clean = text.replace(/[*_`#>]/g, "").trim();
     if (!clean || clean.length < 2) return;
-
     try {
       const ctrl = new AbortController();
       const timeout = setTimeout(() => ctrl.abort(), 12000);
@@ -470,7 +380,7 @@ export default function AIChatBox() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ text: clean.slice(0, 500), voice: sarieVoiceRef.current }),
-        signal: ctrl.signal
+        signal: ctrl.signal,
       });
       clearTimeout(timeout);
       if (!res.ok) return;
@@ -487,7 +397,7 @@ export default function AIChatBox() {
     }
   };
 
-  // Processes the TTS queue serially
+  // Drain the TTS queue, then resume listening
   const processTTSQueue = async () => {
     if (ttsPlayingRef.current) return;
     ttsPlayingRef.current = true;
@@ -496,12 +406,15 @@ export default function AIChatBox() {
       await playTTSRaw(sentence);
     }
     ttsPlayingRef.current = false;
-    // After all sentences spoken, release the voice mode lock
     setIsProcessingVoice(false);
     isProcessingVoiceRef.current = false;
+    // Resume listening after Sarie finishes speaking
+    if (isVoiceModeRef.current) {
+      setTimeout(() => startRecognition(), 300);
+    }
   };
 
-  // Add a sentence to the queue and kick off processing
+  // Add a sentence to the TTS queue and start processing
   const queueTTS = (sentence: string) => {
     ttsQueueRef.current.push(sentence);
     processTTSQueue();
