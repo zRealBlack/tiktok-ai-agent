@@ -302,12 +302,9 @@ export default function ChatPage() {
   return (
     <div style={{
       display: "flex",
-      height: "100vh",
-      maxHeight: "100vh",
+      height: "calc(100vh - 56px)", // exactly the viewport minus the TopBar
       overflow: "hidden",
-      // top: leave room for logo (68px); bottom: leave room for profile card (~72px)
-      paddingTop: 72,
-      paddingBottom: 16,
+      paddingBottom: 12,
       paddingRight: 20,
       paddingLeft: 0,
       gap: 16,
