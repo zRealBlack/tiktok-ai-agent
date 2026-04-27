@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
@@ -78,10 +78,7 @@ const ScoreBar = ({ label, value, delay }: { label: string; value: number; delay
 
 export default function VideoScoreCard({ video, compact = false }: { video: VideoData; compact?: boolean }) {
   const router = useRouter();
-  const [imgFailed, setImgFailed] = useState(false);
   const fmtNum = (n: number) => n >= 1000 ? (n / 1000).toFixed(1) + "K" : n.toString();
-
-  const showCover = video.coverUrl && !imgFailed;
 
   return (
     <div
@@ -89,34 +86,18 @@ export default function VideoScoreCard({ video, compact = false }: { video: Vide
       onClick={() => router.push(`/audit/${video.id}`)}
     >
       {/* Cover thumbnail */}
-      {showCover ? (
+      {video.coverUrl ? (
         <div className="relative w-full h-40 bg-black overflow-hidden">
-          <img
-            src={video.coverUrl}
-            alt={video.title}
-            referrerPolicy="no-referrer"
-            onError={() => setImgFailed(true)}
-            className="w-full h-full object-cover opacity-90 group-hover:opacity-100 group-hover:scale-105 transition-all duration-300"
-          />
+          <img src={video.coverUrl} alt={video.title}
+            className="w-full h-full object-cover opacity-90 group-hover:opacity-100 group-hover:scale-105 transition-all duration-300" />
           <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent" />
           <div className={`absolute top-2 right-2 w-9 h-9 rounded-full flex items-center justify-center text-[12px] font-black ${scoreBadge(video.score)}`}>
             {video.score}
           </div>
+          {/* Arrow hint on hover */}
           <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
             <div className="glass-panel rounded-xl px-3 py-1.5 text-[11px] font-bold" style={{ color: 'var(--text-primary)' }}>
-              عرض التحليل الكامل →
-            </div>
-          </div>
-        </div>
-      ) : video.coverUrl && imgFailed ? (
-        /* Fallback when image fails to load */
-        <div className="relative w-full h-40 overflow-hidden flex items-center justify-center" style={{ background: 'var(--glass-elevated)' }}>
-          <div className={`w-14 h-14 rounded-full flex items-center justify-center text-[20px] font-black ${scoreBadge(video.score)}`}>
-            {video.score}
-          </div>
-          <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-            <div className="glass-panel rounded-xl px-3 py-1.5 text-[11px] font-bold" style={{ color: 'var(--text-primary)' }}>
-              عرض التحليل الكامل →
+              ╪╣╪▒╪╢ ╪º┘ä╪¬╪¡┘ä┘è┘ä ╪º┘ä┘â╪º┘à┘ä ΓåÆ
             </div>
           </div>
         </div>
@@ -172,7 +153,7 @@ export default function VideoScoreCard({ video, compact = false }: { video: Vide
         )}
 
         <div className="glass-elevated rounded-xl p-2.5">
-          <div className="text-[10px] font-bold text-red-500 mb-1 uppercase tracking-wide">⚠ Issue</div>
+          <div className="text-[10px] font-bold text-red-500 mb-1 uppercase tracking-wide">ΓÜá Issue</div>
           <div className="text-[11px] leading-relaxed line-clamp-2" style={{ color: 'var(--text-secondary)' }}>{video.issue}</div>
         </div>
       </div>

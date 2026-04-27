@@ -91,8 +91,9 @@ export default function VideoDetailPage() {
               {video.coverUrl && !coverFailed ? (
                 <>
                   <img
-                    src={`/api/img?url=${encodeURIComponent(video.coverUrl)}`}
+                    src={video.coverUrl}
                     alt={video.title}
+                    referrerPolicy="no-referrer"
                     onError={() => setCoverFailed(true)}
                     className="absolute inset-0 w-full h-full object-cover"
                   />
