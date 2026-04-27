@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect, useCallback } from "react";
 import Image from "next/image";
-import { Send, Loader2, Square, Search, Phone, Video, MoreVertical, Smile, Paperclip, Check, X, FileText, Film, Copy, Trash2, Pencil, Forward, MoreHorizontal } from "lucide-react";
+import { Send, Loader2, Square, Search, Phone, Video, MoreVertical, Smile, Paperclip, Check, CheckCheck, X, FileText, Film, Copy, Trash2, Pencil, Forward, MoreHorizontal } from "lucide-react";
 import { useData } from "@/components/DataContext";
 import MarkdownMessage from "@/components/MarkdownMessage";
 import SarieAvatar from "@/public/sarie_generated.png";
@@ -21,6 +21,7 @@ interface ChatMessage {
   attachment?: Attachment;
   reactions?: string[];
   isForwarded?: boolean;
+  status?: "sent" | "delivered" | "seen";
 }
 
 interface Conversation {
@@ -306,9 +307,24 @@ export default function ChatPage() {
     // Add the forwarded message to the target user's chat history
     setTeamMessages(prev => {
       const u = [...(prev[targetId] || [])];
-      u.push({ role: "user", content: forwardingMsg, ts: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }), isForwarded: true });
+      u.push({ role: "user", content: forwardingMsg, ts: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }), isForwarded: true, status: "sent" });
       return { ...prev, [targetId]: u };
     });
+    
+    setTimeout(() => {
+      setTeamMessages(prev => {
+        const arr = [...(prev[targetId] || [])];
+        if (arr.length > 0) arr[arr.length - 1] = { ...arr[arr.length - 1], status: "delivered" };
+        return { ...prev, [targetId]: arr };
+      });
+      setTimeout(() => {
+        setTeamMessages(prev => {
+          const arr = [...(prev[targetId] || [])];
+          if (arr.length > 0) arr[arr.length - 1] = { ...arr[arr.length - 1], status: "seen" };
+          return { ...prev, [targetId]: arr };
+        });
+      }, 1200);
+    }, 600);
     
     // Reorder conversations to move the target chat to the top (under Sarie)
     setConversations(prev => {
@@ -329,8 +345,24 @@ export default function ChatPage() {
     if (isAI) {
       sarie.send(text || (pendingAttachment ? `[Sent: ${pendingAttachment.name}]` : ""));
     } else {
-      const msg: ChatMessage = { role: "user", content: text || "", ts: now(), ...(pendingAttachment ? { attachment: pendingAttachment } : {}) };
+      const msg: ChatMessage = { role: "user", content: text || "", ts: now(), status: "sent", ...(pendingAttachment ? { attachment: pendingAttachment } : {}) };
       setTeamMessages(prev => ({ ...prev, [activeId]: [...(prev[activeId] || []), msg] }));
+      
+      const targetId = activeId;
+      setTimeout(() => {
+        setTeamMessages(prev => {
+          const arr = [...(prev[targetId] || [])];
+          if (arr.length > 0) arr[arr.length - 1] = { ...arr[arr.length - 1], status: "delivered" };
+          return { ...prev, [targetId]: arr };
+        });
+        setTimeout(() => {
+          setTeamMessages(prev => {
+            const arr = [...(prev[targetId] || [])];
+            if (arr.length > 0) arr[arr.length - 1] = { ...arr[arr.length - 1], status: "seen" };
+            return { ...prev, [targetId]: arr };
+          });
+        }, 1200);
+      }, 600);
       
       // Reorder conversations to move activeId to the top (under Sarie)
       setConversations(prev => {
@@ -555,6 +587,27 @@ export default function ChatPage() {
                       {m.streaming && (
                         <span style={{ display: "inline-block", width: 6, height: 14, marginLeft: 4, background: "rgba(255,255,255,0.6)", borderRadius: 2, verticalAlign: "middle" }} />
                       )}
+                      
+                      {/* Nested Timestamp & Status inside bubble */}
+                      {m.ts && (
+                        <div style={{
+                          fontSize: 10, 
+                          color: isUser ? "rgba(255,255,255,0.7)" : "var(--text-faint)", 
+                          display: "flex", alignItems: "center", justifyContent: "flex-end", 
+                          gap: 4, marginTop: 2, float: "right", clear: "both", marginLeft: 16
+                        }}>
+                          {m.ts}
+                          {isUser && (
+                            (!m.status || m.status === "seen") ? (
+                              <CheckCheck size={14} color="#60a5fa" style={{ strokeWidth: 2.5 }} />
+                            ) : m.status === "delivered" ? (
+                              <CheckCheck size={14} color="rgba(255,255,255,0.7)" />
+                            ) : (
+                              <Check size={14} color="rgba(255,255,255,0.7)" />
+                            )
+                          )}
+                        </div>
+                      )}
                     </div>
 
                     {/* Message Actions (Always visible, simple icons) */}
@@ -588,11 +641,6 @@ export default function ChatPage() {
                     </div>
                   )}
 
-                  {m.ts && (
-                    <div style={{ fontSize: 10, color: "var(--text-faint)", marginTop: 4, textAlign: isUser ? "right" : "left" }}>
-                      {m.ts} {isUser && <Check size={10} style={{ display: "inline", marginLeft: 2 }} />}
-                    </div>
-                  )}
                 </div>
                 {isUser && (
                   <div style={{ width: 30, height: 30, borderRadius: "50%", background: "var(--btn-primary-bg)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 12, fontWeight: 800, color: "#fff", flexShrink: 0 }}>A</div>
