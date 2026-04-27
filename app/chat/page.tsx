@@ -301,8 +301,17 @@ export default function ChatPage() {
 
   return (
     <div style={{
-      display: "flex", height: "100vh", overflow: "hidden",
-      padding: "20px 20px 20px 0", gap: 16,
+      display: "flex",
+      height: "100vh",
+      maxHeight: "100vh",
+      overflow: "hidden",
+      // top: leave room for logo (68px); bottom: leave room for profile card (~72px)
+      paddingTop: 72,
+      paddingBottom: 16,
+      paddingRight: 20,
+      paddingLeft: 0,
+      gap: 16,
+      boxSizing: "border-box",
     }}>
 
       {/* ── LEFT: Conversation List ──────────────────────────────────────── */}
