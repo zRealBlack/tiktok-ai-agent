@@ -229,7 +229,52 @@ function useSarieChat() {
     });
   };
 
-  return { messages, streaming, send, stop };
+  // sendSilent: hits the API but does NOT add a visible user bubble
+  const sendSilent = useCallback(async (hiddenPrompt: string) => {
+    if (streaming) return;
+    setStreaming(true);
+    // Build context with the hidden prompt as a user turn (AI needs it for context)
+    const contextMsgs = [...messages, { role: "user" as const, content: hiddenPrompt }];
+    setMessages(p => [...p, { role: "assistant", content: "", streaming: true, ts: now() }]);
+    const ctrl = new AbortController();
+    abortRef.current = ctrl;
+    try {
+      const res = await fetch("/api/ai", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          messages: contextMsgs.map(m => ({ role: m.role, content: m.content })),
+          contextData: { account, videos, competitors, ideas, trends, generations },
+        }),
+        signal: ctrl.signal,
+      });
+      if (!res.ok) throw new Error("AI error");
+      const reader = res.body!.getReader();
+      const dec = new TextDecoder();
+      let acc = "";
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        acc += dec.decode(value, { stream: true });
+        setMessages(p => { const u = [...p]; u[u.length - 1] = { role: "assistant", content: acc, streaming: true }; return u; });
+      }
+      setMessages(p => {
+        const u = [...p];
+        u[u.length - 1] = { role: "assistant", content: acc, ts: now() };
+        // Save full history including the hidden prompt so context is preserved
+        const toSave = [...contextMsgs.slice(0, -1), { role: "user" as const, content: hiddenPrompt }, u[u.length - 1]];
+        try { sessionStorage.setItem("chat_history", JSON.stringify(toSave)); } catch {}
+        return u;
+      });
+    } catch (e: any) {
+      if (e?.name === "AbortError") return;
+      setMessages(p => p.filter(m => !m.streaming));
+    } finally {
+      setStreaming(false);
+    }
+  }, [messages, streaming, account, videos, competitors, ideas, trends, generations]);
+
+  return { messages, streaming, send, sendSilent, stop };
 }
 
 // ─── Main Page ────────────────────────────────────────────────────────────────
@@ -251,8 +296,10 @@ export default function ChatPage() {
   const recTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const recordingSecsRef = useRef(0); // always-current mirror of recordingSecs
   const sarie = useSarieChat();
-  const sarieSendRef = useRef(sarie.send); // always-current mirror of sarie.send
+  const sarieSendRef = useRef(sarie.send);
+  const sarieSendSilentRef = useRef(sarie.sendSilent);
   useEffect(() => { sarieSendRef.current = sarie.send; }, [sarie.send]);
+  useEffect(() => { sarieSendSilentRef.current = sarie.sendSilent; }, [sarie.sendSilent]);
 
   const activeConvo = CONVERSATIONS.find(c => c.id === activeId)!;
   const isAI = activeConvo.isAI;
@@ -303,10 +350,10 @@ export default function ChatPage() {
         const url = URL.createObjectURL(blob);
         const dur = recordingSecsRef.current; // use ref — always current
         const voiceMsg: ChatMessage = { role: "user", content: "", ts: now(), audioUrl: url, audioDuration: dur };
-        // Add audio bubble locally
+        // Add audio bubble locally (visible)
         setAiVoiceBubbles(prev => [...prev, voiceMsg]);
-        // Trigger Sarie reply via the always-current ref
-        sarieSendRef.current("أرسلت رسالة صوتية — رد عليها بالنص");
+        // Trigger Sarie silently — no visible user message bubble
+        sarieSendSilentRef.current("المستخدم أرسل رسالة صوتية. رد عليه بشكل طبيعي بالنص.");
       };
       mr.start();
       recordingSecsRef.current = 0;
