@@ -28,16 +28,16 @@ export default function Sidebar() {
         className="fixed left-0 top-0 h-full z-40 flex flex-col items-center py-5 gap-2"
         style={{ width: 72 }}
       >
-        {/* Logo — top of sidebar, links to home */}
+        {/* Logo — wider pill to fit horizontal logo */}
         <Link href="/" title="MAS AI Studio" style={{ textDecoration: "none", marginBottom: 6 }}>
           <div style={{
-            width: 46, height: 46, borderRadius: 14,
+            width: 120, height: 40, borderRadius: 12,
             background: "var(--glass-elevated)", border: "1px solid var(--glass-elevated-border)",
             display: "flex", alignItems: "center", justifyContent: "center",
             boxShadow: "0 0 18px rgba(239,68,68,0.18)",
-            overflow: "hidden",
+            overflow: "hidden", padding: "4px 8px",
           }}>
-            <Image src={MASLogo} alt="MAS AI Studio" width={32} height={32} style={{ objectFit: "contain" }} />
+            <Image src={MASLogo} alt="MAS AI Studio" width={104} height={32} style={{ objectFit: "contain", width: "100%", height: "100%" }} />
           </div>
         </Link>
 
