@@ -294,17 +294,15 @@ export default function ChatPage() {
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
   const recTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  const recordingSecsRef = useRef(0); // always-current mirror of recordingSecs
+  const recordingSecsRef = useRef(0);
+  const transcriptRef = useRef<string>("");         // stores speech-to-text result
   const sarie = useSarieChat();
-  const sarieSendRef = useRef(sarie.send);
   const sarieSendSilentRef = useRef(sarie.sendSilent);
-  useEffect(() => { sarieSendRef.current = sarie.send; }, [sarie.send]);
   useEffect(() => { sarieSendSilentRef.current = sarie.sendSilent; }, [sarie.sendSilent]);
 
   const activeConvo = CONVERSATIONS.find(c => c.id === activeId)!;
   const isAI = activeConvo.isAI;
 
-  // For Sarie: merge AI voice bubbles in with AI messages by timestamp order
   const messages: ChatMessage[] = isAI
     ? [...sarie.messages, ...aiVoiceBubbles].sort((a, b) => (a.ts ?? "").localeCompare(b.ts ?? ""))
     : (teamMessages[activeId] || []);
@@ -338,41 +336,76 @@ export default function ChatPage() {
 
   const startVoiceNote = async () => {
     if (isRecording) return;
+    transcriptRef.current = "";
+
+    // ── 1. Start real audio recording (for the playable bubble) ──
+    let stream: MediaStream;
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      const mr = new MediaRecorder(stream);
-      mediaRecorderRef.current = mr;
-      audioChunksRef.current = [];
-      mr.ondataavailable = e => { if (e.data.size > 0) audioChunksRef.current.push(e.data); };
-      mr.onstop = () => {
-        stream.getTracks().forEach(t => t.stop());
-        const blob = new Blob(audioChunksRef.current, { type: "audio/webm" });
-        const url = URL.createObjectURL(blob);
-        const dur = recordingSecsRef.current; // use ref — always current
-        const voiceMsg: ChatMessage = { role: "user", content: "", ts: now(), audioUrl: url, audioDuration: dur };
-        // Add audio bubble locally (visible)
-        setAiVoiceBubbles(prev => [...prev, voiceMsg]);
-        // Trigger Sarie silently — no visible user message bubble
-        sarieSendSilentRef.current("المستخدم أرسل رسالة صوتية. رد عليه بشكل طبيعي بالنص.");
-      };
-      mr.start();
-      recordingSecsRef.current = 0;
-      setIsRecording(true);
-      setRecordingSecs(0);
-      recTimerRef.current = setInterval(() => {
-        recordingSecsRef.current += 1;
-        setRecordingSecs(s => s + 1);
-      }, 1000);
+      stream = await navigator.mediaDevices.getUserMedia({ audio: true });
     } catch {
       alert("Microphone access denied.");
+      return;
+    }
+
+    const mr = new MediaRecorder(stream);
+    mediaRecorderRef.current = mr;
+    audioChunksRef.current = [];
+
+    mr.ondataavailable = e => { if (e.data.size > 0) audioChunksRef.current.push(e.data); };
+
+    mr.onstop = () => {
+      stream.getTracks().forEach(t => t.stop());
+      const blob = new Blob(audioChunksRef.current, { type: "audio/webm" });
+      const url = URL.createObjectURL(blob);
+      const dur = recordingSecsRef.current;
+
+      // Show the audio bubble in chat
+      const voiceMsg: ChatMessage = { role: "user", content: "", ts: now(), audioUrl: url, audioDuration: dur };
+      if (isAI) {
+        setAiVoiceBubbles(prev => [...prev, voiceMsg]);
+        // Send transcript silently to Sarie — she reads it as a plain message
+        const transcript = transcriptRef.current.trim();
+        if (transcript) sarieSendSilentRef.current(transcript);
+      } else {
+        setTeamMessages(prev => ({ ...prev, [activeId]: [...(prev[activeId] || []), voiceMsg] }));
+      }
+    };
+
+    mr.start();
+    recordingSecsRef.current = 0;
+    setIsRecording(true);
+    setRecordingSecs(0);
+    recTimerRef.current = setInterval(() => {
+      recordingSecsRef.current += 1;
+      setRecordingSecs(s => s + 1);
+    }, 1000);
+
+    // ── 2. Run speech recognition in parallel to get the transcript ──
+    const SR = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+    if (SR) {
+      const rec = new SR();
+      rec.lang = "ar-EG";
+      rec.continuous = true;
+      rec.interimResults = false;
+      rec.onresult = (ev: any) => {
+        for (let i = ev.resultIndex; i < ev.results.length; i++) {
+          if (ev.results[i].isFinal) transcriptRef.current += ev.results[i][0].transcript + " ";
+        }
+      };
+      rec.start();
+      // Store ref to stop it when recording stops
+      (mr as any)._rec = rec;
     }
   };
 
   const stopVoiceNote = () => {
+    if (!isRecording) return;
     if (recTimerRef.current) clearInterval(recTimerRef.current);
     setIsRecording(false);
+    try { (mediaRecorderRef.current as any)?._rec?.stop(); } catch {}
     try { mediaRecorderRef.current?.stop(); } catch {}
   };
+
 
   const addReaction = (msgIdx: number, emoji: string) => {
     if (isAI) return;
