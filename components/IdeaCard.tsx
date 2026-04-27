@@ -1,7 +1,7 @@
 'use client';
 
 import { Clock, Music, Zap } from "lucide-react";
-import { dispatchAgentPrompt } from "./AIChatBox";
+import { dispatchAgentPrompt } from "@/lib/events";
 
 interface Idea {
   id: string;

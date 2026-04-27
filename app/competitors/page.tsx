@@ -3,7 +3,7 @@
 import { useState } from "react";
 import CompetitorCard from "@/components/CompetitorCard";
 import { Search, RefreshCw, Zap } from "lucide-react";
-import { dispatchAgentPrompt } from "@/components/AIChatBox";
+import { dispatchAgentPrompt } from "@/lib/events";
 import { useData } from "@/components/DataContext";
 
 const card: React.CSSProperties = {
