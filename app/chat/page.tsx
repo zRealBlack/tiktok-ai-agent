@@ -249,7 +249,10 @@ export default function ChatPage() {
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
   const recTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const recordingSecsRef = useRef(0); // always-current mirror of recordingSecs
   const sarie = useSarieChat();
+  const sarieSendRef = useRef(sarie.send); // always-current mirror of sarie.send
+  useEffect(() => { sarieSendRef.current = sarie.send; }, [sarie.send]);
 
   const activeConvo = CONVERSATIONS.find(c => c.id === activeId)!;
   const isAI = activeConvo.isAI;
@@ -287,6 +290,7 @@ export default function ChatPage() {
   };
 
   const startVoiceNote = async () => {
+    if (isRecording) return;
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       const mr = new MediaRecorder(stream);
@@ -297,27 +301,21 @@ export default function ChatPage() {
         stream.getTracks().forEach(t => t.stop());
         const blob = new Blob(audioChunksRef.current, { type: "audio/webm" });
         const url = URL.createObjectURL(blob);
-        const dur = recordingSecs;
+        const dur = recordingSecsRef.current; // use ref — always current
         const voiceMsg: ChatMessage = { role: "user", content: "", ts: now(), audioUrl: url, audioDuration: dur };
-        if (isAI) {
-          // Send a silent text prompt to Sarie so she knows to reply
-          sarie.send("[Voice note received — please respond in text]");
-          // But display the audio bubble locally
-          // We do this by injecting into sarie messages via a workaround: just send a visual-only message
-        }
-        if (isAI) {
-          // Show audio bubble as user message in the chat
-          // sarie.messages is managed internally; inject via setTeamMessages won't work for AI
-          // Instead we store it in a separate local state for AI voice bubbles
-          setAiVoiceBubbles(prev => [...prev, voiceMsg]);
-        } else {
-          setTeamMessages(prev => ({ ...prev, [activeId]: [...(prev[activeId] || []), voiceMsg] }));
-        }
+        // Add audio bubble locally
+        setAiVoiceBubbles(prev => [...prev, voiceMsg]);
+        // Trigger Sarie reply via the always-current ref
+        sarieSendRef.current("أرسلت رسالة صوتية — رد عليها بالنص");
       };
       mr.start();
+      recordingSecsRef.current = 0;
       setIsRecording(true);
       setRecordingSecs(0);
-      recTimerRef.current = setInterval(() => setRecordingSecs(s => s + 1), 1000);
+      recTimerRef.current = setInterval(() => {
+        recordingSecsRef.current += 1;
+        setRecordingSecs(s => s + 1);
+      }, 1000);
     } catch {
       alert("Microphone access denied.");
     }
