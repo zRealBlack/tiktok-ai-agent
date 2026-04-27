@@ -363,9 +363,9 @@ export default function ChatPage() {
       const voiceMsg: ChatMessage = { role: "user", content: "", ts: now(), audioUrl: url, audioDuration: dur };
       if (isAI) {
         setAiVoiceBubbles(prev => [...prev, voiceMsg]);
-        // Send transcript silently to Sarie — she reads it as a plain message
+        // Always respond — use transcript if captured, fallback if speech API failed
         const transcript = transcriptRef.current.trim();
-        if (transcript) sarieSendSilentRef.current(transcript);
+        sarieSendSilentRef.current(transcript || "رسالة صوتية");
       } else {
         setTeamMessages(prev => ({ ...prev, [activeId]: [...(prev[activeId] || []), voiceMsg] }));
       }
