@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect, useCallback } from "react";
 import Image from "next/image";
-import { Send, Loader2, Mic, Square, Search, Phone, Video, MoreVertical, Smile, Paperclip, Camera, Check, X, ImageIcon, FileText, Film } from "lucide-react";
+import { Send, Loader2, Mic, Square, Search, Phone, Video, MoreVertical, Smile, Paperclip, Check, X, FileText, Film, MicOff } from "lucide-react";
 import { useData } from "@/components/DataContext";
 import MarkdownMessage from "@/components/MarkdownMessage";
 import SarieAvatar from "@/public/sarie_generated.png";
@@ -239,9 +239,12 @@ export default function ChatPage() {
   const [pendingAttachment, setPendingAttachment] = useState<Attachment | null>(null);
   const [teamMessages, setTeamMessages] = useState<Record<string, ChatMessage[]>>(MOCK_TEAM_MESSAGES);
   const [hoverReaction, setHoverReaction] = useState<number | null>(null);
+  const [isRecording, setIsRecording] = useState(false);
+  const [recordingSecs, setRecordingSecs] = useState(0);
   const bottomRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const cameraInputRef = useRef<HTMLInputElement>(null);
+  const recognitionRef = useRef<any>(null);
+  const recTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const sarie = useSarieChat();
 
   const activeConvo = CONVERSATIONS.find(c => c.id === activeId)!;
@@ -267,13 +270,46 @@ export default function ChatPage() {
     setPendingAttachment(null);
   };
 
-  const handleFile = (e: React.ChangeEvent<HTMLInputElement>, source: "file" | "camera") => {
+  const handleFile = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
     const url = URL.createObjectURL(file);
     const type: Attachment["type"] = file.type.startsWith("image") ? "image" : file.type.startsWith("video") ? "video" : "file";
     setPendingAttachment({ name: file.name, url, type });
     e.target.value = "";
+  };
+
+  const startVoiceNote = () => {
+    const SR = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+    if (!SR) { alert("Voice notes require Chrome or Edge."); return; }
+    const rec = new SR();
+    recognitionRef.current = rec;
+    rec.lang = "ar-EG";
+    rec.continuous = false;
+    rec.interimResults = false;
+    rec.onstart = () => {
+      setIsRecording(true);
+      setRecordingSecs(0);
+      recTimerRef.current = setInterval(() => setRecordingSecs(s => s + 1), 1000);
+    };
+    rec.onresult = (ev: any) => {
+      const transcript = ev.results[0][0].transcript.trim();
+      if (transcript) {
+        const label = `🎤 ${transcript}`;
+        if (isAI) sarie.send(label);
+        else setTeamMessages(prev => ({ ...prev, [activeId]: [...(prev[activeId] || []), { role: "user", content: label, ts: now() }] }));
+      }
+    };
+    rec.onerror = () => stopVoiceNote();
+    rec.onend = () => stopVoiceNote();
+    rec.start();
+  };
+
+  const stopVoiceNote = () => {
+    if (recTimerRef.current) clearInterval(recTimerRef.current);
+    setIsRecording(false);
+    setRecordingSecs(0);
+    try { recognitionRef.current?.stop(); } catch {}
   };
 
   const addReaction = (msgIdx: number, emoji: string) => {
@@ -546,32 +582,54 @@ export default function ChatPage() {
             </div>
           )}
 
-          <div style={{ display: "flex", alignItems: "center", gap: 10, background: "var(--glass-elevated)", border: "1px solid var(--glass-elevated-border)", borderRadius: 100, padding: "8px 8px 8px 16px" }}>
-            <Mic size={16} color="var(--text-muted)" style={{ cursor: "pointer", flexShrink: 0 }} />
-            <input value={input} onChange={e => setInput(e.target.value)}
+          <div style={{ display: "flex", alignItems: "center", gap: 10, background: isRecording ? "rgba(239,68,68,0.08)" : "var(--glass-elevated)", border: `1px solid ${isRecording ? "rgba(239,68,68,0.3)" : "var(--glass-elevated-border)"}`, borderRadius: 100, padding: "8px 8px 8px 16px", transition: "all 0.2s" }}>
+            {isRecording ? (
+              <div style={{ display: "flex", alignItems: "center", gap: 6, flex: 1 }}>
+                <span style={{ width: 8, height: 8, borderRadius: "50%", background: "#ef4444", animation: "pulse 1s ease-in-out infinite", flexShrink: 0 }} />
+                <span style={{ fontSize: 12, color: "#ef4444", fontWeight: 600 }}>Recording {recordingSecs}s</span>
+                <span style={{ fontSize: 11, color: "var(--text-muted)", flex: 1 }}>— Release to send</span>
+              </div>
+            ) : (
+              <input value={input} onChange={e => setInput(e.target.value)}
               onKeyDown={e => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleSend(); } }}
               placeholder={isAI ? "اسأل ساري..." : "Write a message..."}
               style={{ flex: 1, background: "transparent", border: "none", outline: "none", fontSize: 13, color: "var(--text-primary)", direction: isAI ? "rtl" : "ltr" }}
             />
+            )}
             <div style={{ display: "flex", gap: 6, alignItems: "center", flexShrink: 0 }}>
               {/* Attach file */}
-              <button onClick={() => fileInputRef.current?.click()} title="Attach file"
-                style={{ background: "none", border: "none", cursor: "pointer", display: "flex", alignItems: "center", padding: 2 }}>
-                <Paperclip size={15} color="var(--text-muted)" />
-              </button>
-              <input ref={fileInputRef} type="file" accept="image/*,video/*,.pdf,.doc,.docx,.txt" style={{ display: "none" }} onChange={e => handleFile(e, "file")} />
+              {!isRecording && (
+                <>
+                  <button onClick={() => fileInputRef.current?.click()} title="Attach file"
+                    style={{ background: "none", border: "none", cursor: "pointer", display: "flex", alignItems: "center", padding: 2 }}>
+                    <Paperclip size={15} color="var(--text-muted)" />
+                  </button>
+                  <input ref={fileInputRef} type="file" accept="image/*,video/*,.pdf,.doc,.docx,.txt" style={{ display: "none" }} onChange={e => handleFile(e)} />
 
-              {/* Camera / photo */}
-              <button onClick={() => cameraInputRef.current?.click()} title="Take photo"
-                style={{ background: "none", border: "none", cursor: "pointer", display: "flex", alignItems: "center", padding: 2 }}>
-                <Camera size={15} color="var(--text-muted)" />
-              </button>
-              <input ref={cameraInputRef} type="file" accept="image/*" capture="environment" style={{ display: "none" }} onChange={e => handleFile(e, "camera")} />
+                  {/* Emoji picker toggle */}
+                  <button onClick={() => setShowEmoji(v => !v)} title="Emoji"
+                    style={{ background: showEmoji ? "var(--glass-elevated)" : "none", border: "none", cursor: "pointer", display: "flex", alignItems: "center", padding: 2, borderRadius: 6 }}>
+                    <Smile size={15} color={showEmoji ? "var(--btn-primary-bg)" : "var(--text-muted)"} />
+                  </button>
+                </>
+              )}
 
-              {/* Emoji picker toggle */}
-              <button onClick={() => setShowEmoji(v => !v)} title="Emoji"
-                style={{ background: showEmoji ? "var(--glass-elevated)" : "none", border: "none", cursor: "pointer", display: "flex", alignItems: "center", padding: 2, borderRadius: 6 }}>
-                <Smile size={15} color={showEmoji ? "var(--btn-primary-bg)" : "var(--text-muted)"} />
+              {/* Voice note button */}
+              <button
+                onMouseDown={startVoiceNote}
+                onMouseUp={stopVoiceNote}
+                onTouchStart={startVoiceNote}
+                onTouchEnd={stopVoiceNote}
+                onClick={isRecording ? stopVoiceNote : undefined}
+                title={isRecording ? "Release to send" : "Hold to record voice note"}
+                style={{
+                  width: 32, height: 32, borderRadius: "50%", border: "none", cursor: "pointer",
+                  display: "flex", alignItems: "center", justifyContent: "center", padding: 0, flexShrink: 0,
+                  background: isRecording ? "#ef4444" : "var(--glass-elevated)",
+                  boxShadow: isRecording ? "0 0 0 6px rgba(239,68,68,0.2)" : "none",
+                  transition: "all 0.2s",
+                }}>
+                {isRecording ? <MicOff size={15} color="#fff" /> : <Mic size={15} color="var(--text-muted)" />}
               </button>
             </div>
             {streaming ? (
