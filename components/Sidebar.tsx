@@ -3,14 +3,15 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
-import { LayoutDashboard, Video, Users, Lightbulb, Settings, Calendar, Layers, HelpCircle, LogOut } from "lucide-react";
+import { LayoutDashboard, Video, Users, Lightbulb, Settings, Calendar, Layers, HelpCircle, MessageSquare } from "lucide-react";
 import SettingsModal from "@/components/SettingsModal";
 
 const NAV = [
-  { href: "/",            label: "Overview",    icon: LayoutDashboard },
-  { href: "/audit",       label: "Content Audit",icon: Video           },
-  { href: "/competitors", label: "Competitors", icon: Users           },
-  { href: "/ideas",       label: "Ideas",       icon: Lightbulb       },
+  { href: "/",            label: "Overview",     icon: LayoutDashboard },
+  { href: "/audit",       label: "Content Audit", icon: Video           },
+  { href: "/competitors", label: "Competitors",   icon: Users           },
+  { href: "/ideas",       label: "Ideas",         icon: Lightbulb       },
+  { href: "/chat",        label: "Messages",      icon: MessageSquare   },
 ];
 
 const EXTRA = [Calendar, Layers, HelpCircle];
