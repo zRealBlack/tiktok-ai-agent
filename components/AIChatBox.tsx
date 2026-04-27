@@ -10,6 +10,7 @@ import { useData } from "@/components/DataContext";
 import MarkdownMessage from "@/components/MarkdownMessage";
 import Image from "next/image";
 import SarieAvatar from "@/public/sarie_generated.png";
+import { usePathname } from "next/navigation";
 
 export interface Message {
   role: "user" | "assistant";
@@ -23,8 +24,13 @@ export function dispatchAgentPrompt(prompt: string, imageUrl?: string) {
 }
 
 export default function AIChatBox() {
+  const pathname = usePathname();
   const { account, videos, competitors, ideas, trends, generations } = useData();
   const [open, setOpen] = useState(false);
+
+  // Don't render on the dedicated /chat page — Sarie lives there natively
+  if (pathname === "/chat") return null;
+
   const [expanded, setExpanded] = useState(false);
   const [input, setInput] = useState("");
   const [messages, setMessages] = useState<Message[]>([]);
