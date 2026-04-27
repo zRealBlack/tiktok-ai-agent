@@ -27,10 +27,6 @@ export default function AIChatBox() {
   const pathname = usePathname();
   const { account, videos, competitors, ideas, trends, generations } = useData();
   const [open, setOpen] = useState(false);
-
-  // Don't render on the dedicated /chat page — Sarie lives there natively
-  if (pathname === "/chat") return null;
-
   const [expanded, setExpanded] = useState(false);
   const [input, setInput] = useState("");
   const [messages, setMessages] = useState<Message[]>([]);
@@ -448,6 +444,10 @@ export default function AIChatBox() {
     ttsQueueRef.current.push(fetchTTSAudio(sentence)); // Non-blocking fetch starts now
     processTTSQueue();
   };
+
+  // Don't render on the dedicated /chat page — Sarie lives there natively
+  // (placed after all hooks to respect Rules of Hooks)
+  if (pathname === "/chat") return null;
 
   return (
     <>
