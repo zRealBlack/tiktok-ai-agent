@@ -20,8 +20,9 @@ interface ChatMessage {
   ts?: string;
   attachment?: Attachment;
   reactions?: string[];
-  audioUrl?: string;   // playable voice note
-  audioDuration?: number; // seconds
+  audioUrl?: string;
+  audioDuration?: number;
+  hidden?: boolean; // user message sent for AI context but not shown in UI
 }
 
 interface Conversation {
@@ -274,7 +275,51 @@ function useSarieChat() {
     }
   }, [messages, streaming, account, videos, competitors, ideas, trends, generations]);
 
-  return { messages, streaming, send, sendSilent, stop };
+  // sendHidden: sends a user message for AI context but marks it hidden so the UI doesn't render it
+  const sendHidden = useCallback(async (text: string) => {
+    if (!text.trim() || streaming) return;
+    const userMsg: ChatMessage = { role: "user", content: text, ts: now(), hidden: true };
+    const next = [...messages, userMsg];
+    setMessages(next); // includes the hidden msg for context
+    setStreaming(true);
+    setMessages(p => [...p, { role: "assistant", content: "", streaming: true, ts: now() }]);
+    const ctrl = new AbortController();
+    abortRef.current = ctrl;
+    try {
+      const res = await fetch("/api/ai", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          messages: next.map(m => ({ role: m.role, content: m.content })),
+          contextData: { account, videos, competitors, ideas, trends, generations },
+        }),
+        signal: ctrl.signal,
+      });
+      if (!res.ok) throw new Error("AI error");
+      const reader = res.body!.getReader();
+      const dec = new TextDecoder();
+      let acc = "";
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        acc += dec.decode(value, { stream: true });
+        setMessages(p => { const u = [...p]; u[u.length - 1] = { role: "assistant", content: acc, streaming: true }; return u; });
+      }
+      setMessages(p => {
+        const u = [...p];
+        u[u.length - 1] = { role: "assistant", content: acc, ts: now() };
+        try { sessionStorage.setItem("chat_history", JSON.stringify(u)); } catch {}
+        return u;
+      });
+    } catch (e: any) {
+      if (e?.name === "AbortError") return;
+      setMessages(p => p.filter(m => !m.streaming));
+    } finally {
+      setStreaming(false);
+    }
+  }, [messages, streaming, account, videos, competitors, ideas, trends, generations]);
+
+  return { messages, streaming, send, sendHidden, stop };
 }
 
 // ─── Main Page ────────────────────────────────────────────────────────────────
@@ -297,15 +342,17 @@ export default function ChatPage() {
   const recordingSecsRef = useRef(0);
   const transcriptRef = useRef<string>("");         // stores speech-to-text result
   const sarie = useSarieChat();
-  const sarieSendSilentRef = useRef(sarie.sendSilent);
-  useEffect(() => { sarieSendSilentRef.current = sarie.sendSilent; }, [sarie.sendSilent]);
+  const sarieSendHiddenRef = useRef(sarie.sendHidden);
+  useEffect(() => { sarieSendHiddenRef.current = sarie.sendHidden; }, [sarie.sendHidden]);
 
   const activeConvo = CONVERSATIONS.find(c => c.id === activeId)!;
   const isAI = activeConvo.isAI;
 
-  const messages: ChatMessage[] = isAI
+  const allMessages: ChatMessage[] = isAI
     ? [...sarie.messages, ...aiVoiceBubbles].sort((a, b) => (a.ts ?? "").localeCompare(b.ts ?? ""))
     : (teamMessages[activeId] || []);
+  // Hidden messages exist in state for AI context but are never shown in the UI
+  const messages = allMessages.filter(m => !m.hidden);
   const streaming = isAI ? sarie.streaming : false;
 
   useEffect(() => {
@@ -363,9 +410,9 @@ export default function ChatPage() {
       const voiceMsg: ChatMessage = { role: "user", content: "", ts: now(), audioUrl: url, audioDuration: dur };
       if (isAI) {
         setAiVoiceBubbles(prev => [...prev, voiceMsg]);
-        // Always respond — use transcript if captured, fallback if speech API failed
+        // Send transcript via sendHidden — goes to AI for context, user bubble stays hidden
         const transcript = transcriptRef.current.trim();
-        sarieSendSilentRef.current(transcript || "رسالة صوتية");
+        sarieSendHiddenRef.current(transcript || "مرحبا");
       } else {
         setTeamMessages(prev => ({ ...prev, [activeId]: [...(prev[activeId] || []), voiceMsg] }));
       }
