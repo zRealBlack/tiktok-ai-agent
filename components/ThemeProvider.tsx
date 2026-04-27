@@ -2,14 +2,11 @@
 
 import { createContext, useContext, useEffect, useState } from 'react';
 
-export type Theme = 'dark' | 'light' | 'neon' | 'terminal' | 'minimal';
+export type Theme = 'dark' | 'light';
 
 const THEME_HTML_CLASSES: Record<Theme, string[]> = {
   dark:     ['dark'],
   light:    [],
-  neon:     ['dark', 'theme-neon'],
-  terminal: ['dark', 'theme-terminal'],
-  minimal:  ['theme-minimal'],
 };
 
 const ThemeContext = createContext<{
@@ -24,7 +21,7 @@ export function useTheme() {
 
 function applyTheme(theme: Theme) {
   const el = document.documentElement;
-  el.classList.remove('dark', 'theme-neon', 'theme-terminal', 'theme-minimal');
+  el.classList.remove('dark');
   THEME_HTML_CLASSES[theme].forEach(c => el.classList.add(c));
 }
 
