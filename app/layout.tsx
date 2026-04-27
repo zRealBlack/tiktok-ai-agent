@@ -2,7 +2,6 @@ import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
 import Sidebar from "@/components/Sidebar";
-import AIChatBox from "@/components/AIChatBox";
 import TopBar from "@/components/TopBar";
 import { ThemeProvider } from "@/components/ThemeProvider";
 import { DataProvider } from "@/components/DataContext";
@@ -43,7 +42,6 @@ export default function RootLayout({
                 <TopBar />
                 <div className="flex-1 page-fade">{children}</div>
               </main>
-              <AIChatBox />
             </PasswordGuard>
           </DataProvider>
         </ThemeProvider>

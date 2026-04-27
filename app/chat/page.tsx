@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect, useCallback } from "react";
 import Image from "next/image";
-import { Send, Loader2, Square, Search, Phone, Video, MoreVertical, Smile, Paperclip, Check, X, FileText, Film } from "lucide-react";
+import { Send, Loader2, Square, Search, Phone, Video, MoreVertical, Smile, Paperclip, Check, X, FileText, Film, Copy, Trash2, Pencil, Forward, MoreHorizontal } from "lucide-react";
 import { useData } from "@/components/DataContext";
 import MarkdownMessage from "@/components/MarkdownMessage";
 import SarieAvatar from "@/public/sarie_generated.png";
@@ -227,7 +227,7 @@ function useSarieChat() {
     });
   };
 
-  return { messages, streaming, send, stop };
+  return { messages, setMessages, streaming, send, stop };
 }
 
 // ─── Main Page ────────────────────────────────────────────────────────────────
@@ -239,6 +239,8 @@ export default function ChatPage() {
   const [pendingAttachment, setPendingAttachment] = useState<Attachment | null>(null);
   const [teamMessages, setTeamMessages] = useState<Record<string, ChatMessage[]>>(MOCK_TEAM_MESSAGES);
   const [hoverReaction, setHoverReaction] = useState<number | null>(null);
+  const [hoverMsg, setHoverMsg] = useState<number | null>(null);
+  const [activeMenu, setActiveMenu] = useState<number | null>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const sarie = useSarieChat();
@@ -254,6 +256,47 @@ export default function ChatPage() {
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, streaming]);
+
+  // Close menu on click outside
+  useEffect(() => {
+    if (activeMenu === null) return;
+    const clickHandler = () => setActiveMenu(null);
+    window.addEventListener("click", clickHandler);
+    return () => window.removeEventListener("click", clickHandler);
+  }, [activeMenu]);
+
+  const handleDelete = (index: number) => {
+    if (isAI) {
+      sarie.setMessages(prev => {
+        const u = prev.filter((_, i) => i !== index);
+        try { sessionStorage.setItem("chat_history", JSON.stringify(u)); } catch {}
+        return u;
+      });
+    } else {
+      setTeamMessages(prev => {
+        const u = [...(prev[activeId] || [])];
+        u.splice(index, 1);
+        return { ...prev, [activeId]: u };
+      });
+    }
+    setActiveMenu(null);
+  };
+
+  const handleCopy = (content: string) => {
+    navigator.clipboard.writeText(content);
+    setActiveMenu(null);
+  };
+
+  const handleEdit = (index: number, content: string) => {
+    setInput(content);
+    handleDelete(index); // simple edit flow: puts content in input and deletes old message
+    setActiveMenu(null);
+  };
+
+  const handleForward = (content: string) => {
+    alert("Forward feature coming soon!");
+    setActiveMenu(null);
+  };
 
   const handleSend = () => {
     const text = input.trim();
@@ -429,8 +472,8 @@ export default function ChatPage() {
             const isUser = m.role === "user";
             return (
               <div key={i} style={{ display: "flex", justifyContent: isUser ? "flex-end" : "flex-start", alignItems: "flex-end", gap: 10 }}
-                onMouseEnter={() => setHoverReaction(i)}
-                onMouseLeave={() => setHoverReaction(null)}
+                onMouseEnter={() => { setHoverReaction(i); setHoverMsg(i); }}
+                onMouseLeave={() => { setHoverReaction(null); setHoverMsg(null); }}
               >
                 {!isUser && (
                   activeConvo.isAI ? (
@@ -440,23 +483,38 @@ export default function ChatPage() {
                   ) : <AvatarCircle name={activeConvo.name} size={30} />
                 )}
                 <div style={{ maxWidth: "68%", position: "relative" }}>
-                  {/* Reaction picker on hover (team chats only) */}
-                  {!isAI && hoverReaction === i && (
+                  {/* Hover Actions Menu & Reaction Picker */}
+                  {(hoverMsg === i || activeMenu === i || (!isAI && hoverReaction === i)) && (
                     <div style={{
                       position: "absolute", [isUser ? "right" : "left"]: 0,
                       bottom: "100%", marginBottom: 4, zIndex: 10,
-                      display: "flex", gap: 4, background: "var(--glass-bg)",
+                      display: "flex", alignItems: "center", gap: 4, background: "var(--glass-bg)",
                       border: "1px solid var(--glass-border)", borderRadius: 100,
                       padding: "4px 8px", backdropFilter: "blur(16px)",
                       boxShadow: "var(--glass-shadow)"
                     }}>
-                      {EMOJIS.slice(0, 8).map(e => (
+                      {/* Reaction picker (team chats only) */}
+                      {!isAI && EMOJIS.slice(0, 8).map(e => (
                         <button key={e} onClick={() => addReaction(i, e)}
                           style={{ background: "none", border: "none", cursor: "pointer", fontSize: 16, padding: "0 2px", transition: "transform 0.1s" }}
                           onMouseEnter={el => (el.currentTarget.style.transform = "scale(1.35)")}
                           onMouseLeave={el => (el.currentTarget.style.transform = "scale(1)")}
                         >{e}</button>
                       ))}
+                      {!isAI && <div style={{ width: 1, height: 16, background: "var(--glass-elevated-border)", margin: "0 4px" }} />}
+                      
+                      {/* Message Actions */}
+                      <button onClick={() => handleForward(m.content)} title="Forward" style={{ background: "none", border: "none", cursor: "pointer", color: "var(--text-muted)", padding: 4, borderRadius: 6, display: "flex" }} onMouseEnter={e => e.currentTarget.style.background="var(--glass-elevated)"} onMouseLeave={e => e.currentTarget.style.background="none"}><Forward size={14} /></button>
+                      <button onClick={() => handleCopy(m.content)} title="Copy" style={{ background: "none", border: "none", cursor: "pointer", color: "var(--text-muted)", padding: 4, borderRadius: 6, display: "flex" }} onMouseEnter={e => e.currentTarget.style.background="var(--glass-elevated)"} onMouseLeave={e => e.currentTarget.style.background="none"}><Copy size={14} /></button>
+                      <div style={{ position: "relative" }}>
+                        <button onClick={(e) => { e.stopPropagation(); setActiveMenu(activeMenu === i ? null : i); }} title="More" style={{ background: activeMenu === i ? "var(--glass-elevated)" : "none", border: "none", cursor: "pointer", color: "var(--text-muted)", padding: 4, borderRadius: 6, display: "flex" }} onMouseEnter={e => { if(activeMenu !== i) e.currentTarget.style.background="var(--glass-elevated)"; }} onMouseLeave={e => { if(activeMenu !== i) e.currentTarget.style.background="none"; }}><MoreHorizontal size={14} /></button>
+                        {activeMenu === i && (
+                          <div style={{ position: "absolute", bottom: "100%", [isUser ? "right" : "left"]: 0, marginBottom: 4, background: "var(--glass-panel-bg)", border: "1px solid var(--glass-border)", borderRadius: 12, padding: 4, boxShadow: "var(--glass-shadow)", zIndex: 20, minWidth: 120 }}>
+                            {isUser && <button onClick={() => handleEdit(i, m.content)} style={{ width: "100%", display: "flex", alignItems: "center", gap: 8, background: "none", border: "none", color: "var(--text-primary)", fontSize: 13, padding: "8px 12px", cursor: "pointer", borderRadius: 8, textAlign: "left" }} onMouseEnter={e => e.currentTarget.style.background="rgba(255,255,255,0.05)"} onMouseLeave={e => e.currentTarget.style.background="none"}><Pencil size={14}/> Edit</button>}
+                            <button onClick={() => handleDelete(i)} style={{ width: "100%", display: "flex", alignItems: "center", gap: 8, background: "none", border: "none", color: "#ef4444", fontSize: 13, padding: "8px 12px", cursor: "pointer", borderRadius: 8, textAlign: "left" }} onMouseEnter={e => e.currentTarget.style.background="rgba(239,68,68,0.1)"} onMouseLeave={e => e.currentTarget.style.background="none"}><Trash2 size={14}/> Delete</button>
+                          </div>
+                        )}
+                      </div>
                     </div>
                   )}
 
