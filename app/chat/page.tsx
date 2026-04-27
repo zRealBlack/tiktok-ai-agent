@@ -2,18 +2,24 @@
 
 import { useState, useRef, useEffect, useCallback } from "react";
 import Image from "next/image";
-import { Send, Loader2, Mic, Square, Search, Phone, Video, MoreVertical, Smile, Paperclip, Camera, Check } from "lucide-react";
+import { Send, Loader2, Mic, Square, Search, Phone, Video, MoreVertical, Smile, Paperclip, Camera, Check, X, ImageIcon, FileText, Film } from "lucide-react";
 import { useData } from "@/components/DataContext";
 import MarkdownMessage from "@/components/MarkdownMessage";
 import SarieAvatar from "@/public/sarie_generated.png";
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 
+const EMOJIS = ["😂","❤️","🔥","👏","😮","😢","🤔","💯","🚀","✅","👍","🎉","💪","😍","🙏","⚡","🎯","💡","🤣","😎"];
+
+interface Attachment { name: string; url: string; type: "image" | "video" | "file"; }
+
 interface ChatMessage {
   role: "user" | "assistant";
   content: string;
   streaming?: boolean;
   ts?: string;
+  attachment?: Attachment;
+  reactions?: string[];
 }
 
 interface Conversation {
@@ -229,16 +235,19 @@ function useSarieChat() {
 export default function ChatPage() {
   const [activeId, setActiveId] = useState("sarie");
   const [input, setInput] = useState("");
+  const [showEmoji, setShowEmoji] = useState(false);
+  const [pendingAttachment, setPendingAttachment] = useState<Attachment | null>(null);
+  const [teamMessages, setTeamMessages] = useState<Record<string, ChatMessage[]>>(MOCK_TEAM_MESSAGES);
+  const [hoverReaction, setHoverReaction] = useState<number | null>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const cameraInputRef = useRef<HTMLInputElement>(null);
   const sarie = useSarieChat();
 
   const activeConvo = CONVERSATIONS.find(c => c.id === activeId)!;
   const isAI = activeConvo.isAI;
 
-  // Derive messages for current convo
-  const messages: ChatMessage[] = isAI
-    ? sarie.messages
-    : (MOCK_TEAM_MESSAGES[activeId] || []);
+  const messages: ChatMessage[] = isAI ? sarie.messages : (teamMessages[activeId] || []);
   const streaming = isAI ? sarie.streaming : false;
 
   useEffect(() => {
@@ -246,9 +255,38 @@ export default function ChatPage() {
   }, [messages, streaming]);
 
   const handleSend = () => {
-    if (!input.trim()) return;
-    if (isAI) sarie.send(input);
+    const text = input.trim();
+    if (!text && !pendingAttachment) return;
+    if (isAI) {
+      sarie.send(text || (pendingAttachment ? `[Sent: ${pendingAttachment.name}]` : ""));
+    } else {
+      const msg: ChatMessage = { role: "user", content: text || "", ts: now(), ...(pendingAttachment ? { attachment: pendingAttachment } : {}) };
+      setTeamMessages(prev => ({ ...prev, [activeId]: [...(prev[activeId] || []), msg] }));
+    }
     setInput("");
+    setPendingAttachment(null);
+  };
+
+  const handleFile = (e: React.ChangeEvent<HTMLInputElement>, source: "file" | "camera") => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const url = URL.createObjectURL(file);
+    const type: Attachment["type"] = file.type.startsWith("image") ? "image" : file.type.startsWith("video") ? "video" : "file";
+    setPendingAttachment({ name: file.name, url, type });
+    e.target.value = "";
+  };
+
+  const addReaction = (msgIdx: number, emoji: string) => {
+    if (isAI) return;
+    setTeamMessages(prev => {
+      const msgs = [...(prev[activeId] || [])];
+      const m = { ...msgs[msgIdx] };
+      const existing = m.reactions || [];
+      m.reactions = existing.includes(emoji) ? existing.filter(r => r !== emoji) : [...existing, emoji];
+      msgs[msgIdx] = m;
+      return { ...prev, [activeId]: msgs };
+    });
+    setHoverReaction(null);
   };
 
   const glass: React.CSSProperties = {
@@ -381,33 +419,81 @@ export default function ChatPage() {
           {messages.map((m, i) => {
             const isUser = m.role === "user";
             return (
-              <div key={i} style={{ display: "flex", justifyContent: isUser ? "flex-end" : "flex-start", alignItems: "flex-end", gap: 10 }}>
+              <div key={i} style={{ display: "flex", justifyContent: isUser ? "flex-end" : "flex-start", alignItems: "flex-end", gap: 10 }}
+                onMouseEnter={() => setHoverReaction(i)}
+                onMouseLeave={() => setHoverReaction(null)}
+              >
                 {!isUser && (
                   activeConvo.isAI ? (
                     <div style={{ width: 30, height: 30, borderRadius: "50%", overflow: "hidden", flexShrink: 0 }}>
                       <Image src={SarieAvatar} alt="Sarie" width={30} height={30} style={{ objectFit: "cover" }} />
                     </div>
-                  ) : (
-                    <AvatarCircle name={activeConvo.name} size={30} />
-                  )
+                  ) : <AvatarCircle name={activeConvo.name} size={30} />
                 )}
-                <div style={{ maxWidth: "68%" }}>
+                <div style={{ maxWidth: "68%", position: "relative" }}>
+                  {/* Reaction picker on hover (team chats only) */}
+                  {!isAI && hoverReaction === i && (
+                    <div style={{
+                      position: "absolute", [isUser ? "right" : "left"]: 0,
+                      bottom: "100%", marginBottom: 4, zIndex: 10,
+                      display: "flex", gap: 4, background: "var(--glass-bg)",
+                      border: "1px solid var(--glass-border)", borderRadius: 100,
+                      padding: "4px 8px", backdropFilter: "blur(16px)",
+                      boxShadow: "var(--glass-shadow)"
+                    }}>
+                      {EMOJIS.slice(0, 8).map(e => (
+                        <button key={e} onClick={() => addReaction(i, e)}
+                          style={{ background: "none", border: "none", cursor: "pointer", fontSize: 16, padding: "0 2px", transition: "transform 0.1s" }}
+                          onMouseEnter={el => (el.currentTarget.style.transform = "scale(1.35)")}
+                          onMouseLeave={el => (el.currentTarget.style.transform = "scale(1)")}
+                        >{e}</button>
+                      ))}
+                    </div>
+                  )}
+
                   <div style={{
-                    padding: "10px 14px", borderRadius: 18,
+                    padding: m.attachment && m.attachment.type === "image" ? "6px" : "10px 14px",
+                    borderRadius: 18,
                     borderBottomLeftRadius: !isUser ? 4 : 18,
                     borderBottomRightRadius: isUser ? 4 : 18,
                     fontSize: 13, lineHeight: 1.55,
                     background: isUser ? "var(--btn-primary-bg)" : "var(--glass-elevated)",
                     color: isUser ? "#fff" : "var(--text-primary)",
                     border: isUser ? "none" : "1px solid var(--glass-elevated-border)",
+                    overflow: "hidden",
                   }}>
-                    {m.role === "assistant" && isAI ? (
-                      <MarkdownMessage content={m.content} />
-                    ) : m.content}
+                    {/* Attachment */}
+                    {m.attachment && m.attachment.type === "image" && (
+                      <img src={m.attachment.url} alt={m.attachment.name}
+                        style={{ width: "100%", maxWidth: 240, borderRadius: 12, display: "block", marginBottom: m.content ? 8 : 0 }} />
+                    )}
+                    {m.attachment && m.attachment.type === "video" && (
+                      <video src={m.attachment.url} controls
+                        style={{ width: "100%", maxWidth: 240, borderRadius: 12, display: "block", marginBottom: m.content ? 8 : 0 }} />
+                    )}
+                    {m.attachment && m.attachment.type === "file" && (
+                      <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "6px 8px", marginBottom: m.content ? 8 : 0 }}>
+                        <FileText size={18} color={isUser ? "#fff" : "var(--text-muted)"} />
+                        <span style={{ fontSize: 12, fontWeight: 600 }}>{m.attachment.name}</span>
+                      </div>
+                    )}
+                    {m.content && (m.role === "assistant" && isAI ? <MarkdownMessage content={m.content} /> : m.content)}
                     {m.streaming && (
-                      <span style={{ display: "inline-block", width: 6, height: 14, marginLeft: 4, background: "rgba(255,255,255,0.6)", borderRadius: 2, verticalAlign: "middle", animation: "pulse 1s ease-in-out infinite" }} />
+                      <span style={{ display: "inline-block", width: 6, height: 14, marginLeft: 4, background: "rgba(255,255,255,0.6)", borderRadius: 2, verticalAlign: "middle" }} />
                     )}
                   </div>
+
+                  {/* Reactions display */}
+                  {m.reactions && m.reactions.length > 0 && (
+                    <div style={{ display: "flex", gap: 4, marginTop: 4, flexWrap: "wrap" }}>
+                      {m.reactions.map((r, ri) => (
+                        <span key={ri} onClick={() => addReaction(i, r)}
+                          style={{ fontSize: 14, cursor: "pointer", background: "var(--glass-elevated)", borderRadius: 100, padding: "2px 6px", border: "1px solid var(--glass-elevated-border)" }}
+                        >{r}</span>
+                      ))}
+                    </div>
+                  )}
+
                   {m.ts && (
                     <div style={{ fontSize: 10, color: "var(--text-faint)", marginTop: 4, textAlign: isUser ? "right" : "left" }}>
                       {m.ts} {isUser && <Check size={10} style={{ display: "inline", marginLeft: 2 }} />}
@@ -415,9 +501,7 @@ export default function ChatPage() {
                   )}
                 </div>
                 {isUser && (
-                  <div style={{ width: 30, height: 30, borderRadius: "50%", background: "var(--btn-primary-bg)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 12, fontWeight: 800, color: "#fff", flexShrink: 0 }}>
-                    A
-                  </div>
+                  <div style={{ width: 30, height: 30, borderRadius: "50%", background: "var(--btn-primary-bg)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 12, fontWeight: 800, color: "#fff", flexShrink: 0 }}>A</div>
                 )}
               </div>
             );
@@ -438,42 +522,66 @@ export default function ChatPage() {
 
         {/* Input Bar */}
         <div style={{ padding: "14px 20px", borderTop: "1px solid var(--glass-border)", flexShrink: 0 }}>
-          <div style={{
-            display: "flex", alignItems: "center", gap: 10,
-            background: "var(--glass-elevated)", border: "1px solid var(--glass-elevated-border)",
-            borderRadius: 100, padding: "8px 8px 8px 16px"
-          }}>
+          {/* Pending attachment preview */}
+          {pendingAttachment && (
+            <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 10, padding: "8px 12px", background: "var(--glass-elevated)", borderRadius: 14, border: "1px solid var(--glass-elevated-border)" }}>
+              {pendingAttachment.type === "image" && <img src={pendingAttachment.url} alt="" style={{ width: 48, height: 48, objectFit: "cover", borderRadius: 8 }} />}
+              {pendingAttachment.type === "video" && <Film size={20} color="var(--text-muted)" />}
+              {pendingAttachment.type === "file" && <FileText size={20} color="var(--text-muted)" />}
+              <span style={{ flex: 1, fontSize: 12, color: "var(--text-secondary)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{pendingAttachment.name}</span>
+              <button onClick={() => setPendingAttachment(null)} style={{ background: "none", border: "none", cursor: "pointer", color: "var(--text-muted)" }}><X size={14} /></button>
+            </div>
+          )}
+
+          {/* Emoji picker */}
+          {showEmoji && (
+            <div style={{ marginBottom: 10, padding: "12px", background: "var(--glass-bg)", border: "1px solid var(--glass-border)", borderRadius: 18, backdropFilter: "blur(16px)", display: "flex", flexWrap: "wrap", gap: 6 }}>
+              {EMOJIS.map(e => (
+                <button key={e} onClick={() => { setInput(v => v + e); setShowEmoji(false); }}
+                  style={{ fontSize: 20, background: "none", border: "none", cursor: "pointer", padding: "2px 4px", borderRadius: 8, transition: "background 0.1s" }}
+                  onMouseEnter={el => el.currentTarget.style.background = "var(--glass-elevated)"}
+                  onMouseLeave={el => el.currentTarget.style.background = "none"}
+                >{e}</button>
+              ))}
+            </div>
+          )}
+
+          <div style={{ display: "flex", alignItems: "center", gap: 10, background: "var(--glass-elevated)", border: "1px solid var(--glass-elevated-border)", borderRadius: 100, padding: "8px 8px 8px 16px" }}>
             <Mic size={16} color="var(--text-muted)" style={{ cursor: "pointer", flexShrink: 0 }} />
-            <input
-              value={input}
-              onChange={e => setInput(e.target.value)}
+            <input value={input} onChange={e => setInput(e.target.value)}
               onKeyDown={e => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleSend(); } }}
               placeholder={isAI ? "اسأل ساري..." : "Write a message..."}
-              style={{
-                flex: 1, background: "transparent", border: "none", outline: "none",
-                fontSize: 13, color: "var(--text-primary)",
-                direction: isAI ? "rtl" : "ltr"
-              }}
+              style={{ flex: 1, background: "transparent", border: "none", outline: "none", fontSize: 13, color: "var(--text-primary)", direction: isAI ? "rtl" : "ltr" }}
             />
             <div style={{ display: "flex", gap: 6, alignItems: "center", flexShrink: 0 }}>
-              <Paperclip size={15} color="var(--text-muted)" style={{ cursor: "pointer" }} />
-              <Camera size={15} color="var(--text-muted)" style={{ cursor: "pointer" }} />
-              <Smile size={15} color="var(--text-muted)" style={{ cursor: "pointer" }} />
+              {/* Attach file */}
+              <button onClick={() => fileInputRef.current?.click()} title="Attach file"
+                style={{ background: "none", border: "none", cursor: "pointer", display: "flex", alignItems: "center", padding: 2 }}>
+                <Paperclip size={15} color="var(--text-muted)" />
+              </button>
+              <input ref={fileInputRef} type="file" accept="image/*,video/*,.pdf,.doc,.docx,.txt" style={{ display: "none" }} onChange={e => handleFile(e, "file")} />
+
+              {/* Camera / photo */}
+              <button onClick={() => cameraInputRef.current?.click()} title="Take photo"
+                style={{ background: "none", border: "none", cursor: "pointer", display: "flex", alignItems: "center", padding: 2 }}>
+                <Camera size={15} color="var(--text-muted)" />
+              </button>
+              <input ref={cameraInputRef} type="file" accept="image/*" capture="environment" style={{ display: "none" }} onChange={e => handleFile(e, "camera")} />
+
+              {/* Emoji picker toggle */}
+              <button onClick={() => setShowEmoji(v => !v)} title="Emoji"
+                style={{ background: showEmoji ? "var(--glass-elevated)" : "none", border: "none", cursor: "pointer", display: "flex", alignItems: "center", padding: 2, borderRadius: 6 }}>
+                <Smile size={15} color={showEmoji ? "var(--btn-primary-bg)" : "var(--text-muted)"} />
+              </button>
             </div>
             {streaming ? (
-              <button
-                onClick={sarie.stop}
-                style={{ width: 36, height: 36, borderRadius: "50%", background: "var(--btn-primary-bg)", border: "none", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}
-              >
+              <button onClick={sarie.stop} style={{ width: 36, height: 36, borderRadius: "50%", background: "var(--btn-primary-bg)", border: "none", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
                 <Square size={13} color="#fff" fill="#fff" />
               </button>
             ) : (
-              <button
-                onClick={handleSend}
-                disabled={!input.trim()}
-                style={{ width: 36, height: 36, borderRadius: "50%", background: input.trim() ? "var(--btn-primary-bg)" : "var(--glass-elevated)", border: "none", cursor: input.trim() ? "pointer" : "default", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, transition: "background 0.2s", opacity: input.trim() ? 1 : 0.5 }}
-              >
-                <Send size={14} color={input.trim() ? "#fff" : "var(--text-muted)"} />
+              <button onClick={handleSend} disabled={!input.trim() && !pendingAttachment}
+                style={{ width: 36, height: 36, borderRadius: "50%", background: (input.trim() || pendingAttachment) ? "var(--btn-primary-bg)" : "var(--glass-elevated)", border: "none", cursor: (input.trim() || pendingAttachment) ? "pointer" : "default", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, transition: "background 0.2s", opacity: (input.trim() || pendingAttachment) ? 1 : 0.5 }}>
+                <Send size={14} color={(input.trim() || pendingAttachment) ? "#fff" : "var(--text-muted)"} />
               </button>
             )}
           </div>
