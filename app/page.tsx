@@ -5,8 +5,9 @@ import TrendRow from "@/components/TrendRow";
 import CompetitorCard from "@/components/CompetitorCard";
 import GenerationBars from "@/components/GenerationBar";
 import { useData } from "@/components/DataContext";
-import { Eye, Users, TrendingUp, AlertTriangle, ArrowUpRight, Zap, Heart, MessageCircle } from "lucide-react";
+import { Eye, Users, TrendingUp, AlertTriangle, ArrowUpRight, Zap, Heart, MessageCircle, Plus, ChevronDown } from "lucide-react";
 import Link from "next/link";
+import { useState } from "react";
 
 const fmt = (n: number) => n >= 1_000_000 ? (n/1_000_000).toFixed(1)+'M' : n >= 1000 ? (n/1000).toFixed(1)+'K' : String(n);
 
@@ -87,8 +88,12 @@ function LineChart({ videos }: { videos: any[] }) {
 
 export default function OverviewPage() {
   const { account, videos, generations, trends, competitors } = useData();
+  const [sortBy, setSortBy] = useState<'score' | 'views'>('score');
 
-  const topVideos  = [...videos].sort((a,b) => (b.views||0)-(a.views||0)).slice(0,5);
+  const displayVideos = [...videos].sort((a,b) => {
+    if (sortBy === 'score') return (b.score||0)-(a.score||0);
+    return (b.views||0)-(a.views||0);
+  });
   const chartVids  = [...videos].sort((a,b) => (a.posted||'').localeCompare(b.posted||''));
   const high       = videos.filter(v => (v.score||0) >= 70).length;
   const med        = videos.filter(v => (v.score||0) >= 50 && (v.score||0) < 70).length;
@@ -148,35 +153,50 @@ export default function OverviewPage() {
 
         {/* COL 1 — Top Videos list */}
         <div style={{ ...card, display: 'flex', flexDirection: 'column', maxHeight: 620 }}>
-          <div style={{ padding: '20px 20px 0' }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
-              <span style={{ fontSize: 15, fontWeight: 800, color: 'var(--text-primary)' }}>Top Videos</span>
-              <Link href="/audit" style={{ display: 'flex', alignItems: 'center', gap: 4, width: 30, height: 30, borderRadius: '50%', border: '1px solid var(--glass-elevated-border)', background: 'var(--glass-elevated)', justifyContent: 'center', textDecoration: 'none' }}>
-                <ArrowUpRight size={13} color="var(--text-muted)" />
-              </Link>
+          <div style={{ padding: '24px 20px 10px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
+              <span style={{ fontSize: 18, fontWeight: 800, color: 'var(--text-primary)' }}>Top Videos</span>
+              <button style={{ width: 32, height: 32, borderRadius: '50%', border: '1px solid var(--glass-elevated-border)', background: 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
+                <Plus size={16} color="var(--text-muted)"/>
+              </button>
             </div>
+            
+            {/* Sort Toggles */}
+            <div style={{ display: 'flex', gap: 8, marginBottom: 20 }}>
+              <button onClick={() => setSortBy('score')} style={{ background: sortBy === 'score' ? 'var(--text-primary)' : 'transparent', color: sortBy === 'score' ? 'var(--bg-base)' : 'var(--text-primary)', borderRadius: 100, padding: '6px 14px', fontSize: 12, fontWeight: 700, border: sortBy === 'score' ? 'none' : '1px solid var(--glass-elevated-border)', cursor: 'pointer', transition: 'all 0.2s' }}>By Score</button>
+              <button onClick={() => setSortBy('views')} style={{ background: sortBy === 'views' ? 'var(--text-primary)' : 'transparent', color: sortBy === 'views' ? 'var(--bg-base)' : 'var(--text-primary)', borderRadius: 100, padding: '6px 14px', fontSize: 12, fontWeight: 700, border: sortBy === 'views' ? 'none' : '1px solid var(--glass-elevated-border)', cursor: 'pointer', transition: 'all 0.2s' }}>By Views</button>
+            </div>
+
             {/* Count pill */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 14px', background: 'var(--glass-elevated)', border: '1px solid var(--glass-elevated-border)', borderRadius: 12, marginBottom: 14 }}>
-              <div style={{ width: 22, height: 22, borderRadius: '50%', background: 'var(--btn-primary-bg)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, fontWeight: 900, color: '#fff' }}>{videos.length}</div>
-              <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-secondary)' }}>Videos Analyzed</span>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 14px', background: 'var(--glass-elevated)', border: '1px solid var(--glass-elevated-border)', borderRadius: 12, marginBottom: 14 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                <div style={{ width: 24, height: 24, borderRadius: '50%', background: 'var(--text-primary)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 900, color: 'var(--bg-base)' }}>{videos.length}</div>
+                <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-primary)' }}>Videos Analyzed</span>
+              </div>
+              <ChevronDown size={14} color="var(--text-muted)" />
             </div>
           </div>
 
-          <div style={{ overflowY: 'auto', padding: '0 14px 18px', display: 'flex', flexDirection: 'column', gap: 8 }}>
-            {topVideos.map(v => {
+          <div style={{ overflowY: 'auto', padding: '0 14px 18px', display: 'flex', flexDirection: 'column', gap: 12, flex: 1, paddingRight: 8 }}>
+            {displayVideos.map(v => {
               const sc = v.score||0;
               const scClr = sc>=70?'#22c55e':sc>=50?'#f59e0b':'#ef4444';
               const scBg  = sc>=70?'rgba(34,197,94,0.1)':sc>=50?'rgba(245,158,11,0.1)':'rgba(239,68,68,0.1)';
               return (
-                <Link key={v.id} href={`/audit/${v.id}`} style={{ padding: '13px 14px', background: 'var(--glass-elevated)', borderRadius: 16, border: '1px solid var(--glass-elevated-border)', cursor: 'pointer', textDecoration: 'none', display: 'block' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6 }}>
-                    <div style={{ width: 28, height: 28, borderRadius: 9, background: scBg, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 900, color: scClr, flexShrink: 0 }}>{sc}</div>
-                    <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{v.title}</div>
+                <Link key={v.id} href={`/audit/${v.id}`} style={{ padding: '16px', background: 'transparent', borderRadius: 16, border: '1px solid var(--glass-border)', cursor: 'pointer', textDecoration: 'none', display: 'flex', flexDirection: 'column', gap: 12 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <div style={{ padding: '4px 10px', borderRadius: 10, background: scBg, color: scClr, fontSize: 12, fontWeight: 800 }}>{sc}</div>
+                    <div style={{ width: 22, height: 22, borderRadius: '50%', border: '1px solid var(--glass-elevated-border)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      <div style={{ width: 6, height: 6, borderRadius: '50%', background: scClr }} />
+                    </div>
                   </div>
-                  <div style={{ display: 'flex', gap: 10, fontSize: 11, color: 'var(--text-muted)' }}>
-                    <span style={{ display: 'flex', alignItems: 'center', gap: 3 }}><Eye size={10}/>{fmt(v.views||0)}</span>
-                    <span style={{ display: 'flex', alignItems: 'center', gap: 3 }}><Heart size={10}/>{fmt(v.likes||0)}</span>
-                    <span style={{ display: 'flex', alignItems: 'center', gap: 3 }}><MessageCircle size={10}/>{v.comments||0}</span>
+                  <div style={{ fontSize: 13, fontWeight: 800, color: 'var(--text-primary)', lineHeight: 1.4, direction: 'rtl' }}>
+                    {v.title}
+                  </div>
+                  <div style={{ display: 'flex', gap: 12, fontSize: 11, color: 'var(--text-muted)' }}>
+                    <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}><Eye size={12}/>{fmt(v.views||0)}</span>
+                    <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}><Heart size={12}/>{fmt(v.likes||0)}</span>
+                    <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}><MessageCircle size={12}/>{v.comments||0}</span>
                   </div>
                 </Link>
               );
