@@ -345,7 +345,6 @@ export default function ChatPage() {
       msgs[msgIdx] = m;
       return { ...prev, [activeId]: msgs };
     });
-    setHoverReaction(null);
   };
 
   const glass: React.CSSProperties = {
@@ -356,6 +355,7 @@ export default function ChatPage() {
   };
 
   return (
+    <>
     <div style={{
       display: "flex",
       height: "calc(100vh - 56px)", // exactly the viewport minus the TopBar
@@ -729,7 +729,6 @@ export default function ChatPage() {
           </div>
         </div>
       </div>
-      </div>
     </div>
 
     {/* Forward GUI Modal */}
@@ -766,6 +765,7 @@ export default function ChatPage() {
         </div>
       </div>
     )}
+
     </>
   );
 }
