@@ -1,0 +1,30 @@
+﻿diff --git a/app/audit/[id]/page.tsx b/app/audit/[id]/page.tsx
+index c50cdc1..0c48e1b 100644
+--- a/app/audit/[id]/page.tsx
++++ b/app/audit/[id]/page.tsx
+@@ -36,6 +36,7 @@ export default function VideoDetailPage() {
+   const { id } = useParams<{ id: string }>();
+   const { videos } = useData();
+   const router = useRouter();
++  const [coverFailed, setCoverFailed] = useState(false);
+ 
+   const video = videos.find((v) => v.id === id);
+ 
+@@ -87,10 +88,14 @@ export default function VideoDetailPage() {
+           <div className="flex justify-center mb-5">
+             <div className="relative rounded-2xl overflow-hidden bg-black shadow-2xl"
+               style={{ width: '260px', height: '462px' }}>
+-              {video.coverUrl ? (
++              {video.coverUrl && !coverFailed ? (
+                 <>
+-                  <img src={video.coverUrl} alt={video.title}
+-                    className="absolute inset-0 w-full h-full object-cover" />
++                  <img
++                    src={`/api/img?url=${encodeURIComponent(video.coverUrl)}`}
++                    alt={video.title}
++                    onError={() => setCoverFailed(true)}
++                    className="absolute inset-0 w-full h-full object-cover"
++                  />
+                   <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-transparent to-transparent" />
+                   {/* Score badge */}
+                   <div className={`absolute top-3 right-3 w-11 h-11 rounded-full flex items-center justify-center text-[14px] font-black ${scoreBg(video.score)}`}>
