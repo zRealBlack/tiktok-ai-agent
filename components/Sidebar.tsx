@@ -1,10 +1,12 @@
 'use client';
 
 import Link from "next/link";
+import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
 import { LayoutDashboard, Video, Users, Lightbulb, Settings, Calendar, Layers, HelpCircle, MessageSquare } from "lucide-react";
 import SettingsModal from "@/components/SettingsModal";
+import MASLogo from "@/public/MAS-aistudiored.png";
 
 const NAV = [
   { href: "/",            label: "Overview",     icon: LayoutDashboard },
@@ -26,7 +28,21 @@ export default function Sidebar() {
         className="fixed left-0 top-0 h-full z-40 flex flex-col items-center py-5 gap-2"
         style={{ width: 72 }}
       >
-        <div style={{ height: 20 }} /> {/* Spacer since logo was removed */}
+        {/* Logo — top of sidebar, links to home */}
+        <Link href="/" title="MAS AI Studio" style={{ textDecoration: "none", marginBottom: 6 }}>
+          <div style={{
+            width: 46, height: 46, borderRadius: 14,
+            background: "var(--glass-elevated)", border: "1px solid var(--glass-elevated-border)",
+            display: "flex", alignItems: "center", justifyContent: "center",
+            boxShadow: "0 0 18px rgba(239,68,68,0.18)",
+            overflow: "hidden",
+          }}>
+            <Image src={MASLogo} alt="MAS AI Studio" width={32} height={32} style={{ objectFit: "contain" }} />
+          </div>
+        </Link>
+
+        {/* Divider */}
+        <div style={{ width: 24, height: 1, background: "var(--glass-border)", margin: "2px 0 6px" }} />
 
         {/* Nav icons */}
         {NAV.map(({ href, label, icon: Icon }) => {
