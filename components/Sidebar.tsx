@@ -26,20 +26,23 @@ export default function Sidebar() {
     <>
       <aside
         className="fixed left-0 top-0 h-full z-40 flex flex-col items-center py-5 gap-2"
-        style={{ width: 72 }}
+        style={{ width: 72, paddingTop: 68 }}
       >
-        {/* Logo — wider pill to fit horizontal logo */}
-        <Link href="/" title="MAS AI Studio" style={{ textDecoration: "none", marginBottom: 6 }}>
-          <div style={{
-            width: 120, height: 40, borderRadius: 12,
-            background: "var(--glass-elevated)", border: "1px solid var(--glass-elevated-border)",
-            display: "flex", alignItems: "center", justifyContent: "center",
-            boxShadow: "0 0 18px rgba(239,68,68,0.18)",
-            overflow: "hidden", padding: "4px 8px",
-          }}>
-            <Image src={MASLogo} alt="MAS AI Studio" width={104} height={32} style={{ objectFit: "contain", width: "100%", height: "100%" }} />
-          </div>
-        </Link>
+      {/* Logo — fixed top-left, separate from sidebar icon flow */}
+      <Link href="/" title="MAS AI Studio" style={{
+        position: "fixed", top: 16, left: 8, zIndex: 50,
+        textDecoration: "none",
+      }}>
+        <div style={{
+          width: 112, height: 36, borderRadius: 10,
+          background: "var(--glass-elevated)", border: "1px solid var(--glass-elevated-border)",
+          display: "flex", alignItems: "center", justifyContent: "center",
+          boxShadow: "0 0 16px rgba(239,68,68,0.15)",
+          overflow: "hidden", padding: "4px 8px",
+        }}>
+          <Image src={MASLogo} alt="MAS AI Studio" width={96} height={28} style={{ objectFit: "contain", width: "100%", height: "100%" }} />
+        </div>
+      </Link>
 
         {/* Divider */}
         <div style={{ width: 24, height: 1, background: "var(--glass-border)", margin: "2px 0 6px" }} />
