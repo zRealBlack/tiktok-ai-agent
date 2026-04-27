@@ -20,6 +20,8 @@ interface ChatMessage {
   ts?: string;
   attachment?: Attachment;
   reactions?: string[];
+  audioUrl?: string;   // playable voice note
+  audioDuration?: number; // seconds
 }
 
 interface Conversation {
@@ -241,16 +243,21 @@ export default function ChatPage() {
   const [hoverReaction, setHoverReaction] = useState<number | null>(null);
   const [isRecording, setIsRecording] = useState(false);
   const [recordingSecs, setRecordingSecs] = useState(0);
+  const [aiVoiceBubbles, setAiVoiceBubbles] = useState<ChatMessage[]>([]);
   const bottomRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const recognitionRef = useRef<any>(null);
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const audioChunksRef = useRef<Blob[]>([]);
   const recTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const sarie = useSarieChat();
 
   const activeConvo = CONVERSATIONS.find(c => c.id === activeId)!;
   const isAI = activeConvo.isAI;
 
-  const messages: ChatMessage[] = isAI ? sarie.messages : (teamMessages[activeId] || []);
+  // For Sarie: merge AI voice bubbles in with AI messages by timestamp order
+  const messages: ChatMessage[] = isAI
+    ? [...sarie.messages, ...aiVoiceBubbles].sort((a, b) => (a.ts ?? "").localeCompare(b.ts ?? ""))
+    : (teamMessages[activeId] || []);
   const streaming = isAI ? sarie.streaming : false;
 
   useEffect(() => {
@@ -279,37 +286,47 @@ export default function ChatPage() {
     e.target.value = "";
   };
 
-  const startVoiceNote = () => {
-    const SR = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
-    if (!SR) { alert("Voice notes require Chrome or Edge."); return; }
-    const rec = new SR();
-    recognitionRef.current = rec;
-    rec.lang = "ar-EG";
-    rec.continuous = false;
-    rec.interimResults = false;
-    rec.onstart = () => {
+  const startVoiceNote = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const mr = new MediaRecorder(stream);
+      mediaRecorderRef.current = mr;
+      audioChunksRef.current = [];
+      mr.ondataavailable = e => { if (e.data.size > 0) audioChunksRef.current.push(e.data); };
+      mr.onstop = () => {
+        stream.getTracks().forEach(t => t.stop());
+        const blob = new Blob(audioChunksRef.current, { type: "audio/webm" });
+        const url = URL.createObjectURL(blob);
+        const dur = recordingSecs;
+        const voiceMsg: ChatMessage = { role: "user", content: "", ts: now(), audioUrl: url, audioDuration: dur };
+        if (isAI) {
+          // Send a silent text prompt to Sarie so she knows to reply
+          sarie.send("[Voice note received — please respond in text]");
+          // But display the audio bubble locally
+          // We do this by injecting into sarie messages via a workaround: just send a visual-only message
+        }
+        if (isAI) {
+          // Show audio bubble as user message in the chat
+          // sarie.messages is managed internally; inject via setTeamMessages won't work for AI
+          // Instead we store it in a separate local state for AI voice bubbles
+          setAiVoiceBubbles(prev => [...prev, voiceMsg]);
+        } else {
+          setTeamMessages(prev => ({ ...prev, [activeId]: [...(prev[activeId] || []), voiceMsg] }));
+        }
+      };
+      mr.start();
       setIsRecording(true);
       setRecordingSecs(0);
       recTimerRef.current = setInterval(() => setRecordingSecs(s => s + 1), 1000);
-    };
-    rec.onresult = (ev: any) => {
-      const transcript = ev.results[0][0].transcript.trim();
-      if (transcript) {
-        const label = `🎤 ${transcript}`;
-        if (isAI) sarie.send(label);
-        else setTeamMessages(prev => ({ ...prev, [activeId]: [...(prev[activeId] || []), { role: "user", content: label, ts: now() }] }));
-      }
-    };
-    rec.onerror = () => stopVoiceNote();
-    rec.onend = () => stopVoiceNote();
-    rec.start();
+    } catch {
+      alert("Microphone access denied.");
+    }
   };
 
   const stopVoiceNote = () => {
     if (recTimerRef.current) clearInterval(recTimerRef.current);
     setIsRecording(false);
-    setRecordingSecs(0);
-    try { recognitionRef.current?.stop(); } catch {}
+    try { mediaRecorderRef.current?.stop(); } catch {}
   };
 
   const addReaction = (msgIdx: number, emoji: string) => {
@@ -513,6 +530,25 @@ export default function ChatPage() {
                         <span style={{ fontSize: 12, fontWeight: 600 }}>{m.attachment.name}</span>
                       </div>
                     )}
+                {/* Audio voice note bubble */}
+                    {m.audioUrl && (
+                      <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 12px", minWidth: 180 }}>
+                        <button
+                          onClick={() => { const a = new Audio(m.audioUrl); a.play(); }}
+                          style={{ width: 34, height: 34, borderRadius: "50%", background: isUser ? "rgba(255,255,255,0.25)" : "var(--btn-primary-bg)", border: "none", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}
+                        >
+                          <svg width="12" height="14" viewBox="0 0 12 14" fill={isUser ? "#fff" : "#fff"}><path d="M0 0l12 7-12 7z"/></svg>
+                        </button>
+                        <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: 4 }}>
+                          <div style={{ display: "flex", gap: 2 }}>
+                            {[...Array(18)].map((_, wi) => (
+                              <div key={wi} style={{ width: 2, borderRadius: 1, background: isUser ? "rgba(255,255,255,0.7)" : "rgba(239,68,68,0.6)", height: 6 + Math.sin(wi * 1.3) * 5 }} />
+                            ))}
+                          </div>
+                          <span style={{ fontSize: 10, color: isUser ? "rgba(255,255,255,0.7)" : "var(--text-faint)", fontWeight: 600 }}>🎤 {m.audioDuration ?? 0}s</span>
+                        </div>
+                      </div>
+                    )}
                     {m.content && (m.role === "assistant" && isAI ? <MarkdownMessage content={m.content} /> : m.content)}
                     {m.streaming && (
                       <span style={{ display: "inline-block", width: 6, height: 14, marginLeft: 4, background: "rgba(255,255,255,0.6)", borderRadius: 2, verticalAlign: "middle" }} />
@@ -582,22 +618,34 @@ export default function ChatPage() {
             </div>
           )}
 
-          <div style={{ display: "flex", alignItems: "center", gap: 10, background: isRecording ? "rgba(239,68,68,0.08)" : "var(--glass-elevated)", border: `1px solid ${isRecording ? "rgba(239,68,68,0.3)" : "var(--glass-elevated-border)"}`, borderRadius: 100, padding: "8px 8px 8px 16px", transition: "all 0.2s" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 10, background: isRecording ? "rgba(239,68,68,0.08)" : "var(--glass-elevated)", border: `1px solid ${isRecording ? "rgba(239,68,68,0.3)" : "var(--glass-elevated-border)"}`, borderRadius: 100, padding: "8px 12px", transition: "all 0.2s" }}>
+            {/* Mic — always on the left */}
+            <button
+              onMouseDown={startVoiceNote}
+              onMouseUp={stopVoiceNote}
+              onTouchStart={startVoiceNote}
+              onTouchEnd={stopVoiceNote}
+              title={isRecording ? "Release to send" : "Hold to record voice note"}
+              style={{ width: 30, height: 30, borderRadius: "50%", border: "none", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, background: isRecording ? "#ef4444" : "transparent", boxShadow: isRecording ? "0 0 0 5px rgba(239,68,68,0.2)" : "none", transition: "all 0.2s" }}
+            >
+              {isRecording ? <MicOff size={15} color="#fff" /> : <Mic size={15} color="var(--text-muted)" />}
+            </button>
+
             {isRecording ? (
               <div style={{ display: "flex", alignItems: "center", gap: 6, flex: 1 }}>
-                <span style={{ width: 8, height: 8, borderRadius: "50%", background: "#ef4444", animation: "pulse 1s ease-in-out infinite", flexShrink: 0 }} />
-                <span style={{ fontSize: 12, color: "#ef4444", fontWeight: 600 }}>Recording {recordingSecs}s</span>
+                <span style={{ width: 7, height: 7, borderRadius: "50%", background: "#ef4444", animation: "pulse 1s ease-in-out infinite" }} />
+                <span style={{ fontSize: 12, color: "#ef4444", fontWeight: 600 }}>{recordingSecs}s</span>
                 <span style={{ fontSize: 11, color: "var(--text-muted)", flex: 1 }}>— Release to send</span>
               </div>
             ) : (
               <input value={input} onChange={e => setInput(e.target.value)}
-              onKeyDown={e => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleSend(); } }}
-              placeholder={isAI ? "اسأل ساري..." : "Write a message..."}
-              style={{ flex: 1, background: "transparent", border: "none", outline: "none", fontSize: 13, color: "var(--text-primary)", direction: isAI ? "rtl" : "ltr" }}
-            />
+                onKeyDown={e => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleSend(); } }}
+                placeholder={isAI ? "اسأل ساري..." : "Write a message..."}
+                style={{ flex: 1, background: "transparent", border: "none", outline: "none", fontSize: 13, color: "var(--text-primary)", direction: isAI ? "rtl" : "ltr" }}
+              />
             )}
             <div style={{ display: "flex", gap: 6, alignItems: "center", flexShrink: 0 }}>
-              {/* Attach file */}
+              {/* Attach + Emoji — hidden while recording */}
               {!isRecording && (
                 <>
                   <button onClick={() => fileInputRef.current?.click()} title="Attach file"
@@ -605,32 +653,12 @@ export default function ChatPage() {
                     <Paperclip size={15} color="var(--text-muted)" />
                   </button>
                   <input ref={fileInputRef} type="file" accept="image/*,video/*,.pdf,.doc,.docx,.txt" style={{ display: "none" }} onChange={e => handleFile(e)} />
-
-                  {/* Emoji picker toggle */}
                   <button onClick={() => setShowEmoji(v => !v)} title="Emoji"
                     style={{ background: showEmoji ? "var(--glass-elevated)" : "none", border: "none", cursor: "pointer", display: "flex", alignItems: "center", padding: 2, borderRadius: 6 }}>
                     <Smile size={15} color={showEmoji ? "var(--btn-primary-bg)" : "var(--text-muted)"} />
                   </button>
                 </>
               )}
-
-              {/* Voice note button */}
-              <button
-                onMouseDown={startVoiceNote}
-                onMouseUp={stopVoiceNote}
-                onTouchStart={startVoiceNote}
-                onTouchEnd={stopVoiceNote}
-                onClick={isRecording ? stopVoiceNote : undefined}
-                title={isRecording ? "Release to send" : "Hold to record voice note"}
-                style={{
-                  width: 32, height: 32, borderRadius: "50%", border: "none", cursor: "pointer",
-                  display: "flex", alignItems: "center", justifyContent: "center", padding: 0, flexShrink: 0,
-                  background: isRecording ? "#ef4444" : "var(--glass-elevated)",
-                  boxShadow: isRecording ? "0 0 0 6px rgba(239,68,68,0.2)" : "none",
-                  transition: "all 0.2s",
-                }}>
-                {isRecording ? <MicOff size={15} color="#fff" /> : <Mic size={15} color="var(--text-muted)" />}
-              </button>
             </div>
             {streaming ? (
               <button onClick={sarie.stop} style={{ width: 36, height: 36, borderRadius: "50%", background: "var(--btn-primary-bg)", border: "none", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
