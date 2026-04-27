@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { Eye, Users, Search, RefreshCw, ShieldAlert, TrendingUp, TrendingDown, Minus, CheckCircle2, XCircle, Zap, ExternalLink } from "lucide-react";
-import { dispatchAgentPrompt } from "./AIChatBox";
+import { dispatchAgentPrompt } from "@/lib/events";
 import { useData } from "./DataContext";
 
 interface Competitor {
