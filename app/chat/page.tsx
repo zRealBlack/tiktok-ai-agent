@@ -467,7 +467,7 @@ export default function ChatPage() {
         </div>
 
         {/* Messages */}
-        <div style={{ flex: 1, overflowY: "auto", padding: "20px 20px", display: "flex", flexDirection: "column", gap: 14 }} dir={isAI ? "rtl" : "ltr"}>
+        <div style={{ flex: 1, overflowY: "auto", padding: "20px 20px", display: "flex", flexDirection: "column", gap: 14 }}>
           {messages.map((m, i) => {
             const isUser = m.role === "user";
             return (
@@ -504,7 +504,7 @@ export default function ChatPage() {
                       </div>
                     )}
 
-                    <div style={{
+                    <div dir="auto" style={{
                       padding: m.attachment && m.attachment.type === "image" ? "6px" : "10px 14px",
                       borderRadius: 18,
                       borderBottomLeftRadius: !isUser ? 4 : 18,
