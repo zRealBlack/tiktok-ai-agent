@@ -238,9 +238,9 @@ export default function ChatPage() {
   const [showEmoji, setShowEmoji] = useState(false);
   const [pendingAttachment, setPendingAttachment] = useState<Attachment | null>(null);
   const [teamMessages, setTeamMessages] = useState<Record<string, ChatMessage[]>>(MOCK_TEAM_MESSAGES);
-  const [hoverReaction, setHoverReaction] = useState<number | null>(null);
   const [hoverMsg, setHoverMsg] = useState<number | null>(null);
   const [activeMenu, setActiveMenu] = useState<number | null>(null);
+  const [forwardingMsg, setForwardingMsg] = useState<string | null>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const sarie = useSarieChat();
@@ -294,8 +294,21 @@ export default function ChatPage() {
   };
 
   const handleForward = (content: string) => {
-    alert("Forward feature coming soon!");
+    setForwardingMsg(content);
     setActiveMenu(null);
+  };
+
+  const confirmForward = (targetId: string) => {
+    if (!forwardingMsg) return;
+    
+    // Add the forwarded message to the target user's chat history
+    setTeamMessages(prev => {
+      const u = [...(prev[targetId] || [])];
+      u.push({ role: "user", content: forwardingMsg, ts: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) });
+      return { ...prev, [targetId]: u };
+    });
+    
+    setForwardingMsg(null);
   };
 
   const handleSend = () => {
@@ -472,8 +485,8 @@ export default function ChatPage() {
             const isUser = m.role === "user";
             return (
               <div key={i} style={{ display: "flex", justifyContent: isUser ? "flex-end" : "flex-start", alignItems: "flex-end", gap: 10 }}
-                onMouseEnter={() => { setHoverReaction(i); setHoverMsg(i); }}
-                onMouseLeave={() => { setHoverReaction(null); setHoverMsg(null); }}
+                onMouseEnter={() => setHoverMsg(i)}
+                onMouseLeave={() => setHoverMsg(null)}
               >
                 {!isUser && (
                   activeConvo.isAI ? (
@@ -484,25 +497,6 @@ export default function ChatPage() {
                 )}
                 <div style={{ maxWidth: "68%", position: "relative", display: "flex", alignItems: "flex-end", gap: 8, flexDirection: isUser ? "row-reverse" : "row" }}>
                   <div style={{ position: "relative", display: "flex", flexDirection: "column", width: "100%" }}>
-                    {/* Reaction picker (team chats only) - keep on top */}
-                    {!isAI && hoverReaction === i && (
-                      <div style={{
-                        position: "absolute", [isUser ? "right" : "left"]: 0,
-                        bottom: "100%", marginBottom: 4, zIndex: 10,
-                        display: "flex", gap: 4, background: "var(--glass-bg)",
-                        border: "1px solid var(--glass-border)", borderRadius: 100,
-                        padding: "4px 8px", backdropFilter: "blur(16px)",
-                        boxShadow: "var(--glass-shadow)"
-                      }}>
-                        {EMOJIS.slice(0, 8).map(e => (
-                          <button key={e} onClick={() => addReaction(i, e)}
-                            style={{ background: "none", border: "none", cursor: "pointer", fontSize: 16, padding: "0 2px", transition: "transform 0.1s" }}
-                            onMouseEnter={el => (el.currentTarget.style.transform = "scale(1.35)")}
-                            onMouseLeave={el => (el.currentTarget.style.transform = "scale(1)")}
-                          >{e}</button>
-                        ))}
-                      </div>
-                    )}
 
                     <div dir="auto" style={{
                       padding: m.attachment && m.attachment.type === "image" ? "6px" : "10px 14px",
@@ -536,29 +530,24 @@ export default function ChatPage() {
                       )}
                     </div>
 
-                    {/* Message Hover Actions (Below the bubble so it never clips) */}
-                    {(hoverMsg === i || activeMenu === i) && (
-                      <div style={{
-                        display: "flex", alignItems: "center", gap: 4,
-                        background: "var(--glass-bg)", border: "1px solid var(--glass-border)",
-                        borderRadius: 12, padding: "4px", backdropFilter: "blur(16px)",
-                        boxShadow: "var(--glass-shadow)", zIndex: 5,
-                        alignSelf: isUser ? "flex-end" : "flex-start",
-                        marginTop: 4,
-                      }}>
-                        <button onClick={() => handleForward(m.content)} title="Forward" style={{ background: "none", border: "none", cursor: "pointer", color: "var(--text-muted)", padding: 4, borderRadius: 6, display: "flex" }} onMouseEnter={e => e.currentTarget.style.background="var(--glass-elevated)"} onMouseLeave={e => e.currentTarget.style.background="none"}><Forward size={14} /></button>
-                        <button onClick={() => handleCopy(m.content)} title="Copy" style={{ background: "none", border: "none", cursor: "pointer", color: "var(--text-muted)", padding: 4, borderRadius: 6, display: "flex" }} onMouseEnter={e => e.currentTarget.style.background="var(--glass-elevated)"} onMouseLeave={e => e.currentTarget.style.background="none"}><Copy size={14} /></button>
-                        <div style={{ position: "relative" }}>
-                          <button onClick={(e) => { e.stopPropagation(); setActiveMenu(activeMenu === i ? null : i); }} title="More" style={{ background: activeMenu === i ? "var(--glass-elevated)" : "none", border: "none", cursor: "pointer", color: "var(--text-muted)", padding: 4, borderRadius: 6, display: "flex" }} onMouseEnter={e => { if(activeMenu !== i) e.currentTarget.style.background="var(--glass-elevated)"; }} onMouseLeave={e => { if(activeMenu !== i) e.currentTarget.style.background="none"; }}><MoreHorizontal size={14} /></button>
-                          {activeMenu === i && (
-                            <div style={{ position: "absolute", top: "100%", [isUser ? "right" : "left"]: 0, marginTop: 4, background: "var(--glass-panel-bg)", border: "1px solid var(--glass-border)", borderRadius: 12, padding: 4, boxShadow: "var(--glass-shadow)", zIndex: 20, minWidth: 120 }}>
-                              {isUser && <button onClick={() => handleEdit(i, m.content)} style={{ width: "100%", display: "flex", alignItems: "center", gap: 8, background: "none", border: "none", color: "var(--text-primary)", fontSize: 13, padding: "8px 12px", cursor: "pointer", borderRadius: 8, textAlign: "left" }} onMouseEnter={e => e.currentTarget.style.background="rgba(255,255,255,0.05)"} onMouseLeave={e => e.currentTarget.style.background="none"}><Pencil size={14}/> Edit</button>}
-                              <button onClick={() => handleDelete(i)} style={{ width: "100%", display: "flex", alignItems: "center", gap: 8, background: "none", border: "none", color: "#ef4444", fontSize: 13, padding: "8px 12px", cursor: "pointer", borderRadius: 8, textAlign: "left" }} onMouseEnter={e => e.currentTarget.style.background="rgba(239,68,68,0.1)"} onMouseLeave={e => e.currentTarget.style.background="none"}><Trash2 size={14}/> Delete</button>
-                            </div>
-                          )}
-                        </div>
+                    {/* Message Actions (Always visible, simple icons) */}
+                    <div style={{
+                      display: "flex", alignItems: "center", gap: 4,
+                      alignSelf: isUser ? "flex-end" : "flex-start",
+                      marginTop: 4, zIndex: 5
+                    }}>
+                      <button onClick={() => handleForward(m.content)} title="Forward" style={{ background: "none", border: "none", cursor: "pointer", color: "var(--text-faint)", padding: 4 }} onMouseEnter={e => e.currentTarget.style.color="var(--text-primary)"} onMouseLeave={e => e.currentTarget.style.color="var(--text-faint)"}><Forward size={14} /></button>
+                      <button onClick={() => handleCopy(m.content)} title="Copy" style={{ background: "none", border: "none", cursor: "pointer", color: "var(--text-faint)", padding: 4 }} onMouseEnter={e => e.currentTarget.style.color="var(--text-primary)"} onMouseLeave={e => e.currentTarget.style.color="var(--text-faint)"}><Copy size={14} /></button>
+                      <div style={{ position: "relative" }}>
+                        <button onClick={(e) => { e.stopPropagation(); setActiveMenu(activeMenu === i ? null : i); }} title="More" style={{ background: "none", border: "none", cursor: "pointer", color: "var(--text-faint)", padding: 4 }} onMouseEnter={e => e.currentTarget.style.color="var(--text-primary)"} onMouseLeave={e => e.currentTarget.style.color="var(--text-faint)"}><MoreHorizontal size={14} /></button>
+                        {activeMenu === i && (
+                          <div style={{ position: "absolute", top: "100%", [isUser ? "right" : "left"]: 0, marginTop: 4, background: "var(--glass-panel-bg)", border: "1px solid var(--glass-border)", borderRadius: 12, padding: 4, boxShadow: "var(--glass-shadow)", zIndex: 20, minWidth: 120 }}>
+                            {isUser && <button onClick={() => handleEdit(i, m.content)} style={{ width: "100%", display: "flex", alignItems: "center", gap: 8, background: "none", border: "none", color: "var(--text-primary)", fontSize: 13, padding: "8px 12px", cursor: "pointer", borderRadius: 8, textAlign: "left" }} onMouseEnter={e => e.currentTarget.style.background="rgba(255,255,255,0.05)"} onMouseLeave={e => e.currentTarget.style.background="none"}><Pencil size={14}/> Edit</button>}
+                            <button onClick={() => handleDelete(i)} style={{ width: "100%", display: "flex", alignItems: "center", gap: 8, background: "none", border: "none", color: "#ef4444", fontSize: 13, padding: "8px 12px", cursor: "pointer", borderRadius: 8, textAlign: "left" }} onMouseEnter={e => e.currentTarget.style.background="rgba(239,68,68,0.1)"} onMouseLeave={e => e.currentTarget.style.background="none"}><Trash2 size={14}/> Delete</button>
+                          </div>
+                        )}
                       </div>
-                    )}
+                    </div>
                   </div>
 
                   {/* Reactions display */}
@@ -740,6 +729,43 @@ export default function ChatPage() {
           </div>
         </div>
       </div>
+      </div>
     </div>
+
+    {/* Forward GUI Modal */}
+    {forwardingMsg && (
+      <div style={{
+        position: "fixed", top: 0, left: 0, right: 0, bottom: 0,
+        background: "rgba(0,0,0,0.5)", backdropFilter: "blur(4px)",
+        display: "flex", alignItems: "center", justifyContent: "center", zIndex: 100
+      }}>
+        <div style={{
+          background: "var(--glass-bg)", border: "1px solid var(--glass-border)",
+          borderRadius: 24, padding: 24, width: "100%", maxWidth: 360,
+          boxShadow: "0 20px 40px rgba(0,0,0,0.4)"
+        }}>
+          <h3 style={{ margin: "0 0 16px 0", fontSize: 18, color: "var(--text-primary)" }}>Forward to...</h3>
+          <div style={{ display: "flex", flexDirection: "column", gap: 8, maxHeight: 300, overflowY: "auto", paddingRight: 4 }}>
+            {CONVERSATIONS.filter(c => c.id !== activeId && !c.isAI).map(c => (
+              <button key={c.id} onClick={() => confirmForward(c.id)} style={{
+                display: "flex", alignItems: "center", gap: 12, padding: "12px",
+                background: "var(--glass-elevated)", border: "1px solid var(--glass-elevated-border)",
+                borderRadius: 16, cursor: "pointer", textAlign: "left", color: "var(--text-primary)"
+              }} onMouseEnter={e => e.currentTarget.style.background="rgba(255,255,255,0.05)"} onMouseLeave={e => e.currentTarget.style.background="var(--glass-elevated)"}>
+                <AvatarCircle name={c.name} size={36} online={c.online} />
+                <div style={{ flex: 1, fontSize: 14, fontWeight: 600 }}>{c.name}</div>
+                <Forward size={16} color="var(--text-muted)" />
+              </button>
+            ))}
+          </div>
+          <button onClick={() => setForwardingMsg(null)} style={{
+            width: "100%", marginTop: 16, padding: "12px", background: "none",
+            border: "1px solid var(--glass-border)", borderRadius: 12, color: "var(--text-muted)",
+            cursor: "pointer", fontWeight: 600
+          }}>Cancel</button>
+        </div>
+      </div>
+    )}
+    </>
   );
 }
