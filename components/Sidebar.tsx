@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
-import { LayoutDashboard, Video, Users, Lightbulb, Settings, Calendar, Layers, HelpCircle, LogOut, User } from "lucide-react";
+import { LayoutDashboard, Video, Users, Lightbulb, Settings, Calendar, Layers, HelpCircle, LogOut } from "lucide-react";
 import SettingsModal from "@/components/SettingsModal";
 
 const NAV = [
@@ -18,70 +18,14 @@ const EXTRA = [Calendar, Layers, HelpCircle];
 export default function Sidebar() {
   const pathname = usePathname();
   const [showSettings, setShowSettings] = useState(false);
-  const [showAccountMenu, setShowAccountMenu] = useState(false);
 
   return (
     <>
       <aside
         className="fixed left-0 top-0 h-full z-40 flex flex-col items-center py-5 gap-2"
-        style={{ width: 72, background: "var(--sidebar-bg)", borderRight: "1px solid var(--sidebar-border)", backdropFilter: "blur(32px)" }}
+        style={{ width: 72 }}
       >
-        {/* Personal Account Avatar (Top Left) */}
-        <div style={{ position: "relative", marginBottom: 14 }}>
-          <button
-            onClick={() => setShowAccountMenu(!showAccountMenu)}
-            style={{
-              width: 40, height: 40, borderRadius: "50%",
-              background: "var(--btn-primary-bg)",
-              border: "none", cursor: "pointer",
-              display: "flex", alignItems: "center", justifyContent: "center",
-              fontSize: 15, fontWeight: 800, color: "#fff",
-              boxShadow: "0 4px 12px rgba(239,68,68,0.3)"
-            }}
-          >
-            A
-          </button>
-
-          {/* Account Menu Dropdown */}
-          {showAccountMenu && (
-            <div style={{
-              position: "absolute", top: 0, left: 56,
-              background: "var(--glass-panel-bg, var(--glass-bg))",
-              border: "1px solid var(--glass-border)",
-              borderRadius: 16, padding: "12px", width: 220,
-              boxShadow: "var(--glass-shadow)", zIndex: 50,
-              backdropFilter: "blur(24px)"
-            }}>
-              <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 12, paddingBottom: 12, borderBottom: "1px solid var(--glass-border)" }}>
-                <div style={{ width: 36, height: 36, borderRadius: "50%", background: "var(--btn-primary-bg)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14, fontWeight: 800, color: "#fff" }}>A</div>
-                <div style={{ flex: 1 }}>
-                  <div style={{ fontSize: 13, fontWeight: 700, color: "var(--text-primary)" }}>Admin User</div>
-                  <div style={{ fontSize: 11, color: "var(--text-muted)" }}>admin@mas.ai</div>
-                </div>
-              </div>
-              
-              <button style={{
-                width: "100%", display: "flex", alignItems: "center", gap: 10,
-                padding: "8px 10px", borderRadius: 10, border: "none",
-                background: "transparent", cursor: "pointer",
-                color: "var(--text-primary)", fontSize: 12, fontWeight: 600,
-                textAlign: "left"
-              }}>
-                <User size={14} /> Profile
-              </button>
-              
-              <button style={{
-                width: "100%", display: "flex", alignItems: "center", gap: 10,
-                padding: "8px 10px", borderRadius: 10, border: "none",
-                background: "transparent", cursor: "pointer",
-                color: "#ef4444", fontSize: 12, fontWeight: 600,
-                textAlign: "left", marginTop: 4
-              }}>
-                <LogOut size={14} /> Log out
-              </button>
-            </div>
-          )}
-        </div>
+        <div style={{ height: 20 }} /> {/* Spacer since logo was removed */}
 
         {/* Nav icons */}
         {NAV.map(({ href, label, icon: Icon }) => {
@@ -121,21 +65,38 @@ export default function Sidebar() {
         ))}
 
         <div style={{ flex: 1 }} />
+      </aside>
 
-        {/* Settings Button */}
+      {/* Floating Horizontal Profile Card (Bottom Left) */}
+      <div style={{
+        position: "fixed", bottom: 20, left: 20, zIndex: 50,
+        display: "flex", alignItems: "center", gap: 12,
+        background: "var(--glass-bg)", border: "1px solid var(--glass-border)",
+        padding: "8px 12px 8px 8px", borderRadius: 100,
+        backdropFilter: "blur(24px)", boxShadow: "var(--glass-shadow)",
+      }}>
+        <div style={{ width: 36, height: 36, borderRadius: "50%", background: "var(--btn-primary-bg)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14, fontWeight: 800, color: "#fff", flexShrink: 0 }}>
+          A
+        </div>
+        <div style={{ display: "flex", flexDirection: "column", marginRight: 8 }}>
+          <span style={{ fontSize: 13, fontWeight: 700, color: "var(--text-primary)", lineHeight: 1.2 }}>Admin User</span>
+          <span style={{ fontSize: 10, color: "var(--text-muted)" }}>admin@mas.ai</span>
+        </div>
+        <div style={{ width: 1, height: 24, background: "var(--glass-border)", margin: "0 2px" }} />
         <button 
           onClick={() => setShowSettings(true)}
           title="Settings"
           style={{
-            width: 42, height: 42, borderRadius: "50%",
             display: "flex", alignItems: "center", justifyContent: "center",
-            background: "var(--glass-elevated)", border: "1px solid var(--glass-elevated-border)", 
-            cursor: "pointer", transition: "all 0.18s", marginBottom: 10
+            background: "transparent", border: "none", cursor: "pointer", padding: 6,
+            borderRadius: "50%", transition: "background 0.2s"
           }}
+          onMouseEnter={(e) => e.currentTarget.style.background = "var(--glass-elevated)"}
+          onMouseLeave={(e) => e.currentTarget.style.background = "transparent"}
         >
           <Settings size={18} color="var(--text-secondary)" strokeWidth={2} />
         </button>
-      </aside>
+      </div>
 
       {/* Settings Modal */}
       {showSettings && <SettingsModal onClose={() => setShowSettings(false)} />}
