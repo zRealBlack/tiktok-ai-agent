@@ -1,0 +1,458 @@
+﻿commit 09c8efba1c388a5bb9b3eb854972406a3af0ee56
+Author: zRealblack <you@example.com>
+Date:   Sat Apr 25 18:08:25 2026 +0300
+
+    feat: transform chatbox into right sidebar drawer that pushes main content
+
+diff --git a/components/AIChatBox.tsx b/components/AIChatBox.tsx
+index 1d4f447..e1dee23 100644
+--- a/components/AIChatBox.tsx
++++ b/components/AIChatBox.tsx
+@@ -64,6 +64,19 @@ export default function AIChatBox() {
+     setIsUserScrolled(isScrolledUp);
+   }, []);
+ 
++  // Push main content left when sidebar opens
++  useEffect(() => {
++    const main = document.querySelector('main');
++    if (!main) return;
++    if (open) {
++      main.style.transition = 'margin-right 0.3s ease';
++      main.style.marginRight = '380px';
++    } else {
++      main.style.marginRight = '0px';
++    }
++    return () => { main.style.marginRight = '0px'; };
++  }, [open]);
++
+   // Keep refs in sync with React state
+   useEffect(() => { isRecordingRef.current = isRecording; }, [isRecording]);
+   useEffect(() => { isProcessingVoiceRef.current = isProcessingVoice; }, [isProcessingVoice]);
+@@ -432,46 +445,63 @@ export default function AIChatBox() {
+ 
+   return (
+     <>
+-      <button
+-        onClick={() => setOpen((v) => !v)}
+-        className="fixed bottom-6 right-6 z-50 w-12 h-12 rounded-full flex items-center justify-center shadow-2xl transition-all duration-200 hover:scale-110 glass-panel"
+-        aria-label="Open AI Agent"
+-      >
+-        {open
+-          ? <X size={18} style={{ color: 'var(--text-secondary)' }} />
+-          : <MessageSquare size={18} style={{ color: 'var(--text-secondary)' }} />}
+-      </button>
+-
++      {/* Slim tab on right edge ΓÇö click to open sidebar */}
++      {!open && (
++        <button
++          onClick={() => setOpen(true)}
++          className="fixed right-0 top-1/2 -translate-y-1/2 z-40 flex flex-col items-center justify-center gap-2 py-5 px-2 rounded-l-2xl shadow-2xl transition-all duration-200 hover:px-3 group"
++          style={{ background: 'var(--glass-panel-bg)', border: '1px solid var(--glass-border)', borderRight: 'none' }}
++          aria-label="Open Sarie AI"
++        >
++          <div className="w-7 h-7 rounded-full overflow-hidden relative shrink-0">
++            <Image src={SarieAvatar} alt="Sarie" fill className="object-cover" />
++          </div>
++          <span className="text-[10px] font-bold tracking-widest uppercase opacity-60 group-hover:opacity-100 transition-opacity"
++            style={{ writingMode: 'vertical-rl', color: 'var(--text-secondary)', transform: 'rotate(180deg)' }}>
++            Sarie
++          </span>
++          <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 pulse-dot" />
++        </button>
++      )}
++
++      {/* Sidebar overlay backdrop (subtle, not a full modal) */}
++      {open && (
++        <div
++          className="fixed inset-0 z-30 pointer-events-none"
++          style={{ background: 'transparent' }}
++        />
++      )}
++
++      {/* The sidebar itself */}
+       <div
+-        className={`fixed z-50 glass-chat rounded-2xl flex flex-col overflow-hidden transition-all duration-300 ${
+-          open ? "opacity-100 translate-y-0 pointer-events-auto" : "opacity-0 translate-y-4 pointer-events-none"
+-        } ${
+-          expanded
+-            ? "bottom-4 right-4 left-4 md:left-auto md:right-6 md:w-[760px]"
+-            : "bottom-24 right-6 w-[390px]"
++        className={`fixed top-0 right-0 h-full z-40 flex flex-col transition-transform duration-300 ease-in-out ${
++          open ? 'translate-x-0' : 'translate-x-full'
+         }`}
+-        style={expanded
+-          ? { height: "calc(100vh - 32px)", maxHeight: "calc(100vh - 32px)" }
+-          : { maxHeight: "560px" }
+-        }
++        style={{
++          width: '380px',
++          background: 'var(--glass-panel-bg)',
++          borderLeft: '1px solid var(--glass-border)',
++          backdropFilter: 'blur(24px)',
++          WebkitBackdropFilter: 'blur(24px)',
++        }}
+       >
+-        <div className="flex items-center gap-3 px-4 py-3 border-b shrink-0"
+-          style={{ borderColor: 'var(--glass-border)' }}>
+-          <div className="w-8 h-8 rounded-full glass-elevated flex items-center justify-center overflow-hidden shrink-0 relative">
++        {/* Header */}
++        <div className="flex items-center gap-3 px-4 py-4 shrink-0 border-b" style={{ borderColor: 'var(--glass-border)' }}>
++          <div className="w-9 h-9 rounded-full overflow-hidden relative shrink-0 ring-2 ring-purple-500/30">
+             <Image src={SarieAvatar} alt="Sarie" fill className="object-cover object-center" />
+           </div>
+           <div className="flex-1 min-w-0">
+-            <div className="text-[13px] font-bold" style={{ color: 'var(--text-primary)' }}>Mas Sarie</div>
+-            <div className="text-[10px] text-emerald-500 flex items-center gap-1">
++            <div className="text-[14px] font-bold" style={{ color: 'var(--text-primary)' }}>Mas Sarie</div>
++            <div className="text-[11px] text-emerald-500 flex items-center gap-1.5">
+               <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 inline-block pulse-dot" />
+-              Mas AI Studio
++              AI Content Strategist
+             </div>
+           </div>
+           <div className="flex items-center gap-1">
+-            <select 
+-              value={sarieVoice} 
++            <select
++              value={sarieVoice}
+               onChange={(e) => setSarieVoice(e.target.value)}
+-              className="text-[11px] rounded-lg px-1 py-1 mr-1 glass-elevated outline-none"
++              className="text-[11px] rounded-lg px-2 py-1 mr-1 glass-elevated outline-none"
+               style={{ color: 'var(--text-muted)', background: 'transparent' }}
+             >
+               <option value="nova">Nova</option>
+@@ -488,60 +518,57 @@ export default function AIChatBox() {
+                   setMessages(greeting);
+                   saveHistory(greeting);
+                 }}
+-                className="w-7 h-7 rounded-lg flex items-center justify-center transition-colors glass-elevated hover:opacity-80"
+-                title="┘à╪│╪¡ ╪º┘ä┘à╪¡╪º╪»╪½╪⌐">
++                className="w-7 h-7 rounded-lg flex items-center justify-center glass-elevated hover:opacity-80 transition-all"
++                title="┘à╪│╪¡ ╪º┘ä┘à╪¡╪º╪»╪½╪⌐"
++              >
+                 <Trash2 size={12} style={{ color: 'var(--text-muted)' }} />
+               </button>
+             )}
+             <button
+-              onClick={() => setExpanded(v => !v)}
+-              className="w-7 h-7 rounded-lg flex items-center justify-center glass-elevated hover:opacity-80"
+-              title={expanded ? "╪¬╪╡╪║┘è╪▒" : "╪¬┘â╪¿┘è╪▒"}>
+-              {expanded
+-                ? <Minimize2 size={13} style={{ color: 'var(--text-muted)' }} />
+-                : <Maximize2 size={13} style={{ color: 'var(--text-muted)' }} />}
+-            </button>
+-            <button onClick={() => setOpen(false)}
+-              className="w-7 h-7 rounded-lg flex items-center justify-center glass-elevated hover:opacity-80">
+-              <ChevronDown size={15} style={{ color: 'var(--text-muted)' }} />
++              onClick={() => setOpen(false)}
++              className="w-7 h-7 rounded-lg flex items-center justify-center glass-elevated hover:opacity-80 transition-all"
++              title="Close"
++            >
++              <X size={14} style={{ color: 'var(--text-muted)' }} />
+             </button>
+           </div>
+         </div>
+ 
+-        <div className="flex-1 overflow-y-auto px-4 py-3 space-y-3 min-h-0" dir="rtl" ref={scrollRef} onScroll={handleScroll}>
++        {/* Messages */}
++        <div className="flex-1 overflow-y-auto px-4 py-4 space-y-4 min-h-0" dir="rtl" ref={scrollRef} onScroll={handleScroll}>
+           {messages.map((m, i) => (
+             <div key={i} className={`flex gap-2.5 ${m.role === "user" ? "justify-end" : "justify-start"}`}>
+               {m.role === "assistant" && (
+-                <div className="w-6 h-6 rounded-full glass-elevated flex shrink-0 mt-0.5 overflow-hidden justify-center relative">
++                <div className="w-6 h-6 rounded-full glass-elevated flex shrink-0 mt-1 overflow-hidden justify-center relative">
+                   <Image src={SarieAvatar} alt="Sarie" fill className="object-cover object-center" />
+                 </div>
+               )}
+-              <div className="relative group max-w-[82%]">
++              <div className="relative group max-w-[85%]">
+                 {editingIndex === i ? (
+-                  <div className="flex flex-col gap-2 w-full min-w-[280px]">
++                  <div className="flex flex-col gap-2 w-full min-w-[260px]">
+                     <textarea
+                       value={editValue}
+                       onChange={(e) => setEditValue(e.target.value)}
+                       className="w-full bg-transparent text-[13px] p-3 rounded-xl border outline-none focus:ring-1 focus:ring-purple-500/50"
+-                      style={{ 
+-                        background: 'var(--glass-elevated)', 
+-                        color: 'var(--text-primary)', 
++                      style={{
++                        background: 'var(--glass-elevated)',
++                        color: 'var(--text-primary)',
+                         borderColor: 'var(--glass-border)',
+                         minHeight: '80px'
+                       }}
+                       autoFocus
+                     />
+                     <div className="flex justify-end gap-2">
+-                      <button 
++                      <button
+                         onClick={() => setEditingIndex(null)}
+-                        className="px-3 py-1.5 rounded-lg text-[11px] font-medium transition-colors hover:opacity-80"
++                        className="px-3 py-1.5 rounded-lg text-[11px] font-medium hover:opacity-80"
+                         style={{ color: 'var(--text-muted)' }}
+                       >
+                         Cancel
+                       </button>
+-                      <button 
++                      <button
+                         onClick={() => submitEdit(i)}
+-                        className="px-3 py-1.5 rounded-lg text-[11px] font-medium bg-purple-600 text-white transition-all hover:bg-purple-500"
++                        className="px-3 py-1.5 rounded-lg text-[11px] font-medium bg-purple-600 text-white hover:bg-purple-500 transition-all"
+                       >
+                         Send
+                       </button>
+@@ -550,8 +577,8 @@ export default function AIChatBox() {
+                 ) : (
+                   <>
+                     <div
+-                      className={`px-3 py-2.5 rounded-xl text-[13px] leading-relaxed whitespace-pre-wrap ${
+-                        m.role === "user" ? "rounded-br-none" : "rounded-bl-none"
++                      className={`px-3.5 py-2.5 rounded-2xl text-[13px] leading-relaxed ${
++                        m.role === "user" ? "rounded-br-sm" : "rounded-bl-sm"
+                       }`}
+                       style={m.role === "user"
+                         ? { background: 'var(--glass-elevated)', color: 'var(--text-primary)', border: '1px solid var(--glass-elevated-border)' }
+@@ -572,55 +599,49 @@ export default function AIChatBox() {
+                       )}
+                     </div>
+ 
+-                    {/* Action Row Under Message */}
+-                    <div className="flex items-center gap-4 mt-2 px-1" dir="ltr">
++                    {/* Action Row */}
++                    <div className="flex items-center gap-3 mt-1.5 px-1" dir="ltr">
+                       {m.role === "user" && !m.streaming && (
+                         <button
+                           onClick={() => handleEdit(i, m.content)}
+-                          className="flex items-center gap-1.5 text-[11px] transition-colors hover:opacity-80"
++                          className="flex items-center gap-1 text-[11px] transition-opacity hover:opacity-80 opacity-0 group-hover:opacity-100"
+                           style={{ color: 'var(--text-muted)' }}
+                         >
+-                          <Pencil size={12} />
+-                          <span>Edit</span>
++                          <Pencil size={11} /><span>Edit</span>
+                         </button>
+                       )}
+                       <button
+                         onClick={() => copyToClipboard(m.content, i)}
+-                        className="flex items-center gap-1.5 text-[11px] transition-colors hover:opacity-80"
++                        className="flex items-center gap-1 text-[11px] transition-opacity hover:opacity-80 opacity-0 group-hover:opacity-100"
+                         style={{ color: 'var(--text-muted)' }}
+                       >
+-                        {copiedId === i ? <Check size={12} className="text-emerald-500" /> : <Copy size={12} />}
++                        {copiedId === i ? <Check size={11} className="text-emerald-500" /> : <Copy size={11} />}
+                         <span>{copiedId === i ? "Copied" : "Copy"}</span>
+                       </button>
+                       <button
+                         onClick={() => handleShare(m.content)}
+-                        className="flex items-center gap-1.5 text-[11px] transition-colors hover:opacity-80"
++                        className="flex items-center gap-1 text-[11px] transition-opacity hover:opacity-80 opacity-0 group-hover:opacity-100"
+                         style={{ color: 'var(--text-muted)' }}
+                       >
+-                        <Share size={12} />
+-                        <span>Share</span>
++                        <Share size={11} /><span>Share</span>
+                       </button>
+-                      
+-                      {/* More options menu button (retained but moved to row) */}
+                       <div className="relative ml-auto">
+                         <button
+                           onClick={(e) => { e.stopPropagation(); setActiveMenu(activeMenu === i ? null : i); }}
+-                          className="w-6 h-6 rounded-lg flex items-center justify-center transition-colors hover:bg-white/5"
+-                          title="╪º┘ä┘à╪▓┘è╪»"
++                          className="w-5 h-5 rounded flex items-center justify-center hover:bg-white/5 opacity-0 group-hover:opacity-100 transition-opacity"
+                         >
+-                          <MoreVertical size={13} style={{ color: 'var(--text-muted)' }} />
++                          <MoreVertical size={12} style={{ color: 'var(--text-muted)' }} />
+                         </button>
+                         {activeMenu === i && (
+-                          <div 
+-                            className="absolute bottom-full mb-2 right-0 z-[60] min-w-[120px] glass-chat rounded-xl border p-1 shadow-2xl animate-in fade-in zoom-in-95 duration-100"
++                          <div
++                            className="absolute bottom-full mb-2 right-0 z-[60] min-w-[130px] glass-chat rounded-xl border p-1 shadow-2xl"
+                             style={{ borderColor: 'var(--glass-border)', direction: 'rtl' }}
+                           >
+                             <button
+                               onClick={() => deleteMessage(i)}
+                               className="w-full flex items-center gap-2 px-3 py-2 text-[11px] font-medium text-red-500 hover:bg-red-500/10 rounded-lg transition-colors"
+                             >
+-                              <Trash2 size={12} />
+-                              ╪¡╪░┘ü ╪º┘ä╪▒╪│╪º┘ä╪⌐
++                              <Trash2 size={11} />╪¡╪░┘ü ╪º┘ä╪▒╪│╪º┘ä╪⌐
+                             </button>
+                           </div>
+                         )}
+@@ -630,7 +651,7 @@ export default function AIChatBox() {
+                 )}
+               </div>
+               {m.role === "user" && (
+-                <div className="w-6 h-6 rounded-full glass-elevated flex items-center justify-center shrink-0 mt-0.5">
++                <div className="w-6 h-6 rounded-full glass-elevated flex items-center justify-center shrink-0 mt-1">
+                   <User size={11} style={{ color: 'var(--text-secondary)' }} />
+                 </div>
+               )}
+@@ -641,7 +662,7 @@ export default function AIChatBox() {
+               <div className="w-6 h-6 rounded-full glass-elevated flex items-center justify-center shrink-0">
+                 <Loader2 size={11} className="animate-spin" style={{ color: 'var(--text-muted)' }} />
+               </div>
+-              <div className="glass-elevated px-3 py-2.5 rounded-xl text-[12px]"
++              <div className="glass-elevated px-3.5 py-2.5 rounded-2xl rounded-bl-sm text-[12px]"
+                 style={{ color: 'var(--text-muted)' }}>Thinking...</div>
+             </div>
+           )}
+@@ -654,15 +675,16 @@ export default function AIChatBox() {
+           <div ref={bottomRef} />
+         </div>
+ 
++        {/* Prompt chips */}
+         {messages.length <= 1 && (
+-          <div className="px-3 pt-2 flex gap-1.5 overflow-x-auto pb-1" dir="rtl">
++          <div className="px-4 pt-2 pb-1 flex gap-2 overflow-x-auto" dir="rtl">
+             {[
+               "╪Ñ┘è┘ç ╪ú╪╢╪╣┘ü ┘å┘é╪╖╪⌐ ╪╣┘å╪»┘è╪ƒ",
+               "╪╡┘ä╪¡ ╪ú╪│┘ê╪ú ┘ü┘è╪»┘è┘ê ╪╣┘å╪»┘è",
+               "╪Ñ┘è┘ç ╪º┘ä┘ä┘è ╪¿┘è╪╣┘à┘ä┘ç ╪º┘ä┘à┘å╪º┘ü╪│┘è┘å ╪╡╪¡╪ƒ",
+             ].map((p) => (
+               <button key={p} onClick={() => sendMessage(p)}
+-                className="shrink-0 text-[11px] glass-elevated px-3 py-1 rounded-full transition-colors hover:opacity-80 whitespace-nowrap"
++                className="shrink-0 text-[11px] glass-elevated px-3 py-1.5 rounded-full transition-all hover:opacity-80 whitespace-nowrap"
+                 style={{ color: 'var(--text-secondary)' }}>
+                 {p}
+               </button>
+@@ -670,12 +692,45 @@ export default function AIChatBox() {
+           </div>
+         )}
+ 
+-        <div className="px-3 py-3 border-t shrink-0" style={{ borderColor: 'var(--glass-border)' }}>
++        {/* Input bar */}
++        <div className="px-4 py-4 border-t shrink-0 relative" style={{ borderColor: 'var(--glass-border)' }}>
++          {/* Voice mode overlay */}
++          {isVoiceMode && (
++            <div className="absolute inset-0 z-10 flex flex-col items-center justify-center rounded-b-none bg-black/70 backdrop-blur-md border-t border-white/10 animate-in fade-in duration-300">
++              <div className="mb-3 relative">
++                <div className={`w-16 h-16 rounded-full flex items-center justify-center ${isProcessingVoice ? 'bg-purple-500/20' : isRecording ? 'bg-red-500/20' : 'bg-emerald-500/20'} ${!isProcessingVoice && 'animate-pulse'}`}>
++                  {isProcessingVoice ? (
++                    <Loader2 size={24} className="animate-spin text-purple-400" />
++                  ) : (
++                    <Mic size={24} className={isRecording ? "text-red-400" : "text-emerald-400"} />
++                  )}
++                </div>
++                {isRecording && <div className="absolute inset-0 rounded-full border-2 border-red-500 animate-ping opacity-50" />}
++              </div>
++              <div className="text-sm font-bold text-white mb-1">
++                {isProcessingVoice ? "Sarie is thinking..." : isRecording ? "Listening..." : "Waiting for you to speak..."}
++              </div>
++              <div className="text-[11px] text-white/50 mb-4">Hands-free ┬╖ ar-EG</div>
++              <div className="flex items-center gap-1 h-7 mb-5">
++                {[...Array(5)].map((_, idx) => (
++                  <div
++                    key={idx}
++                    className={`audio-wave-bar w-1.5 rounded-full ${isRecording ? 'bg-emerald-400' : 'bg-white/20'}`}
++                    style={{ height: '100%', transformOrigin: 'center', transition: 'transform 0.05s', transform: 'scaleY(0.15)' }}
++                  />
++                ))}
++              </div>
++              <button
++                onClick={stopVoiceMode}
++                className="px-6 py-2.5 rounded-full bg-red-500/80 text-white font-bold text-xs hover:bg-red-500 transition-colors shadow-lg"
++              >
++                End Call
++              </button>
++            </div>
++          )}
++
+           <div className="flex items-end gap-2">
+-            <div
+-              className="flex-1 glass-input rounded-xl px-3 py-2.5 transition-all"
+-              style={{ minHeight: '40px' }}
+-            >
++            <div className="flex-1 glass-input rounded-xl px-3 py-2.5">
+               <textarea
+                 value={input}
+                 onChange={(e) => setInput(e.target.value)}
+@@ -688,62 +743,19 @@ export default function AIChatBox() {
+                 style={{ color: 'var(--text-primary)', maxHeight: '96px', fieldSizing: 'content', direction: 'rtl' } as React.CSSProperties}
+               />
+             </div>
+-            {isVoiceMode ? (
+-              <div className="absolute inset-0 z-10 glass-panel flex flex-col items-center justify-center rounded-b-2xl bg-black/60 backdrop-blur-md border-t border-white/10 animate-in fade-in duration-300">
+-                <div className="mb-4 relative">
+-                  <div className={`w-16 h-16 rounded-full flex items-center justify-center ${isProcessingVoice ? 'bg-purple-500/20' : isRecording ? 'bg-red-500/20' : 'bg-emerald-500/20'} ${!isProcessingVoice && 'animate-pulse'}`}>
+-                    {isProcessingVoice ? (
+-                      <Loader2 size={24} className="animate-spin text-purple-400" />
+-                    ) : (
+-                      <Mic size={24} className={isRecording ? "text-red-400" : "text-emerald-400"} />
+-                    )}
+-                  </div>
+-                  {isRecording && <div className="absolute inset-0 rounded-full border-2 border-red-500 animate-ping opacity-50" />}
+-                </div>
+-                <div className="text-sm font-bold text-white mb-1">
+-                  {isProcessingVoice ? "Sarie is thinking..." : isRecording ? "Listening..." : "Waiting for you to speak..."}
+-                </div>
+-                <div className="text-[11px] text-white/50 mb-4">Hands-free mode active</div>
+-                
+-                {/* Audio Visualizer Waves */}
+-                <div className="flex items-center gap-1 h-8 mb-6">
+-                  {[...Array(5)].map((_, i) => (
+-                    <div 
+-                      key={i} 
+-                      className={`audio-wave-bar w-1.5 rounded-full ${isRecording ? 'bg-emerald-400' : 'bg-white/20'}`}
+-                      style={{ 
+-                        height: '100%', 
+-                        transformOrigin: 'bottom',
+-                        transition: 'transform 0.05s ease-out',
+-                        transform: 'scaleY(0.1)'
+-                      }}
+-                    />
+-                  ))}
+-                </div>
+-
+-                <button 
+-                  onClick={stopVoiceMode}
+-                  className="px-6 py-2.5 rounded-full bg-red-500/80 text-white font-bold text-xs hover:bg-red-500 transition-colors shadow-lg"
+-                >
+-                  End Call
+-                </button>
+-              </div>
+-            ) : (
+-              <button 
+-                onClick={startVoiceMode}
+-                disabled={streaming}
+-                className="w-9 h-9 rounded-xl glass-elevated flex items-center justify-center shrink-0 transition-all hover:opacity-90 disabled:opacity-30 relative group"
+-                style={{ color: 'var(--text-secondary)' }}
+-                title="Start Hands-Free Voice Mode"
+-              >
+-                <Mic size={14} />
+-                <span className="absolute -top-1 -right-1 flex h-2.5 w-2.5">
+-                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+-                  <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500"></span>
+-                </span>
+-              </button>
+-            )}
+-
++            <button
++              onClick={startVoiceMode}
++              disabled={streaming || isVoiceMode}
++              className="w-9 h-9 rounded-xl glass-elevated flex items-center justify-center shrink-0 transition-all hover:opacity-90 disabled:opacity-30 relative group"
++              style={{ color: 'var(--text-secondary)' }}
++              title="Start Voice Mode"
++            >
++              <Mic size={14} />
++              <span className="absolute -top-1 -right-1 flex h-2.5 w-2.5">
++                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
++                <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500" />
++              </span>
++            </button>
+             {streaming ? (
+               <button onClick={stop}
+                 className="w-9 h-9 rounded-xl glass-elevated flex items-center justify-center shrink-0 hover:opacity-80 transition-all">
+@@ -761,7 +773,9 @@ export default function AIChatBox() {
+           </div>
+         </div>
+       </div>
++
+       <audio ref={persistentAudioRef} className="hidden" />
+     </>
+   );
+ }
++

@@ -183,8 +183,170 @@ body {
 
 /* ─── Dynamic Logo Filter ────────────────────────────── */
 html:not(.dark) .dynamic-logo {
-  filter: brightness(0); /* Make black in light mode */
+  filter: brightness(0);
 }
 html.dark .dynamic-logo {
-  filter: brightness(0) invert(1); /* Make it white in dark mode */
+  filter: brightness(0) invert(1);
+}
+
+/* ═══════════════════════════════════════════════════════════
+   THEME: NEON — Deep dark, electric purple/blue glows
+   ═══════════════════════════════════════════════════════════ */
+.theme-neon {
+  --bg-base: #07050f;
+  --bg-gradient-a: rgba(139, 92, 246, 0.14);
+  --bg-gradient-b: rgba(59, 130, 246, 0.08);
+
+  --glass-bg: rgba(18, 12, 38, 0.88);
+  --glass-border: rgba(139, 92, 246, 0.28);
+  --glass-shadow: 0 0 0 1px rgba(139, 92, 246, 0.12), 0 8px 32px rgba(139, 92, 246, 0.18), 0 2px 8px rgba(0,0,0,0.6);
+  --glass-inner: rgba(139, 92, 246, 0.04);
+  --glass-blur: 28px;
+
+  --sidebar-bg: rgba(10, 6, 22, 0.97);
+  --sidebar-border: rgba(139, 92, 246, 0.18);
+
+  --chat-bg: rgba(12, 8, 26, 0.97);
+
+  --input-bg: rgba(139, 92, 246, 0.08);
+  --input-border: rgba(139, 92, 246, 0.22);
+
+  --text-primary: #ede9fe;
+  --text-secondary: #c4b5fd;
+  --text-muted: #7c5cbf;
+  --text-faint: #4a3580;
+
+  --glass-elevated: rgba(139, 92, 246, 0.1);
+  --glass-elevated-border: rgba(139, 92, 246, 0.22);
+
+  --btn-primary-bg: #8b5cf6;
+  --btn-primary-text: #ffffff;
+  --btn-secondary-bg: rgba(139, 92, 246, 0.12);
+  --btn-secondary-text: #c4b5fd;
+  --btn-secondary-border: rgba(139, 92, 246, 0.28);
+
+  --scroll-thumb: rgba(139, 92, 246, 0.35);
+}
+
+.theme-neon .glass-panel {
+  box-shadow: var(--glass-shadow), inset 0 1px 0 rgba(139, 92, 246, 0.08);
+}
+
+.theme-neon body {
+  background-image:
+    radial-gradient(ellipse 80% 55% at 15% 15%, var(--bg-gradient-a) 0%, transparent 100%),
+    radial-gradient(ellipse 65% 45% at 85% 85%, var(--bg-gradient-b) 0%, transparent 100%),
+    radial-gradient(ellipse 40% 30% at 50% 50%, rgba(139,92,246,0.04) 0%, transparent 100%);
+}
+
+/* ═══════════════════════════════════════════════════════════
+   THEME: TERMINAL — Pure black, neon green, sharp + mono
+   ═══════════════════════════════════════════════════════════ */
+.theme-terminal {
+  --bg-base: #080808;
+  --bg-gradient-a: transparent;
+  --bg-gradient-b: transparent;
+
+  --glass-bg: #111111;
+  --glass-border: rgba(0, 212, 106, 0.2);
+  --glass-shadow: 0 0 0 1px rgba(0, 212, 106, 0.12), 0 4px 16px rgba(0,0,0,0.8);
+  --glass-inner: transparent;
+  --glass-blur: 0px;
+
+  --sidebar-bg: #0c0c0c;
+  --sidebar-border: rgba(0, 212, 106, 0.15);
+
+  --chat-bg: #0c0c0c;
+
+  --input-bg: #1a1a1a;
+  --input-border: rgba(0, 212, 106, 0.25);
+
+  --text-primary: #00d46a;
+  --text-secondary: #00a854;
+  --text-muted: #006633;
+  --text-faint: #003d1f;
+
+  --glass-elevated: #181818;
+  --glass-elevated-border: rgba(0, 212, 106, 0.15);
+
+  --btn-primary-bg: #00d46a;
+  --btn-primary-text: #000000;
+  --btn-secondary-bg: #1a1a1a;
+  --btn-secondary-text: #00d46a;
+  --btn-secondary-border: rgba(0, 212, 106, 0.25);
+
+  --scroll-thumb: rgba(0, 212, 106, 0.3);
+}
+
+.theme-terminal .glass-panel,
+.theme-terminal .glass-sidebar,
+.theme-terminal .glass-chat,
+.theme-terminal .glass-elevated,
+.theme-terminal .glass-input {
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  border-radius: 4px !important;
+}
+
+.theme-terminal * {
+  font-family: 'JetBrains Mono', 'Fira Code', 'Cascadia Code', 'Courier New', monospace !important;
+  letter-spacing: -0.01em;
+}
+
+.theme-terminal .rounded-2xl,
+.theme-terminal .rounded-xl,
+.theme-terminal .rounded-lg,
+.theme-terminal .rounded-full {
+  border-radius: 4px !important;
+}
+
+/* ═══════════════════════════════════════════════════════════
+   THEME: MINIMAL — Bright white, flat, Notion/Linear feel
+   ═══════════════════════════════════════════════════════════ */
+.theme-minimal {
+  --bg-base: #f8f8f8;
+  --bg-gradient-a: transparent;
+  --bg-gradient-b: transparent;
+
+  --glass-bg: #ffffff;
+  --glass-border: #e4e4e7;
+  --glass-shadow: 0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04);
+  --glass-inner: transparent;
+  --glass-blur: 0px;
+
+  --sidebar-bg: #ffffff;
+  --sidebar-border: #e4e4e7;
+
+  --chat-bg: #ffffff;
+
+  --input-bg: #f4f4f5;
+  --input-border: #e4e4e7;
+
+  --text-primary: #09090b;
+  --text-secondary: #3f3f46;
+  --text-muted: #71717a;
+  --text-faint: #a1a1aa;
+
+  --glass-elevated: #f4f4f5;
+  --glass-elevated-border: #e4e4e7;
+
+  --btn-primary-bg: #ef4444;
+  --btn-primary-text: #ffffff;
+  --btn-secondary-bg: #f4f4f5;
+  --btn-secondary-text: #3f3f46;
+  --btn-secondary-border: #e4e4e7;
+
+  --scroll-thumb: rgba(0,0,0,0.1);
+}
+
+.theme-minimal .glass-panel,
+.theme-minimal .glass-sidebar,
+.theme-minimal .glass-chat,
+.theme-minimal .glass-elevated {
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+
+.theme-minimal .dynamic-logo {
+  filter: brightness(0) !important;
 }

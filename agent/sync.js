@@ -200,7 +200,7 @@ async function extractAudioFromVideo(videoPath) {
 async function analyzeAudioWithGPT(audioBase64, duration, caption, videoStats) {
   const stats = videoStats || {};
   const body = {
-    model: "gpt-4o-audio-preview",
+    model: "gpt-4o-mini-audio-preview",
     messages: [
       {
         role: "system",

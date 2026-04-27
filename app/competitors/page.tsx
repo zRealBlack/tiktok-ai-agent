@@ -6,9 +6,16 @@ import { Search, RefreshCw, Zap } from "lucide-react";
 import { dispatchAgentPrompt } from "@/components/AIChatBox";
 import { useData } from "@/components/DataContext";
 
+const card: React.CSSProperties = {
+  background: 'var(--glass-bg)',
+  borderRadius: 24,
+  border: '1px solid var(--glass-border)',
+  boxShadow: 'var(--glass-shadow)',
+};
+
 export default function CompetitorsPage() {
   const { competitors, scrapeCompetitor, scrapingHandles } = useData();
-  const [newHandle, setNewHandle] = useState("");
+  const [newHandle, setNewHandle]   = useState("");
   const [isScrapeAll, setIsScrapeAll] = useState(false);
 
   const handleCustomSpy = () => {
@@ -19,83 +26,67 @@ export default function CompetitorsPage() {
     setNewHandle("");
   };
 
-  // Scrape ALL at once — single API call, no race conditions
   const handleScrapeAll = async () => {
     setIsScrapeAll(true);
-    try {
-      await scrapeCompetitor("__all__");
-    } catch {
-      // individual errors shown in cards
-    } finally {
-      setIsScrapeAll(false);
-    }
+    try { await scrapeCompetitor("__all__"); } catch {} finally { setIsScrapeAll(false); }
   };
 
-  const anyScrapePending = scrapingHandles.size > 0 || isScrapeAll;
-
-  // Check if any competitor has real data
-  const hasAnyData = competitors.some((c: any) => !c.needsScrape && c.followers > 0);
+  const anyPending  = scrapingHandles.size > 0 || isScrapeAll;
+  const hasAnyData  = competitors.some((c: any) => !c.needsScrape && c.followers > 0);
   const lastScraped = competitors.find((c: any) => c.scrapedAt)?.scrapedAt;
 
   return (
-    <div className="px-8 py-8 max-w-[1400px] mx-auto">
-      {/* Header */}
-      <div className="flex items-start justify-between mb-8">
-        <div>
-          <h1 className="text-2xl font-bold mb-1" style={{ color: 'var(--text-primary)' }}>Competitor Intelligence</h1>
-          <p className="text-sm" style={{ color: 'var(--text-muted)' }}>
-            Real-time analysis of your competitors — powered by Apify + Sarie AI.
-            {lastScraped && (
-              <span className="ml-2 text-[11px] opacity-60">
-                Last synced: {new Date(lastScraped).toLocaleString()}
-              </span>
-            )}
-          </p>
+    <div style={{ padding: '32px 28px', maxWidth: 1400, margin: '0 auto' }}>
+
+      {/* ── PAGE TITLE ─────────────────────────── */}
+      <div style={{ marginBottom: 28 }}>
+        <div style={{ fontSize: 13, color: 'var(--text-muted)', fontWeight: 500, marginBottom: 6 }}>
+          Real-time analysis · Apify + Sarie AI
+          {lastScraped && <span style={{ marginLeft: 12, opacity: 0.6, fontSize: 11 }}>Last synced: {new Date(lastScraped).toLocaleString()}</span>}
         </div>
-        <button
-          onClick={handleScrapeAll}
-          disabled={anyScrapePending}
-          className="btn-primary flex items-center gap-2 px-5 py-2.5 rounded-xl text-[13px] font-semibold transition-all disabled:opacity-50"
-        >
-          <RefreshCw size={15} className={anyScrapePending ? "animate-spin" : ""} />
-          {anyScrapePending ? "Scraping…" : hasAnyData ? "Refresh All" : "Scrape All Live"}
-        </button>
+        <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between' }}>
+          <h1 style={{ fontSize: 46, fontWeight: 900, color: 'var(--text-primary)', margin: 0, letterSpacing: '-0.045em', lineHeight: 1 }}>
+            Competitors
+          </h1>
+          <button
+            onClick={handleScrapeAll}
+            disabled={anyPending}
+            style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 22px', borderRadius: 100, background: 'var(--btn-primary-bg)', border: 'none', color: '#fff', fontSize: 13, fontWeight: 700, cursor: anyPending ? 'not-allowed' : 'pointer', opacity: anyPending ? 0.5 : 1, boxShadow: '0 4px 16px rgba(239,68,68,0.3)' }}
+          >
+            <RefreshCw size={14} style={{ animation: anyPending ? 'spin 1s linear infinite' : 'none' }} />
+            {anyPending ? "Scraping…" : hasAnyData ? "Refresh All" : "Scrape All Live"}
+          </button>
+        </div>
       </div>
 
-      {/* Spy input */}
-      <div className="glass-panel rounded-2xl p-5 mb-6">
-        <h2 className="text-[13px] font-bold mb-3" style={{ color: 'var(--text-secondary)' }}>Ask Sarie about any account</h2>
-        <div className="flex gap-3">
-          <div className="flex-1 flex items-center gap-3 glass-input rounded-xl px-4 py-2.5">
-            <Search size={15} style={{ color: 'var(--text-muted)' }} className="shrink-0" />
+      {/* ── SARIE SPY INPUT ────────────────────── */}
+      <div style={{ ...card, padding: '22px 24px', marginBottom: 24 }}>
+        <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-secondary)', marginBottom: 14 }}>Ask Sarie about any account</div>
+        <div style={{ display: 'flex', gap: 12 }}>
+          <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: 12, background: 'var(--glass-elevated)', border: '1px solid var(--glass-elevated-border)', borderRadius: 14, padding: '10px 16px' }}>
+            <Search size={15} color="var(--text-muted)" style={{ flexShrink: 0 }} />
             <input
-              type="text"
-              value={newHandle}
-              onChange={(e) => setNewHandle(e.target.value)}
-              onKeyDown={(e) => e.key === "Enter" && handleCustomSpy()}
+              type="text" value={newHandle} onChange={e => setNewHandle(e.target.value)}
+              onKeyDown={e => e.key === "Enter" && handleCustomSpy()}
               placeholder="@handle"
-              className="flex-1 bg-transparent text-[13px] outline-none placeholder:opacity-40"
-              style={{ color: 'var(--text-primary)' }}
+              style={{ flex: 1, background: 'transparent', border: 'none', outline: 'none', fontSize: 13, color: 'var(--text-primary)' }}
             />
           </div>
           <button
-            onClick={handleCustomSpy}
-            disabled={!newHandle.trim()}
-            className="btn-primary flex items-center gap-2 px-5 py-2.5 rounded-xl text-[13px] font-semibold transition-all disabled:opacity-40"
+            onClick={handleCustomSpy} disabled={!newHandle.trim()}
+            style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 22px', borderRadius: 14, background: 'var(--btn-primary-bg)', border: 'none', color: '#fff', fontSize: 13, fontWeight: 700, cursor: 'pointer', opacity: newHandle.trim() ? 1 : 0.4 }}
           >
-            <Zap size={15} /> Ask
+            <Zap size={14} /> Ask
           </button>
         </div>
-        <p className="text-[11px] mt-2" style={{ color: 'var(--text-faint)' }}>
-          Sarie will analyze the account based on TikTok strategy knowledge in the chat panel →
-        </p>
+        <p style={{ fontSize: 11, color: 'var(--text-faint)', marginTop: 10 }}>Sarie will analyze the account in the chat panel →</p>
       </div>
 
-      {/* Tracked accounts */}
-      <h2 className="text-[12px] font-bold uppercase tracking-widest mb-4" style={{ color: 'var(--text-muted)' }}>
+      {/* ── TRACKED ACCOUNTS ───────────────────── */}
+      <div style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', color: 'var(--text-muted)', marginBottom: 16 }}>
         Tracked Accounts ({competitors.length})
-      </h2>
-      <div className="grid grid-cols-2 xl:grid-cols-2 gap-5">
+      </div>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 18 }}>
         {competitors.map((c: any) => (
           <CompetitorCard key={c.handle} competitor={c} />
         ))}

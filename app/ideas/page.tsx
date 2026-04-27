@@ -7,13 +7,19 @@ import { useData } from "@/components/DataContext";
 
 const SESSION_KEY = "tiktok_ideas_cache";
 
+const card: React.CSSProperties = {
+  background: 'var(--glass-bg)',
+  borderRadius: 24,
+  border: '1px solid var(--glass-border)',
+  boxShadow: 'var(--glass-shadow)',
+};
+
 export default function IdeasPage() {
   const { account, videos, syncedAt } = useData();
-  const [ideas, setIdeas] = useState<any[]>([]);
+  const [ideas, setIdeas]   = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError]     = useState<string | null>(null);
 
-  // Load from sessionStorage only
   useEffect(() => {
     try {
       const cached = sessionStorage.getItem(SESSION_KEY);
@@ -23,14 +29,9 @@ export default function IdeasPage() {
 
   const generateIdeas = async () => {
     if (!videos.length || !account) return;
-    setLoading(true);
-    setError(null);
+    setLoading(true); setError(null);
     try {
-      const res = await fetch("/api/ideas", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ videos, account }),
-      });
+      const res  = await fetch("/api/ideas", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ videos, account }) });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "فشل التوليد");
       setIdeas(data.ideas);
@@ -43,73 +44,68 @@ export default function IdeasPage() {
   };
 
   return (
-    <div className="px-8 py-8 max-w-[1400px] mx-auto">
-      <div className="mb-8">
-        <h1 className="text-2xl font-bold mb-1" style={{ color: 'var(--text-primary)' }}>Video Ideas</h1>
-        <p className="text-sm" style={{ color: 'var(--text-muted)' }}>
-          أفكار مُولَّدة بالذكاء الاصطناعي بناءً على محتوى {account?.username || '@rasayel_podcast'}.
-        </p>
-      </div>
+    <div style={{ padding: '32px 28px', maxWidth: 1400, margin: '0 auto' }}>
 
-      <div className="flex items-center justify-between mb-6">
-        <h2 className="text-[13px] font-bold" style={{ color: 'var(--text-secondary)' }}>
-          Baseline Briefs
-          {ideas.length > 0 && (
-            <span className="ml-2 text-[11px] font-normal" style={{ color: 'var(--text-faint)' }}>
-              {ideas.length} أفكار — محفوظة لهذه الجلسة
-            </span>
-          )}
-        </h2>
-        <button
-          onClick={generateIdeas}
-          disabled={loading || !syncedAt || !videos.length}
-          className="btn-secondary flex items-center gap-2 px-4 py-2 rounded-xl text-[12px] font-semibold transition-all disabled:opacity-50"
-        >
-          {loading
-            ? <><Loader2 size={13} className="animate-spin" /> جاري التوليد...</>
-            : <><RefreshCw size={13} /> توليد 3 أفكار جديدة</>}
-        </button>
+      {/* ── PAGE TITLE ─────────────────────────── */}
+      <div style={{ marginBottom: 28 }}>
+        <div style={{ fontSize: 13, color: 'var(--text-muted)', fontWeight: 500, marginBottom: 6 }}>
+          أفكار مُولَّدة بالذكاء الاصطناعي · {account?.username || '@rasayel_podcast'}
+        </div>
+        <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between' }}>
+          <h1 style={{ fontSize: 46, fontWeight: 900, color: 'var(--text-primary)', margin: 0, letterSpacing: '-0.045em', lineHeight: 1 }}>
+            Video Ideas
+          </h1>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+            {ideas.length > 0 && (
+              <span style={{ fontSize: 12, color: 'var(--text-faint)' }}>{ideas.length} أفكار — محفوظة</span>
+            )}
+            <button
+              onClick={generateIdeas}
+              disabled={loading || !syncedAt || !videos.length}
+              style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 22px', borderRadius: 100, background: 'var(--glass-elevated)', border: '1px solid var(--glass-elevated-border)', color: 'var(--text-secondary)', fontSize: 13, fontWeight: 700, cursor: 'pointer', opacity: (loading||!syncedAt||!videos.length) ? 0.5 : 1 }}
+            >
+              {loading ? <><Loader2 size={13} style={{ animation: 'spin 1s linear infinite' }} /> جاري التوليد...</> : <><RefreshCw size={13} /> توليد 3 أفكار جديدة</>}
+            </button>
+          </div>
+        </div>
       </div>
 
       {error && (
-        <div className="flex items-center gap-2 glass-panel rounded-xl p-4 mb-5 text-[13px] text-red-500">
-          <AlertCircle size={14} className="shrink-0" />
-          {error}
+        <div style={{ ...card, padding: '14px 18px', marginBottom: 20, display: 'flex', alignItems: 'center', gap: 10, fontSize: 13, color: '#ef4444' }}>
+          <AlertCircle size={14} style={{ flexShrink: 0 }} /> {error}
         </div>
       )}
 
       {loading ? (
-        <div className="grid grid-cols-2 xl:grid-cols-3 gap-5">
-          {[1, 2, 3].map((i) => (
-            <div key={i} className="glass-panel rounded-2xl p-5 animate-pulse">
-              <div className="h-4 rounded-lg mb-3 w-1/3" style={{ background: 'var(--glass-elevated)' }} />
-              <div className="h-5 rounded-lg mb-4 w-3/4" style={{ background: 'var(--glass-elevated)' }} />
-              <div className="space-y-2">
-                {[1, 2, 3].map((j) => <div key={j} className="h-3 rounded-lg" style={{ background: 'var(--glass-elevated)' }} />)}
-              </div>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 18 }}>
+          {[1,2,3].map(i => (
+            <div key={i} style={{ ...card, padding: '22px', height: 300 }}>
+              {[80,120,60,100,40].map((w,j) => (
+                <div key={j} style={{ height: 12, borderRadius: 6, background: 'var(--glass-elevated)', width: `${w}%`, marginBottom: 12, animation: 'pulse 1.5s ease-in-out infinite' }} />
+              ))}
             </div>
           ))}
         </div>
       ) : ideas.length === 0 ? (
-        <div className="flex flex-col items-center justify-center py-28 gap-5">
-          <div className="w-16 h-16 rounded-2xl glass-elevated flex items-center justify-center">
-            <RefreshCw size={24} style={{ color: 'var(--text-muted)' }} />
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '100px 0', gap: 20 }}>
+          <div style={{ width: 64, height: 64, borderRadius: 20, background: 'var(--glass-elevated)', border: '1px solid var(--glass-elevated-border)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <RefreshCw size={24} color="var(--text-muted)" />
           </div>
-          <div className="text-center">
-            <p className="text-[16px] font-semibold mb-2" style={{ color: 'var(--text-primary)' }}>مفيش أفكار لسه</p>
-            <p className="text-[13px]" style={{ color: 'var(--text-muted)' }}>
-              {!syncedAt ? "جاري تحميل بيانات الأكاونت..." : "اضغط على زرار \"توليد 3 أفكار جديدة\" فوق"}
+          <div style={{ textAlign: 'center' }}>
+            <p style={{ fontSize: 16, fontWeight: 600, color: 'var(--text-primary)', marginBottom: 8 }}>مفيش أفكار لسه</p>
+            <p style={{ fontSize: 13, color: 'var(--text-muted)' }}>
+              {!syncedAt ? "جاري تحميل بيانات الأكاونت..." : "اضغط توليد 3 أفكار جديدة فوق"}
             </p>
           </div>
           {syncedAt && (
             <button onClick={generateIdeas} disabled={loading}
-              className="btn-primary flex items-center gap-2 px-6 py-2.5 rounded-xl text-[13px] font-semibold">
+              style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '11px 24px', borderRadius: 100, background: 'var(--btn-primary-bg)', border: 'none', color: '#fff', fontSize: 13, fontWeight: 700, cursor: 'pointer', boxShadow: '0 4px 16px rgba(239,68,68,0.3)' }}>
               <RefreshCw size={14} /> ابدأ التوليد
             </button>
           )}
         </div>
       ) : (
-        <div className="grid grid-cols-2 xl:grid-cols-3 gap-5">
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 18 }}>
           {ideas.map((idea: any) => (
             <IdeaCard key={idea.id} idea={idea} />
           ))}
