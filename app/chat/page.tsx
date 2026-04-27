@@ -20,6 +20,7 @@ interface ChatMessage {
   ts?: string;
   attachment?: Attachment;
   reactions?: string[];
+  isForwarded?: boolean;
 }
 
 interface Conversation {
@@ -83,7 +84,7 @@ function AvatarCircle({
 
 // ─── Static mock conversations ────────────────────────────────────────────────
 
-const CONVERSATIONS: Conversation[] = [
+const INITIAL_CONVERSATIONS: Conversation[] = [
   {
     id: "sarie",
     name: "Sarie",
@@ -233,6 +234,7 @@ function useSarieChat() {
 // ─── Main Page ────────────────────────────────────────────────────────────────
 
 export default function ChatPage() {
+  const [conversations, setConversations] = useState<Conversation[]>(INITIAL_CONVERSATIONS);
   const [activeId, setActiveId] = useState("sarie");
   const [input, setInput] = useState("");
   const [showEmoji, setShowEmoji] = useState(false);
@@ -245,7 +247,7 @@ export default function ChatPage() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const sarie = useSarieChat();
 
-  const activeConvo = CONVERSATIONS.find(c => c.id === activeId)!;
+  const activeConvo = conversations.find(c => c.id === activeId)!;
   const isAI = activeConvo.isAI;
 
   const messages: ChatMessage[] = isAI
@@ -304,10 +306,20 @@ export default function ChatPage() {
     // Add the forwarded message to the target user's chat history
     setTeamMessages(prev => {
       const u = [...(prev[targetId] || [])];
-      u.push({ role: "user", content: forwardingMsg, ts: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) });
+      u.push({ role: "user", content: forwardingMsg, ts: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }), isForwarded: true });
       return { ...prev, [targetId]: u };
     });
     
+    // Reorder conversations to move the target chat to the top (under Sarie)
+    setConversations(prev => {
+      const idx = prev.findIndex(c => c.id === targetId);
+      if (idx <= 1) return prev; // Already at the top or is Sarie
+      const next = [...prev];
+      const [item] = next.splice(idx, 1);
+      next.splice(1, 0, item);
+      return next;
+    });
+
     setForwardingMsg(null);
   };
 
@@ -319,6 +331,16 @@ export default function ChatPage() {
     } else {
       const msg: ChatMessage = { role: "user", content: text || "", ts: now(), ...(pendingAttachment ? { attachment: pendingAttachment } : {}) };
       setTeamMessages(prev => ({ ...prev, [activeId]: [...(prev[activeId] || []), msg] }));
+      
+      // Reorder conversations to move activeId to the top (under Sarie)
+      setConversations(prev => {
+        const idx = prev.findIndex(c => c.id === activeId);
+        if (idx <= 1) return prev;
+        const next = [...prev];
+        const [item] = next.splice(idx, 1);
+        next.splice(1, 0, item);
+        return next;
+      });
     }
     setInput("");
     setPendingAttachment(null);
@@ -397,7 +419,7 @@ export default function ChatPage() {
 
         {/* List */}
         <div style={{ flex: 1, overflowY: "auto", padding: "0 12px 16px" }}>
-          {CONVERSATIONS.map(c => {
+          {conversations.map(c => {
             const active = c.id === activeId;
             return (
               <button
@@ -524,7 +546,12 @@ export default function ChatPage() {
                           <span style={{ fontSize: 12, fontWeight: 600 }}>{m.attachment.name}</span>
                         </div>
                       )}
-                      {m.content && (m.role === "assistant" && isAI ? <MarkdownMessage content={m.content} /> : m.content)}
+                      {m.isForwarded && (
+                        <div style={{ fontSize: 10, color: isUser ? "rgba(255,255,255,0.7)" : "var(--text-muted)", marginBottom: 4, fontStyle: "italic", display: "flex", alignItems: "center", gap: 4 }}>
+                          <Forward size={10} /> Forwarded
+                        </div>
+                      )}
+                      {m.content && <MarkdownMessage content={m.content} />}
                       {m.streaming && (
                         <span style={{ display: "inline-block", width: 6, height: 14, marginLeft: 4, background: "rgba(255,255,255,0.6)", borderRadius: 2, verticalAlign: "middle" }} />
                       )}
@@ -745,7 +772,7 @@ export default function ChatPage() {
         }}>
           <h3 style={{ margin: "0 0 16px 0", fontSize: 18, color: "var(--text-primary)" }}>Forward to...</h3>
           <div style={{ display: "flex", flexDirection: "column", gap: 8, maxHeight: 300, overflowY: "auto", paddingRight: 4 }}>
-            {CONVERSATIONS.filter(c => c.id !== activeId && !c.isAI).map(c => (
+            {conversations.filter(c => c.id !== activeId && !c.isAI).map(c => (
               <button key={c.id} onClick={() => confirmForward(c.id)} style={{
                 display: "flex", alignItems: "center", gap: 12, padding: "12px",
                 background: "var(--glass-elevated)", border: "1px solid var(--glass-elevated-border)",

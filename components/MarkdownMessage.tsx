@@ -44,7 +44,7 @@ export default function MarkdownMessage({ content }: Props) {
         h1: ({node, ...props}) => <h1 className="text-base font-bold mb-2 mt-4" {...props} />,
         h2: ({node, ...props}) => <h2 className="text-[15px] font-bold mb-2 mt-3" {...props} />,
         h3: ({node, ...props}) => <h3 className="text-[14px] font-bold mb-1 mt-2" {...props} />,
-        strong: ({node, ...props}) => <strong className="font-bold" style={{ color: 'var(--text-primary)' }} {...props} />,
+        strong: ({node, ...props}) => <strong className="font-bold" style={{ color: 'inherit' }} {...props} />,
         em: ({node, ...props}) => <em className="italic" {...props} />,
         blockquote: ({node, ...props}) => (
           <blockquote className="pl-3 my-2 border-l-2 italic" style={{ borderColor: 'var(--text-secondary)', color: 'var(--text-muted)' }} {...props} />
