@@ -91,7 +91,7 @@ export default function VideoDetailPage() {
               {video.coverUrl && !coverFailed ? (
                 <>
                   <img
-                    src={`/api/proxy-image?url=${encodeURIComponent(video.coverUrl || '')}`}
+                    src={`/api/proxy-image?id=${video.id}&url=${encodeURIComponent(video.coverUrl || '')}`}
                     alt={video.title}
                     referrerPolicy="no-referrer"
                     onError={() => setCoverFailed(true)}
