@@ -7,6 +7,7 @@ import { useState } from "react";
 import { LayoutDashboard, Video, Users, Lightbulb, Settings, Calendar, Layers, HelpCircle, MessageSquare } from "lucide-react";
 import SettingsModal from "@/components/SettingsModal";
 import MASLogo from "@/public/MAS-aistudiored.png";
+import { useData } from "@/components/DataContext";
 
 const NAV = [
   { href: "/",            label: "Overview",     icon: LayoutDashboard },
@@ -21,6 +22,7 @@ const EXTRA = [Calendar, Layers, HelpCircle];
 export default function Sidebar() {
   const pathname = usePathname();
   const [showSettings, setShowSettings] = useState(false);
+  const { currentUser } = useData();
 
   return (
     <>
@@ -96,11 +98,11 @@ export default function Sidebar() {
         backdropFilter: "blur(24px)", boxShadow: "var(--glass-shadow)",
       }}>
         <div style={{ width: 36, height: 36, borderRadius: "50%", background: "var(--btn-primary-bg)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14, fontWeight: 800, color: "#fff", flexShrink: 0 }}>
-          A
+          {currentUser ? currentUser.name[0].toUpperCase() : "A"}
         </div>
         <div style={{ display: "flex", flexDirection: "column", marginRight: 8 }}>
-          <span style={{ fontSize: 13, fontWeight: 700, color: "var(--text-primary)", lineHeight: 1.2 }}>Admin User</span>
-          <span style={{ fontSize: 10, color: "var(--text-muted)" }}>admin@mas.ai</span>
+          <span style={{ fontSize: 13, fontWeight: 700, color: "var(--text-primary)", lineHeight: 1.2 }}>{currentUser ? currentUser.name : "Admin User"}</span>
+          <span style={{ fontSize: 10, color: "var(--text-muted)" }}>{currentUser ? currentUser.email : "admin@mas.ai"}</span>
         </div>
         <div style={{ width: 1, height: 24, background: "var(--glass-border)", margin: "0 2px" }} />
         <button 
