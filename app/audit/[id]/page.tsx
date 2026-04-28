@@ -67,7 +67,7 @@ export default function VideoDetailPage() {
     const appIssueInfo  = video.appearanceIssue ? ` | Appearance Issue: ${video.appearanceIssue}` : "";
     const filmIssueInfo = video.filmingIssue    ? ` | Filming Issue: ${video.filmingIssue}`       : "";
     dispatchAgentPrompt(
-      `حلل الفيديو ده بالكامل واصلحه بناءً على بياناته: "${video.title}" — سكور ${video.score}/100${toneInfo}${moodInfo}${riskInfo}${energyInfo}${pullInfo}${soundInfo}${appInfo}${appIssueInfo}${filmInfo}${filmIssueInfo}${flagsInfo}. المشكلة: ${video.issue}. واديني: 1) اعادة كتابة الهوك 2) كابشن جديد أقل من 100 حرف 3) 3 هاشتاقات مناسبة 4) تقييم الصوت والموسيقى 5) تقييم المظهر والإضاءة بناءً على التحليل المحفوظ 6) توصيات زوايا الكاميرات الـ 3 للفيديو الجاي 7) ٣ تعديلات تحريرية تزيد المشاهدات.`
+      `??? ??????? ?? ??????? ?????? ????? ??? ???????: "${video.title}" - ???? ${video.score}/100${toneInfo}${moodInfo}${riskInfo}${energyInfo}${pullInfo}${soundInfo}${appInfo}${appIssueInfo}${filmInfo}${filmIssueInfo}${flagsInfo}. ???????: ${video.issue}. ??????: 1) ????? ????? ????? 2) ????? ???? ??? ?? 100 ??? 3) 3 ???????? ?????? 4) ????? ????? ????????? 5) ????? ?????? ???????? ????? ??? ??????? ??????? 6) ?????? ????? ????????? ??? 3 ??????? ????? 7) ? ??????? ??????? ???? ?????????.`
     );
     router.back();
   };
@@ -82,16 +82,16 @@ export default function VideoDetailPage() {
       </button>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-        {/* LEFT — Cover + stats */}
+        {/* LEFT - Cover + stats */}
         <div>
-          {/* Cover — 9:16 TikTok vertical */}
+          {/* Cover - 9:16 TikTok vertical */}
           <div className="flex justify-center mb-5">
             <div className="relative rounded-2xl overflow-hidden bg-black shadow-2xl"
               style={{ width: '260px', height: '462px' }}>
               {video.coverUrl && !coverFailed ? (
                 <>
                   <img
-                    src={video.coverUrl}
+                    src={`/api/proxy-image?url=${encodeURIComponent(video.coverUrl)}`}
                     alt={video.title}
                     referrerPolicy="no-referrer"
                     onError={() => setCoverFailed(true)}
@@ -148,12 +148,12 @@ export default function VideoDetailPage() {
           {video.videoUrl && (
             <a href={video.videoUrl} target="_blank" rel="noreferrer"
               className="btn-secondary w-full flex items-center justify-center gap-2 py-3 rounded-xl text-[13px] font-semibold">
-              <ExternalLink size={14} /> افتح على TikTok
+              <ExternalLink size={14} /> ???? ??? TikTok
             </a>
           )}
         </div>
 
-        {/* RIGHT — AI Analysis */}
+        {/* RIGHT - AI Analysis */}
         <div className="flex flex-col gap-5">
           <div>
             <h1 className="text-xl font-bold mb-1 leading-snug" style={{ color: 'var(--text-primary)' }}>{video.title}</h1>
@@ -189,11 +189,11 @@ export default function VideoDetailPage() {
               <h2 className="text-[13px] font-bold mb-4" style={{ color: 'var(--text-primary)' }}>Content DNA</h2>
               <div className="grid grid-cols-2 gap-3">
                 {[
-                  { label: "Tone", value: video.tone || "—" },
-                  { label: "Mood", value: video.mood || "—" },
-                  { label: "Retention Risk", value: video.retentionRisk || "—" },
-                  { label: "Duration", value: video.duration ? `${video.duration}s` : "—" },
-                  { label: "Growth Potential", value: video.growthPotential !== undefined ? `${video.growthPotential}/100` : "—" },
+                  { label: "Tone", value: video.tone || "-" },
+                  { label: "Mood", value: video.mood || "-" },
+                  { label: "Retention Risk", value: video.retentionRisk || "-" },
+                  { label: "Duration", value: video.duration ? `${video.duration}s` : "-" },
+                  { label: "Growth Potential", value: video.growthPotential !== undefined ? `${video.growthPotential}/100` : "-" },
                 ].map(({ label, value }) => (
                   <div key={label} className="glass-elevated rounded-xl p-3">
                     <div className="text-[10px] font-bold uppercase tracking-wide mb-1" style={{ color: 'var(--text-muted)' }}>{label}</div>
@@ -252,7 +252,7 @@ export default function VideoDetailPage() {
                 )}
                 {video.soundName && video.soundName !== "Unknown" && (
                   <span className="glass-elevated px-2 py-0.5 rounded-full text-[10px]" style={{ color: 'var(--text-muted)' }}>
-                    ♪ {video.soundName}
+                    ? {video.soundName}
                   </span>
                 )}
               </div>
@@ -261,7 +261,7 @@ export default function VideoDetailPage() {
               )}
               {video.soundSuggestion && (
                 <div className="glass-elevated rounded-xl p-2.5 mt-2">
-                  <span className="text-[10px] font-bold text-emerald-500 uppercase tracking-wide">✦ Fix  </span>
+                  <span className="text-[10px] font-bold text-emerald-500 uppercase tracking-wide">? Fix  </span>
                   <span className="text-[11px] leading-relaxed" style={{ color: 'var(--text-secondary)' }}>{video.soundSuggestion}</span>
                 </div>
               )}
@@ -289,7 +289,7 @@ export default function VideoDetailPage() {
                 </div>
                 {video.appearanceIssue ? (
                   <div className="glass-elevated rounded-xl p-2.5">
-                    <span className="text-[10px] font-bold text-amber-500 uppercase tracking-wide">⚠ Issue  </span>
+                    <span className="text-[10px] font-bold text-amber-500 uppercase tracking-wide">? Issue  </span>
                     <span className="text-[11px] leading-relaxed" style={{ color: 'var(--text-secondary)' }}>{video.appearanceIssue}</span>
                   </div>
                 ) : (
@@ -299,11 +299,11 @@ export default function VideoDetailPage() {
             ) : (
               <div className="text-center py-3">
                 <p className="text-[12px] mb-3" style={{ color: 'var(--text-muted)' }}>
-                  Visual analysis not available yet — run sync to score appearance from the cover image.
+                  Visual analysis not available yet - run sync to score appearance from the cover image.
                 </p>
                 <button
                   onClick={() => dispatchAgentPrompt(
-                    `بناءً على بيانات الفيديو "${video.title}" (Tone: ${video.tone || "?"}, Mood: ${video.mood || "?"}, Score: ${video.score}/100) — اديني توصيات المظهر العامة للفيديو الجاي: outfit مناسب للـ ${video.tone || "podcast"} content، إضاءة مقترحة (درجة حرارة + مكان الـ key light)، وخلفية مناسبة.`
+                    `????? ??? ?????? ??????? "${video.title}" (Tone: ${video.tone || "?"}, Mood: ${video.mood || "?"}, Score: ${video.score}/100) - ????? ?????? ?????? ?????? ??????? ?????: outfit ????? ??? ${video.tone || "podcast"} content? ????? ?????? (???? ????? + ???? ??? key light)? ?????? ??????.`
                   )}
                   className="btn-secondary px-4 py-2 rounded-xl text-[12px] font-semibold"
                 >
@@ -332,7 +332,7 @@ export default function VideoDetailPage() {
                 </div>
                 {video.filmingIssue ? (
                   <div className="glass-elevated rounded-xl p-2.5 mb-3">
-                    <span className="text-[10px] font-bold text-amber-500 uppercase tracking-wide">⚠ Issue  </span>
+                    <span className="text-[10px] font-bold text-amber-500 uppercase tracking-wide">? Issue  </span>
                     <span className="text-[11px] leading-relaxed" style={{ color: 'var(--text-secondary)' }}>{video.filmingIssue}</span>
                   </div>
                 ) : (
@@ -340,7 +340,7 @@ export default function VideoDetailPage() {
                 )}
                 <button
                   onClick={() => dispatchAgentPrompt(
-                    `اديني توصيات الكاميرا والإضاءة للفيديو "${video.title}" — Filming Score: ${video.filming}/100 | Issue: ${video.filmingIssue || "none"} | Appearance Issue: ${video.appearanceIssue || "none"} | Tone: ${video.tone || "?"} | Mood: ${video.mood || "?"}`
+                    `????? ?????? ???????? ???????? ??????? "${video.title}" - Filming Score: ${video.filming}/100 | Issue: ${video.filmingIssue || "none"} | Appearance Issue: ${video.appearanceIssue || "none"} | Tone: ${video.tone || "?"} | Mood: ${video.mood || "?"}`
                   )}
                   className="btn-secondary px-4 py-2 rounded-xl text-[12px] font-semibold"
                 >
@@ -350,11 +350,11 @@ export default function VideoDetailPage() {
             ) : (
               <div className="text-center py-3">
                 <p className="text-[12px] mb-3" style={{ color: 'var(--text-muted)' }}>
-                  Visual analysis not available yet — run sync to score filming from the cover image.
+                  Visual analysis not available yet - run sync to score filming from the cover image.
                 </p>
                 <button
                   onClick={() => dispatchAgentPrompt(
-                    `اديني توصيات عامة للكاميرا والإضاءة للفيديو "${video.title}" (Tone: ${video.tone || "?"}, Mood: ${video.mood || "?"}, Score: ${video.score}/100) — كاميرا مقترحة، زاوية تصوير، إضاءة (درجة حرارة + مكان الـ key light)، وأي إعداد تقني مهم.`
+                    `????? ?????? ???? ???????? ???????? ??????? "${video.title}" (Tone: ${video.tone || "?"}, Mood: ${video.mood || "?"}, Score: ${video.score}/100) - ?????? ??????? ????? ?????? ????? (???? ????? + ???? ??? key light)? ??? ????? ???? ???.`
                   )}
                   className="btn-secondary px-4 py-2 rounded-xl text-[12px] font-semibold"
                 >
@@ -380,13 +380,13 @@ export default function VideoDetailPage() {
 
           {/* Issue */}
           <div className="glass-panel rounded-2xl p-5">
-            <div className="text-[10px] font-bold text-red-500 uppercase tracking-widest mb-3">⚠ المشكلة الرئيسية</div>
+            <div className="text-[10px] font-bold text-red-500 uppercase tracking-widest mb-3">? ??????? ????????</div>
             <p className="text-[13px] leading-relaxed" style={{ color: 'var(--text-secondary)' }}>{video.issue}</p>
           </div>
 
           {/* Suggestion */}
           <div className="glass-panel rounded-2xl p-5">
-            <div className="text-[10px] font-bold text-emerald-500 uppercase tracking-widest mb-3">✦ الحل المقترح</div>
+            <div className="text-[10px] font-bold text-emerald-500 uppercase tracking-widest mb-3">? ???? ???????</div>
             <p className="text-[13px] leading-relaxed" style={{ color: 'var(--text-secondary)' }}>{video.suggestion}</p>
           </div>
 
@@ -407,7 +407,7 @@ export default function VideoDetailPage() {
           {/* Fix button */}
           <button onClick={handleFix}
             className="btn-primary flex items-center justify-center gap-2 py-3.5 rounded-xl text-[14px] font-semibold mt-auto">
-            <Zap size={16} /> صلح الفيديو ده مع الأيجنت
+            <Zap size={16} /> ??? ??????? ?? ?? ???????
           </button>
         </div>
       </div>
