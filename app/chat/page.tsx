@@ -214,7 +214,10 @@ function useSarieChat() {
       });
     } catch (e: any) {
       if (e?.name === "AbortError") return;
-      setMessages(p => p.filter(m => !m.streaming));
+      setMessages(p => {
+        const u = p.filter(m => !m.streaming);
+        return [...u, { role: "assistant", content: "⚠️ Sorry, the AI model is experiencing extremely high demand right now. Please try again in a few seconds.", ts: now() }];
+      });
     } finally {
       setStreaming(false);
     }
