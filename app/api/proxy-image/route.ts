@@ -15,7 +15,7 @@ export async function GET(request: NextRequest) {
     try {
       const cached = await redis.get<string>(`cover:${videoId}`);
       if (cached) {
-        // cached is "data:<mime>;base64,<data>" - extract the binary
+        // cached is "data:<mime>;base64,<data>" — extract the binary
         const match = cached.match(/^data:(image\/\w+);base64,(.+)$/);
         if (match) {
           const buffer = Buffer.from(match[2], "base64");
@@ -51,7 +51,7 @@ export async function GET(request: NextRequest) {
         // Cache to KV for future use (so it survives URL expiration)
         if (videoId) {
           const b64 = `data:${contentType};base64,${Buffer.from(buffer).toString("base64")}`;
-          // Fire and forget - don't block the response
+          // Fire and forget — don't block the response
           redis.set(`cover:${videoId}`, b64).catch(() => {});
         }
 
