@@ -53,14 +53,13 @@ async function analyzeWithGemini(filePath: string, videoData: any) {
   console.log("Uploading to Gemini File API...");
   const uploadResult = await ai.files.upload({
     file: filePath,
-    mimeType: "video/mp4",
   });
 
-  let file = await ai.files.get({ name: uploadResult.name });
+  let file = await ai.files.get({ name: uploadResult.name! });
   while (file.state === "PROCESSING") {
     console.log("Waiting for video processing...");
     await delay(3000);
-    file = await ai.files.get({ name: uploadResult.name });
+    file = await ai.files.get({ name: uploadResult.name! });
   }
 
   if (file.state === "FAILED") {
@@ -143,7 +142,7 @@ async function runBatch() {
     
     while (retries > 0 && !success) {
       try {
-        const mp4Url = await getMp4FromTikWM(webUrl);
+        const mp4Url = await getMp4FromTikWM(webUrl as string);
         if (!mp4Url) {
           console.log("Could not resolve MP4. Skipping.");
           break;
