@@ -2,22 +2,32 @@
 
 import { useState, useEffect } from 'react';
 import Image from 'next/image';
-import { Lock, ShieldCheck, Cpu, Users, ArrowRight, AlertCircle } from 'lucide-react';
+import { Lock, ShieldCheck, Cpu, Users, ArrowRight, AlertCircle, Mail, Key } from 'lucide-react';
 import MasLogo from '@/public/MAS-aistudiored.png';
+import { authenticateUser, TeamMember } from '@/lib/auth';
 
-const PASS_KEY = 'MasAi@Yassin';
-const SESSION_KEY = 'mas_ai_authenticated';
+const SESSION_KEY = 'mas_ai_authenticated_user';
 
 export default function PasswordGuard({ children }: { children: React.ReactNode }) {
   const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
+  const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState(false);
   const [isMounting, setIsMounting] = useState(true);
 
   useEffect(() => {
-    const auth = sessionStorage.getItem(SESSION_KEY);
-    if (auth === 'true') {
-      setIsAuthenticated(true);
+    const authUserStr = sessionStorage.getItem(SESSION_KEY);
+    if (authUserStr) {
+      try {
+        const user = JSON.parse(authUserStr);
+        if (user && user.id) {
+          setIsAuthenticated(true);
+        } else {
+          setIsAuthenticated(false);
+        }
+      } catch {
+        setIsAuthenticated(false);
+      }
     } else {
       setIsAuthenticated(false);
     }
@@ -26,8 +36,11 @@ export default function PasswordGuard({ children }: { children: React.ReactNode 
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (password === PASS_KEY) {
-      sessionStorage.setItem(SESSION_KEY, 'true');
+    const user = authenticateUser(email, password);
+    if (user) {
+      sessionStorage.setItem(SESSION_KEY, JSON.stringify(user));
+      // Dispatch an event so other components (like DataContext) can pick up the login immediately
+      window.dispatchEvent(new Event("mas_user_login"));
       setIsAuthenticated(true);
       setError(false);
     } else {
@@ -67,9 +80,9 @@ export default function PasswordGuard({ children }: { children: React.ReactNode 
           
           <div className="flex flex-col items-center text-center mb-8">
             <div className="w-12 h-12 rounded-2xl bg-zinc-50 border border-zinc-100 flex items-center justify-center mb-4">
-              <Lock size={20} className="text-zinc-900" />
+              <Users size={20} className="text-zinc-900" />
             </div>
-            <h1 className="text-xl font-bold text-zinc-900 mb-2 tracking-tight">Admin Authentication</h1>
+            <h1 className="text-xl font-bold text-zinc-900 mb-2 tracking-tight">Team Login</h1>
             <p className="text-[12px] text-zinc-500 leading-relaxed max-w-[240px]">
               Secure access to Mas AI Studio. Authorized usage only.
             </p>
@@ -77,6 +90,29 @@ export default function PasswordGuard({ children }: { children: React.ReactNode 
 
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="relative group">
+              <div className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400">
+                <Mail size={16} />
+              </div>
+              <input
+                type="email"
+                value={email}
+                onChange={(e) => {
+                  setEmail(e.target.value);
+                  if (error) setError(false);
+                }}
+                placeholder="Email Address"
+                className={`w-full h-12 bg-zinc-50 rounded-xl pl-10 pr-4 text-[13px] text-zinc-900 border transition-all outline-none placeholder:text-zinc-400 focus:bg-white ${
+                  error ? 'border-red-500/50 focus:border-red-500' : 'border-zinc-200 focus:border-zinc-300'
+                }`}
+                autoFocus
+                required
+              />
+            </div>
+
+            <div className="relative group">
+              <div className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400">
+                <Key size={16} />
+              </div>
               <input
                 type="password"
                 value={password}
@@ -84,11 +120,10 @@ export default function PasswordGuard({ children }: { children: React.ReactNode 
                   setPassword(e.target.value);
                   if (error) setError(false);
                 }}
-                placeholder="Enter Admin Password"
-                className={`w-full h-12 bg-zinc-50 rounded-xl px-4 text-[13px] text-zinc-900 border transition-all outline-none placeholder:text-zinc-400 focus:bg-white ${
+                placeholder="Password"
+                className={`w-full h-12 bg-zinc-50 rounded-xl pl-10 pr-4 text-[13px] text-zinc-900 border transition-all outline-none placeholder:text-zinc-400 focus:bg-white ${
                   error ? 'border-red-500/50 focus:border-red-500' : 'border-zinc-200 focus:border-zinc-300'
                 }`}
-                autoFocus
                 required
               />
               {error && (
@@ -101,9 +136,9 @@ export default function PasswordGuard({ children }: { children: React.ReactNode 
             
             <button
               type="submit"
-              className="w-full h-12 bg-zinc-900 text-white rounded-xl text-[13px] font-bold flex items-center justify-center gap-2 transition-all hover:bg-black active:scale-[0.98]"
+              className="w-full h-12 bg-zinc-900 text-white rounded-xl text-[13px] font-bold flex items-center justify-center gap-2 transition-all hover:bg-black active:scale-[0.98] mt-2"
             >
-              Unlock Studio
+              Sign In
               <ArrowRight size={14} />
             </button>
           </form>

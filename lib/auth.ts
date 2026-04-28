@@ -1,0 +1,34 @@
+export interface TeamMember {
+  id: string;
+  email: string;
+  password?: string; // Optional for security when passing around
+  name: string;
+  role: string;
+  bio: string;
+}
+
+export const TEAM_MEMBERS: TeamMember[] = [
+  {
+    id: "yassin",
+    email: "yassin@mas.ai",
+    password: "Yassin@4289",
+    name: "Yassin Gaml",
+    role: "Ai Specialist & Developer",
+    bio: "The developer of the dashboard, Sarie, and everything technical."
+  },
+  {
+    id: "dina",
+    email: "dina@mas.ai",
+    password: "Dina@1984",
+    name: "Dina Amer",
+    role: "CEO & Content Creator",
+    bio: "The podcaster of Rasayel podcast and CEO."
+  }
+];
+
+export function authenticateUser(email: string, password: string): Omit<TeamMember, 'password'> | null {
+  const user = TEAM_MEMBERS.find(u => u.email.toLowerCase() === email.toLowerCase() && u.password === password);
+  if (!user) return null;
+  const { password: _, ...userWithoutPassword } = user;
+  return userWithoutPassword;
+}

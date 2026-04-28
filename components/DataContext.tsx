@@ -2,6 +2,7 @@
 
 import { createContext, useContext, useState, useEffect, useCallback } from "react";
 import { mockCompetitors, mockTrends, mockGenerations } from "@/lib/mockData";
+import type { TeamMember } from "@/lib/auth";
 
 export interface GlobalData {
   account: any;
@@ -13,6 +14,7 @@ export interface GlobalData {
   isLoading: boolean;
   syncedAt: string | null;
   error: string | null;
+  currentUser: Omit<TeamMember, 'password'> | null;
   refreshData: (handle: string) => Promise<void>;
   clearData: () => void;
   scrapeCompetitor: (handle: string) => Promise<void>;
@@ -38,12 +40,27 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
   const [syncedAt, setSyncedAt] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [scrapingHandles, setScrapingHandles] = useState<Set<string>>(new Set());
+  const [currentUser, setCurrentUser] = useState<Omit<TeamMember, 'password'> | null>(null);
 
-  // On mount: load account data AND competitor data from KV
+  const loadUser = useCallback(() => {
+    try {
+      const userStr = sessionStorage.getItem('mas_ai_authenticated_user');
+      if (userStr) {
+        setCurrentUser(JSON.parse(userStr));
+      }
+    } catch {}
+  }, []);
+
+  // On mount: load account data AND competitor data from KV, and load user
   useEffect(() => {
     fetchFromKV();
     fetchCompetitorsFromKV();
-  }, []);
+    loadUser();
+
+    // Listen for login events
+    window.addEventListener("mas_user_login", loadUser);
+    return () => window.removeEventListener("mas_user_login", loadUser);
+  }, [loadUser]);
 
   const fetchFromKV = async () => {
     setIsLoading(true);
@@ -137,7 +154,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
   return (
     <DataContext.Provider value={{
       account, videos, competitors, ideas, trends, generations,
-      isLoading, syncedAt, error, refreshData, clearData,
+      isLoading, syncedAt, error, currentUser, refreshData, clearData,
       scrapeCompetitor, scrapingHandles,
     }}>
       {children}
