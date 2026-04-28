@@ -258,6 +258,8 @@ function ChatPageInner() {
   const sarie = useSarieChat();
   const searchParams = useSearchParams();
   const promptHandled = useRef(false);
+  const sarieSendRef = useRef(sarie.send);
+  sarieSendRef.current = sarie.send;
 
   // Auto-send prompt from URL (e.g. from "Fix with AI" button on audit page)
   useEffect(() => {
@@ -266,7 +268,7 @@ function ChatPageInner() {
       promptHandled.current = true;
       setActiveId("sarie");
       // Small delay to ensure Sarie chat is ready
-      setTimeout(() => sarie.send(prompt), 300);
+      setTimeout(() => sarieSendRef.current(prompt), 300);
       // Clean the URL without triggering a re-render
       window.history.replaceState({}, "", "/chat");
     }
