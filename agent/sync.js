@@ -1,5 +1,5 @@
 /**
- * TikTok AI Agent — Standalone Sync Script
+ * TikTok AI Agent - Standalone Sync Script
  *
  * Downloads TikTok videos via Apify, extracts 10 frames (hook-weighted),
  * sends frames to Claude Vision for visual/content analysis,
@@ -12,50 +12,50 @@
 const { ApifyClient } = require("apify-client");
 const Anthropic = require("@anthropic-ai/sdk").default;
 
-// ─── CONFIG ────────────────────────────────────────────────────────────────
+// ??? CONFIG ????????????????????????????????????????????????????????????????
 const TIKTOK_HANDLE    = "rasayel_podcast";
 const APIFY_TOKEN      = "apify_api_" + "g6bQyWvIy8xp0jseCouNiHrVh0pZ9A3kJuHg";
 const KV_REST_API_URL  = "https://sure-shrew-104058.upstash.io";
 const KV_REST_API_TOKEN= "gQAAAAAAAZZ6AAIgcDE4OGQ5NzI3Y2NlMTI0MTk0OTA3NjhmMjZkY2RiYmRhOA";
 const ANTHROPIC_API_KEY= "sk-ant-api03-" + "Ui8LaIXSljt7OpB-pzMuqznc4wRgEjXaurj_VPmzVWmIbLXJ_0KLhX-lNLUhy8f5uv1pZd_iFxie6HlAKumwfQ-" + "M7FpwQAA";
 const OPENAI_API_KEY   = "sk-proj-" + "pOetJEZbMI5mIH0wpcBcrtp9Ad9KwIFn4BAbsHYY7fzgfJ0VO9hMixk4eLDuiKSfrvbpI87x3jT3BlbkFJES6w3yi3VxuYKFbiNfb_OIqdhU8yQ3dpc62IkvKHHS1-xOWrawJK8DU3tO-FtHEvvFeYUdZg0A";
-// ───────────────────────────────────────────────────────────────────────────
+// ???????????????????????????????????????????????????????????????????????????
 
 const anthropic = new Anthropic({ apiKey: ANTHROPIC_API_KEY });
 
-// ─── SARIE'S SHARED MEMORY (both Claude-brain and GPT-ears use this) ────────
+// ??? SARIE'S SHARED MEMORY (both Claude-brain and GPT-ears use this) ????????
 // This is Sarie's permanent identity and client knowledge.
 // Claude (brain/eyes) and GPT (ears) are TWO PARTS of the SAME agent.
 const SARIE_MEMORY = `=== SARIE'S PERMANENT IDENTITY ===
-You are a part of Sarie (ساري), the AI agent at Mas AI Studio.
+You are a part of Sarie (????), the AI agent at Mas AI Studio.
 Sarie is ONE agent with TWO senses:
-- Claude is Sarie's BRAIN and EYES — analyzes video frames, content strategy, visuals, and makes final decisions
-- GPT-4o is Sarie's EARS — listens to the actual audio track and reports what it hears
+- Claude is Sarie's BRAIN and EYES - analyzes video frames, content strategy, visuals, and makes final decisions
+- GPT-4o is Sarie's EARS - listens to the actual audio track and reports what it hears
 Both share the same memory, the same client knowledge, and the same strategic goals.
 You work TOGETHER. Your analyses are merged into one unified verdict.
 
 === PERMANENT CLIENT MEMORY (never forget this) ===
-Client: Rasayel Podcast — بودكاست رسائل (@rasayel_podcast)
-Niche: Arabic podcast — conversations, storytelling, guest highlights
+Client: Rasayel Podcast - ??????? ????? (@rasayel_podcast)
+Niche: Arabic podcast - conversations, storytelling, guest highlights
 Market: Egypt & Arab world
-Studio: Mas Studio — professional 3-camera setup with dedicated audio gear
+Studio: Mas Studio - professional 3-camera setup with dedicated audio gear
 Content Types: Podcast clips, guest highlights, behind-the-scenes, conversation excerpts
-Target Audience: Egyptians & Arabs 18–35 (Gen Z & Millennials)
+Target Audience: Egyptians & Arabs 18-35 (Gen Z & Millennials)
 Goals: Grow TikTok presence, increase episode reach, convert views to podcast listeners
 Known Strengths: High-quality studio production, authentic conversations, strong guests
 Known Weaknesses: TikTok clip hooks need improvement, hashtag strategy underdeveloped, CTAs need work
-Agency: Mas Agency — managed by Yassin Gaml (the developer who built Sarie)
+Agency: Mas Agency - managed by Yassin Gaml (the developer who built Sarie)
 
 === AUDIO STANDARDS FOR THIS CLIENT ===
-- Voice clarity is THE #1 priority — this is a PODCAST, speech must be crystal clear
+- Voice clarity is THE #1 priority - this is a PODCAST, speech must be crystal clear
 - Background music should be subtle lofi/ambient, NEVER overpowering conversation
 - Studio recordings should sound clean and professional (they have proper audio gear)
 - Arabic speech clarity is especially important for the Egyptian audience
-- Emotional tone in voice matters — podcast clips that convey emotion get more shares
+- Emotional tone in voice matters - podcast clips that convey emotion get more shares
 - Microphone quality should be consistent across episodes
 - Sound balance: voice at ~85% volume, music at ~15% maximum`;
 
-// ─── SHARED HELPERS ─────────────────────────────────────────────────────────
+// ??? SHARED HELPERS ?????????????????????????????????????????????????????????
 // Ensure ffmpeg is in PATH (WinGet installs to a links dir not in node's inherited env)
 const _homedir = require("os").homedir();
 const _wingetLinks = require("path").join(_homedir, "AppData", "Local", "Microsoft", "WinGet", "Links");
@@ -85,7 +85,7 @@ async function downloadVideoToTemp(videoUrl, fallbackDuration = 30) {
   const tmpId     = `${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
   const videoPath = pathMod.join(os.tmpdir(), `tiktok_${tmpId}.mp4`);
   try {
-    process.stdout.write("    ↓ Downloading video... ");
+    process.stdout.write("    ? Downloading video... ");
 
     const isTikTokPage = videoUrl.includes("tiktok.com/") && videoUrl.includes("/video/");
 
@@ -109,7 +109,7 @@ async function downloadVideoToTemp(videoUrl, fallbackDuration = 30) {
         }
       }
     } else {
-      // Direct CDN URL — just fetch
+      // Direct CDN URL - just fetch
       const res = await fetch(videoUrl, {
         signal: AbortSignal.timeout(60000),
         headers: { "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36" }
@@ -137,7 +137,7 @@ async function downloadVideoToTemp(videoUrl, fallbackDuration = 30) {
     } catch {}
     return { videoPath, realDuration: d, cleanup: () => { try { fs.unlinkSync(videoPath); } catch {} } };
   } catch (err) {
-    console.warn(`    ⚠ Download failed: ${err.message}`);
+    console.warn(`    ? Download failed: ${err.message}`);
     try { fs.unlinkSync(videoPath); } catch {}
     return null;
   }
@@ -167,7 +167,7 @@ function extractFramesFromLocalFile(videoPath, duration) {
         );
         if (fs.existsSync(fp)) framePaths.push(fp);
       } catch (err) {
-        if (i === 0) console.warn(`\n    ⚠ ffmpeg frame error: ${(err.stderr || err.message || "").substring(0, 150)}`);
+        if (i === 0) console.warn(`\n    ? ffmpeg frame error: ${(err.stderr || err.message || "").substring(0, 150)}`);
       }
     }
     if (framePaths.length === 0) return null;
@@ -177,7 +177,7 @@ function extractFramesFromLocalFile(videoPath, duration) {
   })();
 }
 
-// ─── GPT-4o AUDIO ANALYSIS ─────────────────────────────────────────────────
+// ??? GPT-4o AUDIO ANALYSIS ?????????????????????????????????????????????????
 // Extract audio track from video, send to GPT-4o-audio-preview for real listening
 async function extractAudioFromVideo(videoPath) {
   const tmpId = `${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
@@ -204,11 +204,11 @@ async function analyzeAudioWithGPT(audioBase64, duration, caption, videoStats) {
     messages: [
       {
         role: "system",
-        content: `You are Sarie's EARS — the audio analysis module of the Sarie AI agent at Mas AI Studio.
+        content: `You are Sarie's EARS - the audio analysis module of the Sarie AI agent at Mas AI Studio.
 
 ${SARIE_MEMORY}
 
-YOUR ROLE: You LISTEN to the audio and report exactly what you hear. Your findings will be sent directly to Sarie's BRAIN (Claude) who will combine your audio analysis with visual frame analysis to create a unified video verdict. Be precise — Claude is counting on you for audio truth.
+YOUR ROLE: You LISTEN to the audio and report exactly what you hear. Your findings will be sent directly to Sarie's BRAIN (Claude) who will combine your audio analysis with visual frame analysis to create a unified video verdict. Be precise - Claude is counting on you for audio truth.
 
 Return ONLY raw JSON, no markdown.`
       },
@@ -220,7 +220,7 @@ Return ONLY raw JSON, no markdown.`
 Caption: "${(caption || "").substring(0, 300)}"
 Performance: ${(stats.views || 0).toLocaleString()} views | ${(stats.likes || 0).toLocaleString()} likes | ${stats.comments || 0} comments | ${stats.shares || 0} shares
 Engagement: ${stats.engRate ? stats.engRate.toFixed(2) : "?"}%
-Metadata Sound: ${stats.soundLabel || "Unknown"} — "${stats.musicName || "?"}"
+Metadata Sound: ${stats.soundLabel || "Unknown"} - "${stats.musicName || "?"}"
 
 Listen carefully and correlate what you hear with the engagement data. Return ONLY this JSON:
 {
@@ -230,13 +230,13 @@ Listen carefully and correlate what you hear with the engagement data. Return ON
   "musicEnergy": <0-100: energy level of the music, 0 if none>,
   "volumeBalance": <"voice_dominant"|"music_dominant"|"balanced"|"voice_only"|"music_only">,
   "backgroundNoise": <"clean"|"slight_noise"|"noisy">,
-  "audioQuality": <0-100: overall production quality — judge against Mas Studio standards>,
+  "audioQuality": <0-100: overall production quality - judge against Mas Studio standards>,
   "speechPace": <"fast"|"moderate"|"slow">,
   "emotionalTone": <"energetic"|"calm"|"serious"|"funny"|"emotional"|"intense"|"neutral">,
   "hookAudioStrength": <0-100: does the FIRST 3 seconds of audio grab attention? Voice energy, opening words, music drop>,
   "audioEngagementMatch": <"matches"|"underperforming"|"overperforming": does the audio quality match the engagement numbers?>,
   "audioIssue": <one specific audio problem you heard (considering this is a podcast studio), or null if audio is good>,
-  "audioSuggestion": <one specific fix for the issue — practical, actionable, or null>,
+  "audioSuggestion": <one specific fix for the issue - practical, actionable, or null>,
   "audioSummary": <2 sentences: what you heard + how the audio connects to the video's performance>
 }` }
         ]
@@ -299,73 +299,73 @@ async function analyzeVideo(text, hashtags, duration, musicMeta, views, likes, c
     "Ending (85%)", "CTA zone (93%)"
   ];
 
-  const systemPrompt = `You are Sarie's BRAIN and EYES — the visual analysis and strategy module of the Sarie AI agent.
+  const systemPrompt = `You are Sarie's BRAIN and EYES - the visual analysis and strategy module of the Sarie AI agent.
 
 ${SARIE_MEMORY}
 
 YOUR ROLE: You SEE the video frames and analyze content, visuals, appearance, and filming.
-Your EARS (GPT-4o) have already listened to the audio — their findings are included below.
+Your EARS (GPT-4o) have already listened to the audio - their findings are included below.
 Combine what you SEE with what your ears HEARD to create a unified, holistic analysis.
 
-IMPORTANT — VIDEO FRAME ANALYSIS RULES:
+IMPORTANT - VIDEO FRAME ANALYSIS RULES:
 - You will receive MULTIPLE SEQUENTIAL FRAMES extracted from a single TikTok video at different timestamps.
-- These are NOT separate images — they are frames from ONE continuous video. Analyze them TOGETHER as a whole video.
-- Black frames are NORMAL — they indicate transitions between cuts/segments. Do NOT penalize for them.
+- These are NOT separate images - they are frames from ONE continuous video. Analyze them TOGETHER as a whole video.
+- Black frames are NORMAL - they indicate transitions between cuts/segments. Do NOT penalize for them.
 - Blurred frames near the start may be the animated cover/thumbnail transition. This is NORMAL on TikTok. Do NOT flag as an error.
 - Motion blur in action shots is NORMAL for video content. Do NOT flag as quality issues.
 - Focus on the OVERALL visual quality across all frames, not individual frame issues.
 - Use the hook frames (first 4) to judge scroll-stopping power.
 - Use the mid frames to judge pacing, energy, and visual consistency.
 - Use the end frames to judge CTA presence and emotional payoff.
-- Judge appearance and filming quality from the CLEAREST, most representative frames — ignore transitional/black frames.
+- Judge appearance and filming quality from the CLEAREST, most representative frames - ignore transitional/black frames.
 
 Return ONLY a raw JSON object:
 {
-  "hook": <0-100: scroll-stopping power of the opening — judged from the first 4 hook frames + caption. Does the visual opening grab attention?>,
-  "pacing": <0-100: visual pacing judged across ALL frames — are there enough cut changes? Does energy shift? Short emotional clips (15-30s) score higher>,
-  "cta": <0-100: does the ending include a CTA? Check last 2 frames + caption for 'شوف الحلقة' / 'تابعنا' / text overlay prompts>,
+  "hook": <0-100: scroll-stopping power of the opening - judged from the first 4 hook frames + caption. Does the visual opening grab attention?>,
+  "pacing": <0-100: visual pacing judged across ALL frames - are there enough cut changes? Does energy shift? Short emotional clips (15-30s) score higher>,
+  "cta": <0-100: does the ending include a CTA? Check last 2 frames + caption for '??? ??????' / '??????' / text overlay prompts>,
   "tone": <"Emotional / Shareable"|"Controversial / Discussion"|"Entertaining / Likeable"|"Flat / Boring"|"Informative / Valuable"|"Neutral">,
   "mood": <"Energetic"|"Upbeat"|"Serious/Focus"|"Casual"|"Emotional"|"Neutral">,
-  "appearance": <0-100: outfit color contrast vs background, grooming, visual polish — from the clearest person-visible frames>,
+  "appearance": <0-100: outfit color contrast vs background, grooming, visual polish - from the clearest person-visible frames>,
   "filming": <0-100: lighting quality, color temperature, shadow control, camera angles/variety across frames>,
   "appearanceIssue": <one specific outfit/makeup/background problem seen across frames, or null if looks good>,
-  "filmingIssue": <one specific lighting/camera/framing problem — include Kelvin temp if relevant, or null if looks good>,
-  "issue": <the single most impactful content problem — specific, actionable, in English>,
+  "filmingIssue": <one specific lighting/camera/framing problem - include Kelvin temp if relevant, or null if looks good>,
+  "issue": <the single most impactful content problem - specific, actionable, in English>,
   "suggestion": <one specific fix for the main issue above, in English>,
-  "visualFlow": <brief description of the visual story: what happens from hook→mid→end based on frames>,
+  "visualFlow": <brief description of the visual story: what happens from hook?mid?end based on frames>,
   "cutCount": <estimated number of distinct camera angles/scenes visible across frames>,
-  "analysisReport": <2-3 sentences summarizing Sarie's full verdict on this video — what works, what's broken, and the #1 priority fix — written as Sarie's memorized opinion she can reference later>
+  "analysisReport": <2-3 sentences summarizing Sarie's full verdict on this video - what works, what's broken, and the #1 priority fix - written as Sarie's memorized opinion she can reference later>
 }`;
 
   let frameContext;
   if (hasVideoFrames) {
     frameContext = `You are seeing ${videoFrames.length} sequential frames extracted from a ${duration}s TikTok video.
 Frame positions: ${videoFrames.map((_, i) => frameLabels[i] || `Frame ${i+1}`).join(", ")}.
-Analyze them TOGETHER as one continuous video — black/blurred frames are normal transitions, NOT errors.`;
+Analyze them TOGETHER as one continuous video - black/blurred frames are normal transitions, NOT errors.`;
   } else if (coverImg) {
     frameContext = `Only the cover thumbnail is available (no video frames). Score visual quality from this single image, but note limited visual data.`;
   } else {
-    frameContext = `No visual data available — score appearance and filming as null.`;
+    frameContext = `No visual data available - score appearance and filming as null.`;
   }
 
   // Build audio context from GPT analysis
   let audioContext = "";
   if (audioAnalysis) {
-    audioContext = `\n=== AUDIO ANALYSIS (heard by GPT-4o — real listening, not metadata) ===
+    audioContext = `\n=== AUDIO ANALYSIS (heard by GPT-4o - real listening, not metadata) ===
 Voice Clarity: ${audioAnalysis.voiceClarity}/100 | Speech Pace: ${audioAnalysis.speechPace || "?"}
 Music Present: ${audioAnalysis.musicPresent ? "Yes" : "No"} | Music Type: ${audioAnalysis.musicType || "none"} | Music Energy: ${audioAnalysis.musicEnergy || 0}/100
 Volume Balance: ${audioAnalysis.volumeBalance || "?"} | Background Noise: ${audioAnalysis.backgroundNoise || "?"}
 Audio Production Quality: ${audioAnalysis.audioQuality || "?"}/100 | Emotional Tone: ${audioAnalysis.emotionalTone || "?"}
 Audio Issue: ${audioAnalysis.audioIssue || "None"}
-GPT's Audio Summary: ${audioAnalysis.audioSummary || "—"}
+GPT's Audio Summary: ${audioAnalysis.audioSummary || "-"}
 Use this audio data to inform your tone, mood, and overall analysis. Factor audio quality into your analysisReport.\n`;
   } else {
-    audioContext = "\n(No audio analysis available — GPT could not listen to this video's audio.)\n";
+    audioContext = "\n(No audio analysis available - GPT could not listen to this video's audio.)\n";
   }
 
   const textContent = `Caption: "${(text || "No caption").substring(0, 400)}"
 Hashtags: ${hashtagStr || "None"}
-Duration: ${duration}s | Sound: ${soundLabel} — "${musicMeta?.musicName || "Unknown"}"
+Duration: ${duration}s | Sound: ${soundLabel} - "${musicMeta?.musicName || "Unknown"}"
 Views: ${views.toLocaleString()} | Likes: ${likes.toLocaleString()} | Comments: ${comments} | Shares: ${shares}
 Engagement: ${engRate}% | Share rate: ${shareRate}%
 ${audioContext}
@@ -427,8 +427,8 @@ async function kvSet(key, value) {
 }
 
 async function run() {
-  console.log(`\n🔍 Fetching live data for @${TIKTOK_HANDLE} via Apify...`);
-  console.log("   (Claude will watch every video — takes 3–6 minutes ☕)\n");
+  console.log(`\n?? Fetching live data for @${TIKTOK_HANDLE} via Apify...`);
+  console.log("   (Claude will watch every video - takes 3-6 minutes ?)\n");
 
   const client = new ApifyClient({ token: APIFY_TOKEN });
 
@@ -438,7 +438,7 @@ async function run() {
     downloadVideos: true,
   });
 
-  console.log("✅ Apify done. Starting Claude analysis...\n");
+  console.log("? Apify done. Starting Claude analysis...\n");
 
   const { items } = await client.dataset(apifyRun.defaultDatasetId).listItems();
 
@@ -467,7 +467,7 @@ async function run() {
     verified:         profile.verified  || false,
   };
 
-  // Engagement-based component — relative to account's own best video
+  // Engagement-based component - relative to account's own best video
   const maxViews    = Math.max(...videos.map(v => v.playCount    || 0), 1);
   const maxLikes    = Math.max(...videos.map(v => v.diggCount    || 0), 1);
   const maxComments = Math.max(...videos.map(v => v.commentCount || 0), 1);
@@ -500,9 +500,9 @@ async function run() {
     const hashCount  = (v.hashtags  || []).length;
     const duration   = v.videoMeta?.duration || 30;
 
-    // ─── DOWNLOAD + EXTRACT: one download → frames + audio in parallel ───
+    // ??? DOWNLOAD + EXTRACT: one download ? frames + audio in parallel ???
     const coverUrl_ = v.videoMeta?.coverUrl || v.videoMeta?.originalCoverUrl || "";
-    // Try multiple video URL sources — CDN download links first, web URL last
+    // Try multiple video URL sources - CDN download links first, web URL last
     const videoUrl_ = v.videoMeta?.downloadAddr || v.video?.downloadAddr || v.webVideoUrl || "";
     let videoFrames = null;
     let audioAnalysis = null;
@@ -512,42 +512,42 @@ async function run() {
       if (dl) {
         try {
           // Extract frames + audio from the SAME downloaded file (parallel)
-          process.stdout.write("    🎬 Extracting frames + audio... ");
+          process.stdout.write("    ?? Extracting frames + audio... ");
           const [frames, audioB64] = await Promise.all([
             extractFramesFromLocalFile(dl.videoPath, dl.realDuration),
             extractAudioFromVideo(dl.videoPath),
           ]);
           videoFrames = frames;
-          console.log(`✓ ${frames ? frames.length : 0} frames, audio: ${audioB64 ? "yes" : "no"}`);
+          console.log(`? ${frames ? frames.length : 0} frames, audio: ${audioB64 ? "yes" : "no"}`);
 
           // Send audio to GPT-4o for real listening analysis
           if (audioB64) {
-            process.stdout.write("    🎧 GPT-4o listening to audio... ");
+            process.stdout.write("    ?? GPT-4o listening to audio... ");
             audioAnalysis = await analyzeAudioWithGPT(audioB64, dl.realDuration, v.text, {
               views, likes, comments, shares, engRate,
               soundLabel: !v.musicMeta?.musicName ? "No Audio" : v.musicMeta?.musicOriginal ? "Original Sound" : "Trending Audio",
               musicName: v.musicMeta?.musicName || "",
             });
-            console.log(audioAnalysis ? "✓ done" : "⚠ failed");
+            console.log(audioAnalysis ? "? done" : "? failed");
           }
         } finally {
           dl.cleanup();
         }
       } else {
-        console.log("    ⚠ Download failed — falling back to cover thumbnail");
+        console.log("    ? Download failed - falling back to cover thumbnail");
       }
     }
 
-    // ─── SARIE: unified video + audio analysis (Claude sees frames + GPT's audio report) ───
+    // ??? SARIE: unified video + audio analysis (Claude sees frames + GPT's audio report) ???
     const analysisLabel = [
       videoFrames ? `${videoFrames.length} frames` : "cover thumbnail",
       audioAnalysis ? "+ audio" : "",
     ].filter(Boolean).join(" ");
-    process.stdout.write(`    🤖 Sarie analyzing ${analysisLabel}... `);
+    process.stdout.write(`    ?? Sarie analyzing ${analysisLabel}... `);
     const analysis = await analyzeVideo(v.text, v.hashtags, duration, v.musicMeta, views, likes, comments, shares, coverUrl_, videoFrames, audioAnalysis);
-    // ─────────────────────────────────────────────────────────────────────
+    // ?????????????????????????????????????????????????????????????????????
 
-    // ─── ENGAGEMENT METRICS (things Claude can't see or hear) ─────────────
+    // ??? ENGAGEMENT METRICS (things Claude can't see or hear) ?????????????
     const shareRatio   = views > 0 ? shares   / views : 0;
     const commentRatio = views > 0 ? comments / views : 0;
     const likeRatio    = views > 0 ? likes    / views : 0;
@@ -583,19 +583,19 @@ async function run() {
     if (hashCount < 3)                weaknessFlags.push("Few Hashtags");
     if (captionLen < 15)              weaknessFlags.push("Weak Caption");
     if (engRate < 2)                  weaknessFlags.push("Low Engagement");
-    // ─────────────────────────────────────────────────────────────────────
+    // ?????????????????????????????????????????????????????????????????????
 
-    // ─── SOUND (GPT-4o real listening + metadata + engagement) ─────────
+    // ??? SOUND (GPT-4o real listening + metadata + engagement) ?????????
     const musicOriginal = v.musicMeta?.musicOriginal === true;
     const musicName     = (v.musicMeta?.musicName    || "").trim();
     const musicAuthor   = (v.musicMeta?.musicAuthor  || "").trim();
     const soundType     = musicOriginal ? "Original Sound" : musicName ? "Trending Audio" : "No Audio";
-    const soundName     = musicName ? `${musicName}${musicAuthor ? " — " + musicAuthor : ""}` : "Unknown";
+    const soundName     = musicName ? `${musicName}${musicAuthor ? " - " + musicAuthor : ""}` : "Unknown";
 
     // Sound score: blend GPT's real hearing with metadata when available
     let sound;
     if (audioAnalysis && typeof audioAnalysis.audioQuality === "number") {
-      // GPT actually listened — 60% GPT quality + 40% metadata/engagement
+      // GPT actually listened - 60% GPT quality + 40% metadata/engagement
       let metaBase;
       if (!musicName)         metaBase = Math.max(25, Math.min(50, Math.round(28 + engRate)));
       else if (musicOriginal) metaBase = Math.max(40, Math.min(88, Math.round(48 + engRate * 4)));
@@ -614,36 +614,36 @@ async function run() {
       soundIssue      = `[Heard by GPT] ${audioAnalysis.audioIssue}`;
       soundSuggestion = audioAnalysis.audioSuggestion || "Consult Sarie in chat for specific audio recommendations.";
     } else if (audioAnalysis && !audioAnalysis.audioIssue) {
-      soundIssue      = `[Heard by GPT] Audio sounds good — ${audioAnalysis.audioSummary || "no issues detected."}`;
+      soundIssue      = `[Heard by GPT] Audio sounds good - ${audioAnalysis.audioSummary || "no issues detected."}`;
       soundSuggestion = "Audio quality is solid. Focus optimization efforts on visuals and content structure.";
     } else if (!musicName) {
-      soundIssue       = "No background audio detected — missing a key TikTok discoverability signal on the For You page.";
-      soundSuggestion  = "Add a soft lofi track from TikTok's Creator Tools library. Keep music at 10–15% volume relative to voice so speech stays clear.";
+      soundIssue       = "No background audio detected - missing a key TikTok discoverability signal on the For You page.";
+      soundSuggestion  = "Add a soft lofi track from TikTok's Creator Tools library. Keep music at 10-15% volume relative to voice so speech stays clear.";
       weaknessFlags.push("No Audio");
     } else if (musicOriginal && sound < 60) {
-      soundIssue       = "Using original sound but engagement is weak — original audio only works when the hook is exceptionally strong.";
+      soundIssue       = "Using original sound but engagement is weak - original audio only works when the hook is exceptionally strong.";
       soundSuggestion  = "Layer a low-volume trending background track under the original voice audio. Test a popular lofi or podcast instrumental.";
     } else if (!musicOriginal && sound < 65) {
-      soundIssue       = `Trending audio ("${musicName.substring(0, 45)}") is present but not lifting results — likely a mismatch with the content energy.`;
+      soundIssue       = `Trending audio ("${musicName.substring(0, 45)}") is present but not lifting results - likely a mismatch with the content energy.`;
       soundSuggestion  = "Ensure audio energy matches video mood. High-energy trending tracks on slow podcast clips create friction and hurt retention.";
     } else {
       soundIssue       = sound >= 75
-        ? `Sound strategy is working — "${musicName.substring(0, 45)}" fits the content well.`
+        ? `Sound strategy is working - "${musicName.substring(0, 45)}" fits the content well.`
         : "Sound is present but there's room to optimize for reach.";
-      soundSuggestion  = "Consider building a consistent audio identity — using the same lofi track across episodes creates recognizable branding.";
+      soundSuggestion  = "Consider building a consistent audio identity - using the same lofi track across episodes creates recognizable branding.";
     }
-    // ─────────────────────────────────────────────────────────────────────
+    // ?????????????????????????????????????????????????????????????????????
 
-    // ─── CAPTION & HASHTAG SCORES (text-based) ───────────────────────────
+    // ??? CAPTION & HASHTAG SCORES (text-based) ???????????????????????????
     const captionScore = captionLen > 15 && captionLen < 180
       ? Math.max(40, Math.min(95, Math.round(50 + (captionLen / 180) * 30 + (hashCount >= 3 ? 15 : 0))))
       : Math.max(10, Math.min(35, Math.round(captionLen / 5)));
     const hashtagScore = hashCount >= 3 && hashCount <= 8
       ? Math.max(50, Math.min(95, Math.round(55 + hashCount * 5)))
       : Math.max(10, Math.min(45, Math.round(hashCount * 12)));
-    // ─────────────────────────────────────────────────────────────────────
+    // ?????????????????????????????????????????????????????????????????????
 
-    // ─── OVERALL SCORE: 40% reach performance + 60% Claude quality ───────
+    // ??? OVERALL SCORE: 40% reach performance + 60% Claude quality ???????
     const engScore   = calcEngScore(v);
     const claudeNums = [analysis?.hook, analysis?.pacing, analysis?.cta, analysis?.appearance, analysis?.filming]
       .filter(s => typeof s === "number" && !isNaN(s));
@@ -653,7 +653,7 @@ async function run() {
     const totalScore = claudeAvg !== null
       ? Math.max(10, Math.min(100, Math.round(engScore * 0.4 + claudeAvg * 0.6)))
       : engScore;
-    // ─────────────────────────────────────────────────────────────────────
+    // ?????????????????????????????????????????????????????????????????????
 
     processedVideos.push({
       id:    v.id || String(i),
@@ -673,7 +673,7 @@ async function run() {
       tone:            analysis?.tone            ?? null,
       mood:            analysis?.mood            ?? null,
       issue:           analysis?.issue           ?? "Analysis unavailable.",
-      suggestion:      analysis?.suggestion      ?? "اسأل الأيجنت في الشات.",
+      suggestion:      analysis?.suggestion      ?? "???? ??????? ?? ?????.",
       appearance:      analysis?.appearance      ?? null,
       appearanceIssue: analysis?.appearanceIssue ?? null,
       filming:         analysis?.filming         ?? null,
@@ -698,7 +698,7 @@ async function run() {
       soundName,
       soundIssue,
       soundSuggestion,
-      // GPT-4o audio deep analysis (Sarie's ears — when available)
+      // GPT-4o audio deep analysis (Sarie's ears - when available)
       voiceClarity:       audioAnalysis?.voiceClarity       ?? null,
       musicEnergy:        audioAnalysis?.musicEnergy        ?? null,
       volumeBalance:      audioAnalysis?.volumeBalance      ?? null,
@@ -716,7 +716,7 @@ async function run() {
     });
   }
 
-  // ─── AUDIENCE (estimated from engagement + content category) ─────────────
+  // ??? AUDIENCE (estimated from engagement + content category) ?????????????
   const avgLikes_ = processedVideos.reduce((s, v) => s + v.likes, 0) / Math.max(processedVideos.length, 1);
   const avgViews_ = processedVideos.reduce((s, v) => s + v.views, 0) / Math.max(processedVideos.length, 1);
   const engRatio  = avgViews_ > 0 ? avgLikes_ / avgViews_ : 0;
@@ -733,9 +733,9 @@ async function run() {
     { label: "Gen X (35-44)",       pct: genXFinal,        color: "#5DCAA5" },
     { label: "Boomers (45+)",       pct: boomerFinal,      color: "#888780" },
   ];
-  // ─────────────────────────────────────────────────────────────────────────
+  // ?????????????????????????????????????????????????????????????????????????
 
-  // ─── TRENDS (hashtag-driven) ──────────────────────────────────────────────
+  // ??? TRENDS (hashtag-driven) ??????????????????????????????????????????????
   const hashtagStats = {};
   for (const v of processedVideos) {
     for (const tag of (v.hashtags_list || [])) {
@@ -752,21 +752,21 @@ async function run() {
   const allTags      = topHashtags.map(t => t.tag.toLowerCase()).join(" ");
 
   let trendList;
-  if (allTags.includes("podcast") || allTags.includes("بودكاست")) {
+  if (allTags.includes("podcast") || allTags.includes("???????")) {
     trendList = [
       { name: "3-camera split screen clips",                      type: "format", views: "1.2B" },
       { name: "Hook: 'The biggest lie you've been told about...'", type: "hook",   views: "480M" },
       { name: "Raw microphone setup aesthetic",                    type: "visual", views: "850M" },
       { name: "Controversial guest cut-offs",                      type: "format", views: "2.1B" },
     ];
-  } else if (allTags.includes("business") || allTags.includes("marketing") || allTags.includes("بزنس")) {
+  } else if (allTags.includes("business") || allTags.includes("marketing") || allTags.includes("????")) {
     trendList = [
       { name: "Income transparency reveals",       type: "format", views: "3.4B" },
       { name: "Hook: 'How I made X in 30 days'",  type: "hook",   views: "890M" },
       { name: "Whiteboard/iPad breakdown",         type: "visual", views: "1.1B" },
       { name: "Day in the life of a CEO",          type: "format", views: "2.8B" },
     ];
-  } else if (allTags.includes("tech") || allTags.includes("ai") || allTags.includes("تقنية")) {
+  } else if (allTags.includes("tech") || allTags.includes("ai") || allTags.includes("?????")) {
     trendList = [
       { name: "AI tools you're illegally ignoring", type: "hook",    views: "4.1B" },
       { name: "Screen recording with face-cam",     type: "format",  views: "880M" },
@@ -786,7 +786,7 @@ async function run() {
     ...trendList.map((t, i) => ({ rank: i + 1, ...t })),
     { rank: 5, name: `Trending in #${dominantTag || "fyp"}`, type: "hashtag", views: "1.1B" },
   ];
-  // ─────────────────────────────────────────────────────────────────────────
+  // ?????????????????????????????????????????????????????????????????????????
 
   const payload = {
     account,
@@ -796,11 +796,33 @@ async function run() {
     syncedAt: new Date().toISOString(),
   };
 
-  console.log(`\n📤 Uploading to Vercel KV...`);
+  console.log(`\n?? Uploading to Vercel KV...`);
   await kvSet("tiktok_data", JSON.stringify(payload));
 
+  // ??? CACHE COVER IMAGES AS BASE64 IN KV ????????????????????????????????????
+  // TikTok CDN URLs expire every ~7 days, so we cache the actual image data
+  // in KV so the dashboard can always show covers even after URLs expire.
+  console.log(`\n?? Caching cover images...`);
+  let cachedCount = 0;
+  for (const v of processedVideos) {
+    if (!v.coverUrl) continue;
+    try {
+      const img = await fetchImageAsBase64(v.coverUrl);
+      if (img) {
+        const dataUri = `data:${img.mediaType};base64,${img.data}`;
+        await kvSet(`cover:${v.id}`, JSON.stringify(dataUri));
+        cachedCount++;
+        process.stdout.write(`   ? Cached cover for ${v.id}\n`);
+      }
+    } catch (err) {
+      console.warn(`   ? Failed to cache cover for ${v.id}: ${err.message}`);
+    }
+  }
+  console.log(`   ${cachedCount}/${processedVideos.length} covers cached.`);
+  // ?????????????????????????????????????????????????????????????????????????
+
   const analyzed = processedVideos.filter(v => v.hook !== null).length;
-  console.log(`\n✅ SUCCESS! @${TIKTOK_HANDLE} is live.`);
+  console.log(`\n? SUCCESS! @${TIKTOK_HANDLE} is live.`);
   console.log(`   Followers: ${account.followers.toLocaleString()}`);
   console.log(`   Videos synced: ${processedVideos.length}`);
   console.log(`   Analyzed by Claude: ${analyzed}/${processedVideos.length}`);
@@ -812,6 +834,6 @@ async function run() {
 }
 
 run().catch(err => {
-  console.error("\n❌ Sync failed:", err.message);
+  console.error("\n? Sync failed:", err.message);
   process.exit(1);
 });

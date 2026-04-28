@@ -92,7 +92,7 @@ export default function VideoScoreCard({ video, compact = false }: { video: Vide
       {showCover ? (
         <div className="relative w-full h-40 bg-black overflow-hidden">
           <img
-            src={`/api/proxy-image?url=${encodeURIComponent(video.coverUrl || '')}`}
+            src={`/api/proxy-image?id=${video.id}&url=${encodeURIComponent(video.coverUrl || '')}`}
             alt={video.title}
             referrerPolicy="no-referrer"
             onError={() => setImgFailed(true)}
