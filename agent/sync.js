@@ -78,6 +78,21 @@ async function checkFfmpeg() {
   return _ffmpegAvailable;
 }
 
+// Download an image URL and return { data: base64String, mediaType: "image/jpeg" }
+async function fetchImageAsBase64(imageUrl) {
+  const res = await fetch(imageUrl, {
+    signal: AbortSignal.timeout(15000),
+    headers: {
+      "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+      "Referer": "https://www.tiktok.com/",
+    },
+  });
+  if (!res.ok) return null;
+  const buffer = Buffer.from(await res.arrayBuffer());
+  const mediaType = res.headers.get("content-type") || "image/jpeg";
+  return { data: buffer.toString("base64"), mediaType };
+}
+
 // Download video to temp file, return { videoPath, realDuration, cleanup }
 // Uses yt-dlp for TikTok page URLs (which need cookie auth), direct fetch for CDN links
 async function downloadVideoToTemp(videoUrl, fallbackDuration = 30) {
@@ -798,6 +813,28 @@ async function run() {
 
   console.log(`\n📤 Uploading to Vercel KV...`);
   await kvSet("tiktok_data", JSON.stringify(payload));
+
+  // ─── CACHE COVER IMAGES AS BASE64 IN KV ────────────────────────────────────
+  // TikTok CDN URLs expire every ~7 days, so we cache the actual image data
+  // in KV so the dashboard can always show covers even after URLs expire.
+  console.log(`\n📸 Caching cover images...`);
+  let cachedCount = 0;
+  for (const v of processedVideos) {
+    if (!v.coverUrl) continue;
+    try {
+      const img = await fetchImageAsBase64(v.coverUrl);
+      if (img) {
+        const dataUri = `data:${img.mediaType};base64,${img.data}`;
+        await kvSet(`cover:${v.id}`, JSON.stringify(dataUri));
+        cachedCount++;
+        process.stdout.write(`   ✓ Cached cover for ${v.id}\n`);
+      }
+    } catch (err) {
+      console.warn(`   ⚠ Failed to cache cover for ${v.id}: ${err.message}`);
+    }
+  }
+  console.log(`   ${cachedCount}/${processedVideos.length} covers cached.`);
+  // ─────────────────────────────────────────────────────────────────────────
 
   const analyzed = processedVideos.filter(v => v.hook !== null).length;
   console.log(`\n✅ SUCCESS! @${TIKTOK_HANDLE} is live.`);
