@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useRef, useEffect, useCallback } from "react";
+import { useSearchParams } from "next/navigation";
 import Image from "next/image";
 import { Send, Loader2, Square, Search, Phone, Video, MoreVertical, Smile, Paperclip, Check, CheckCheck, X, FileText, Film, Copy, Trash2, Pencil, Forward, MoreHorizontal } from "lucide-react";
 import { useData } from "@/components/DataContext";
@@ -247,6 +248,21 @@ export default function ChatPage() {
   const bottomRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const sarie = useSarieChat();
+  const searchParams = useSearchParams();
+  const promptHandled = useRef(false);
+
+  // Auto-send prompt from URL (e.g. from "Fix with AI" button on audit page)
+  useEffect(() => {
+    const prompt = searchParams.get("prompt");
+    if (prompt && !promptHandled.current && sarie.messages.length > 0) {
+      promptHandled.current = true;
+      setActiveId("sarie");
+      // Small delay to ensure Sarie chat is ready
+      setTimeout(() => sarie.send(prompt), 300);
+      // Clean the URL without triggering a re-render
+      window.history.replaceState({}, "", "/chat");
+    }
+  }, [searchParams, sarie.messages.length]);
 
   const activeConvo = conversations.find(c => c.id === activeId)!;
   const isAI = activeConvo.isAI;
