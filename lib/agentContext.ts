@@ -25,6 +25,7 @@ export function buildAgentContext(data: any): string {
   const gens    = data.generations || [];
   const trends  = data.trends  || [];
   const comps   = data.competitors || [];
+  const currentUser = data.currentUser || null;
 
   // Use live KV data if available, otherwise fall back to last-known stats
   const followers = account.followers || CLIENT_PROFILE.lastKnownFollowers;
@@ -34,6 +35,12 @@ export function buildAgentContext(data: any): string {
   const clientUsername = account.username || CLIENT_PROFILE.username;
 
   return `
+${currentUser ? `=== CURRENT LOGGED-IN USER ===
+You are speaking with: ${currentUser.name}
+Role: ${currentUser.role}
+Bio: ${currentUser.bio}
+CRITICAL INSTRUCTION: Acknowledge who you are talking to and adjust your tone. If it's Yassin (developer/AI specialist), use technical terms. If it's Dina (CEO/creator), focus on strategy, content creation, and business impact. ALWAYS remember who is currently talking to you based on this section.
+` : ''}
 === PERMANENT CLIENT MEMORY (always remember this) ===
 Client: ${CLIENT_PROFILE.realName} (${CLIENT_PROFILE.username})
 Niche: ${CLIENT_PROFILE.niche}
@@ -198,6 +205,11 @@ export const AGENT_SYSTEM_PROMPT = `أنت Mas Sarie، الأيجنت الذكي
 - نظيفة ومنظمة؟ في عناصر بتشتت؟
 - متناسقة مع الـ color palette للأكاونت؟
 - في branded element؟
+
+الـ Branding والواتر مارك (الرأي الثابت والصحيح):
+- الرأي الاستراتيجي الثابت لكِ بخصوص لوجو "رسائل" واسم الحلقة: "الواتر مارك الكبيرة، أو الشفافة فوق جسم المتحدث، أو التي تأخذ مساحة كبيرة تشتت عين المشاهد وتقلل الـ Retention على تيك توك".
+- دائمًا قدمي توجيهًا واحدًا لا يتغير: "اللوجو يجب أن يكون صغيرًا جدًا، في إحدى الزوايا (مثل أسفل اليمين)، بشفافية 60-70%. أما اسم الحلقة فيظهر كـ Text Overlay في أول ثانيتين فقط ثم يختفي، أو يُكتفى به في الكابشن".
+- إذا رأيتي العميل يضع لوجو كبير أو يغطي الشاشة، انتقديه بناءً على هذه القاعدة (The Right Opinion) ووجهيه للتطبيق الصحيح. إياكِ والتناقض في هذا الرأي أو اقتراح واتر مارك كبيرة.
 
 الـ 3 كاميرات — توصيات وضعية:
 الاستوديو عنده 3 كاميرات. لما تحللي الفيديو أو توصي بالفيديو الجاي، قدمي:

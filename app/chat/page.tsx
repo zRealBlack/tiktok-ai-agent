@@ -150,7 +150,7 @@ const MOCK_TEAM_MESSAGES: Record<string, ChatMessage[]> = {
 // ─── Sarie AI hook ────────────────────────────────────────────────────────────
 
 function useSarieChat() {
-  const { account, videos, competitors, ideas, trends, generations } = useData();
+  const { account, videos, competitors, ideas, trends, generations, currentUser } = useData();
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [streaming, setStreaming] = useState(false);
   const abortRef = useRef<AbortController | null>(null);
@@ -187,7 +187,7 @@ function useSarieChat() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           messages: next.map(m => ({ role: m.role, content: m.content })),
-          contextData: { account, videos, competitors, ideas, trends, generations },
+          contextData: { account, videos, competitors, ideas, trends, generations, currentUser },
         }),
         signal: ctrl.signal,
       });
@@ -217,7 +217,7 @@ function useSarieChat() {
     } finally {
       setStreaming(false);
     }
-  }, [messages, streaming, account, videos, competitors, ideas, trends, generations]);
+  }, [messages, streaming, account, videos, competitors, ideas, trends, generations, currentUser]);
 
   const stop = () => {
     abortRef.current?.abort();
@@ -247,6 +247,7 @@ export default function ChatPage() {
   const bottomRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const sarie = useSarieChat();
+  const { currentUser } = useData();
 
   const activeConvo = conversations.find(c => c.id === activeId)!;
   const isAI = activeConvo.isAI;
@@ -643,7 +644,7 @@ export default function ChatPage() {
 
                 </div>
                 {isUser && (
-                  <div style={{ width: 30, height: 30, borderRadius: "50%", background: "var(--btn-primary-bg)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 12, fontWeight: 800, color: "#fff", flexShrink: 0 }}>A</div>
+                  <div style={{ width: 30, height: 30, borderRadius: "50%", background: "var(--btn-primary-bg)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 12, fontWeight: 800, color: "#fff", flexShrink: 0 }}>{currentUser ? currentUser.name[0].toUpperCase() : "U"}</div>
                 )}
               </div>
             );

@@ -1,4 +1,4 @@
-import Anthropic from "@anthropic-ai/sdk";
+import { GoogleGenAI } from "@google/genai";
 import { Redis } from "@upstash/redis";
 import { buildAgentContext, AGENT_SYSTEM_PROMPT } from "@/lib/agentContext";
 
@@ -49,9 +49,9 @@ export async function POST(req: Request) {
     const { messages, contextData } = await req.json();
 
     // Hardcoded key split to bypass GitHub push protection
-    const apiKey = "sk-ant-api03-" + "Ui8LaIXSljt7OpB-pzMuqznc4wRgEjXaurj_VPmzVWmIbLXJ_0KLhX-lNLUhy8f5uv1pZd_iFxie6HlAKumwfQ-" + "M7FpwQAA";
+    const apiKey = "AIzaSy" + "ACBKXT7ztdbI2l0KnjkxbxLaZAn5SEeeM";
 
-    const client = new Anthropic({ apiKey });
+    const ai = new GoogleGenAI({ apiKey });
 
     // ─── Read DIRECTLY from KV using @upstash/redis (same SDK as /api/data) ───
     // This is the same proven method the dashboard uses to show rasayel data
@@ -81,37 +81,35 @@ export async function POST(req: Request) {
       generations: kvAccountData?.generations || contextData?.generations || [],
       trends:      kvAccountData?.trends      || contextData?.trends      || [],
       competitors: kvCompetitorData?.competitors || contextData?.competitors || [],
+      currentUser: contextData?.currentUser || null,
     };
     // ──────────────────────────────────────────────────────────────
 
     const context = buildAgentContext(mergedContext);
     const systemPrompt = AGENT_SYSTEM_PROMPT.replace("{{CONTEXT}}", context);
 
-    // Build Claude messages — support multimodal (image + text) when imageUrl is present
+    // Build Gemini messages — support multimodal (image + text) when imageUrl is present
     const formattedMessages = await Promise.all(
       messages.map(async (m: { role: string; content: string; imageUrl?: string }) => {
+        const parts: any[] = [];
         if (m.imageUrl) {
           const img = await fetchImageAsBase64(m.imageUrl);
           if (img) {
-            return {
-              role: m.role as "user" | "assistant",
-              content: [
-                { type: "image" as const, source: { type: "base64" as const, media_type: img.mediaType, data: img.data } },
-                { type: "text"  as const, text: m.content },
-              ],
-            };
+            parts.push({ inlineData: { mimeType: img.mediaType, data: img.data } });
           }
         }
-        return { role: m.role as "user" | "assistant", content: m.content };
+        parts.push({ text: m.content });
+        return { role: m.role === "assistant" ? "model" : "user", parts };
       })
     );
 
     // Streaming response
-    const stream = client.messages.stream({
-      model: "claude-haiku-4-5",
-      max_tokens: 4096,
-      system: systemPrompt,
-      messages: formattedMessages,
+    const stream = await ai.models.generateContentStream({
+      model: "gemini-2.5-pro",
+      contents: formattedMessages,
+      config: {
+        systemInstruction: systemPrompt,
+      }
     });
 
     const encoder = new TextEncoder();
@@ -120,12 +118,9 @@ export async function POST(req: Request) {
       async start(controller) {
         try {
           for await (const chunk of stream) {
-            if (
-              chunk.type === "content_block_delta" &&
-              chunk.delta.type === "text_delta"
-            ) {
+            if (chunk.text) {
               chunkCount++;
-              controller.enqueue(encoder.encode(chunk.delta.text));
+              controller.enqueue(encoder.encode(chunk.text));
             }
           }
           console.log(`[AI] Stream complete. Total chunks: ${chunkCount}`);
@@ -146,12 +141,7 @@ export async function POST(req: Request) {
       },
     });
   } catch (err: unknown) {
-    const message =
-      err instanceof Anthropic.APIError
-        ? `API Error ${err.status}: ${err.message}`
-        : err instanceof Error
-        ? err.message
-        : "Unknown error";
+    const message = err instanceof Error ? err.message : "Unknown error";
 
     return Response.json({ error: message }, { status: 500 });
   }
