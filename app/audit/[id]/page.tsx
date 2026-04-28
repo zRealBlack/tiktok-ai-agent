@@ -7,6 +7,7 @@ import {
   Eye, Heart, MessageCircle, Share2, ArrowLeft,
   ExternalLink, Zap, TrendingUp, TrendingDown
 } from "lucide-react";
+import { dispatchAgentPrompt } from "@/lib/events";
 
 const scoreColor = (v: number) =>
   v >= 80 ? "#22c55e" : v >= 60 ? "#f59e0b" : "#ef4444";
