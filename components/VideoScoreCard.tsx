@@ -59,6 +59,13 @@ const toneBadgeStyle = (tone?: string) => {
   return "bg-zinc-500/15 text-zinc-400";
 };
 
+function coverSrc(video: VideoData): string {
+  const params = new URLSearchParams();
+  params.set("id", video.id);
+  if (video.coverUrl) params.set("url", video.coverUrl);
+  return `/api/proxy-image?${params.toString()}`;
+}
+
 const ScoreBar = ({ label, value, delay }: { label: string; value: number; delay: number }) => {
   const [mounted, setMounted] = useState(false);
   useEffect(() => { const t = setTimeout(() => setMounted(true), delay); return () => clearTimeout(t); }, [delay]);
@@ -92,7 +99,7 @@ export default function VideoScoreCard({ video, compact = false }: { video: Vide
       {showCover ? (
         <div className="relative w-full h-40 bg-black overflow-hidden">
           <img
-            src={video.coverUrl}
+            src={coverSrc(video)}
             alt={video.title}
             referrerPolicy="no-referrer"
             onError={() => setImgFailed(true)}
@@ -104,7 +111,7 @@ export default function VideoScoreCard({ video, compact = false }: { video: Vide
           </div>
           <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
             <div className="glass-panel rounded-xl px-3 py-1.5 text-[11px] font-bold" style={{ color: 'var(--text-primary)' }}>
-              عرض التحليل الكامل →
+              {"\u0639\u0631\u0636 \u0627\u0644\u062A\u062D\u0644\u064A\u0644 \u0627\u0644\u0643\u0627\u0645\u0644 \u2192"}
             </div>
           </div>
         </div>
@@ -116,7 +123,7 @@ export default function VideoScoreCard({ video, compact = false }: { video: Vide
           </div>
           <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
             <div className="glass-panel rounded-xl px-3 py-1.5 text-[11px] font-bold" style={{ color: 'var(--text-primary)' }}>
-              عرض التحليل الكامل →
+              {"\u0639\u0631\u0636 \u0627\u0644\u062A\u062D\u0644\u064A\u0644 \u0627\u0644\u0643\u0627\u0645\u0644 \u2192"}
             </div>
           </div>
         </div>
@@ -172,7 +179,7 @@ export default function VideoScoreCard({ video, compact = false }: { video: Vide
         )}
 
         <div className="glass-elevated rounded-xl p-2.5">
-          <div className="text-[10px] font-bold text-red-500 mb-1 uppercase tracking-wide">⚠ Issue</div>
+          <div className="text-[10px] font-bold text-red-500 mb-1 uppercase tracking-wide">{"\u26A0"} Issue</div>
           <div className="text-[11px] leading-relaxed line-clamp-2" style={{ color: 'var(--text-secondary)' }}>{video.issue}</div>
         </div>
       </div>
