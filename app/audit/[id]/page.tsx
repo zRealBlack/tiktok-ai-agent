@@ -7,7 +7,6 @@ import {
   Eye, Heart, MessageCircle, Share2, ArrowLeft,
   ExternalLink, Zap, TrendingUp, TrendingDown
 } from "lucide-react";
-import { dispatchAgentPrompt } from "@/lib/events";
 
 const scoreColor = (v: number) =>
   v >= 80 ? "#22c55e" : v >= 60 ? "#f59e0b" : "#ef4444";
@@ -66,10 +65,8 @@ export default function VideoDetailPage() {
     const flagsInfo  = video.weaknessFlags?.length ? ` | Weakness Flags: ${video.weaknessFlags.join(", ")}` : "";
     const appIssueInfo  = video.appearanceIssue ? ` | Appearance Issue: ${video.appearanceIssue}` : "";
     const filmIssueInfo = video.filmingIssue    ? ` | Filming Issue: ${video.filmingIssue}`       : "";
-    dispatchAgentPrompt(
-      `حلل الفيديو ده بالكامل واصلحه بناءً على بياناته: "${video.title}" — سكور ${video.score}/100${toneInfo}${moodInfo}${riskInfo}${energyInfo}${pullInfo}${soundInfo}${appInfo}${appIssueInfo}${filmInfo}${filmIssueInfo}${flagsInfo}. المشكلة: ${video.issue}. واديني: 1) اعادة كتابة الهوك 2) كابشن جديد أقل من 100 حرف 3) 3 هاشتاقات مناسبة 4) تقييم الصوت والموسيقى 5) تقييم المظهر والإضاءة بناءً على التحليل المحفوظ 6) توصيات زوايا الكاميرات الـ 3 للفيديو الجاي 7) ٣ تعديلات تحريرية تزيد المشاهدات.`
-    );
-    router.back();
+    const prompt = `\u062D\u0644\u0644 \u0627\u0644\u0641\u064A\u062F\u064A\u0648 \u062F\u0647 \u0628\u0627\u0644\u0643\u0627\u0645\u0644 \u0648\u0627\u0635\u0644\u062D\u0647 \u0628\u0646\u0627\u0621\u064B \u0639\u0644\u0649 \u0628\u064A\u0627\u0646\u0627\u062A\u0647: "${video.title}" \u2014 \u0633\u0643\u0648\u0631 ${video.score}/100${toneInfo}${moodInfo}${riskInfo}${energyInfo}${pullInfo}${soundInfo}${appInfo}${appIssueInfo}${filmInfo}${filmIssueInfo}${flagsInfo}. \u0627\u0644\u0645\u0634\u0643\u0644\u0629: ${video.issue}. \u0648\u0627\u062F\u064A\u0646\u064A: 1) \u0627\u0639\u0627\u062F\u0629 \u0643\u062A\u0627\u0628\u0629 \u0627\u0644\u0647\u0648\u0643 2) \u0643\u0627\u0628\u0634\u0646 \u062C\u062F\u064A\u062F \u0623\u0642\u0644 \u0645\u0646 100 \u062D\u0631\u0641 3) 3 \u0647\u0627\u0634\u062A\u0627\u0642\u0627\u062A \u0645\u0646\u0627\u0633\u0628\u0629 4) \u062A\u0642\u064A\u064A\u0645 \u0627\u0644\u0635\u0648\u062A \u0648\u0627\u0644\u0645\u0648\u0633\u064A\u0642\u0649 5) \u062A\u0642\u064A\u064A\u0645 \u0627\u0644\u0645\u0638\u0647\u0631 \u0648\u0627\u0644\u0625\u0636\u0627\u0621\u0629 \u0628\u0646\u0627\u0621\u064B \u0639\u0644\u0649 \u0627\u0644\u062A\u062D\u0644\u064A\u0644 \u0627\u0644\u0645\u062D\u0641\u0648\u0638 6) \u062A\u0648\u0635\u064A\u0627\u062A \u0632\u0648\u0627\u064A\u0627 \u0627\u0644\u0643\u0627\u0645\u064A\u0631\u0627\u062A \u0627\u0644\u0640 3 \u0644\u0644\u0641\u064A\u062F\u064A\u0648 \u0627\u0644\u062C\u0627\u064A 7) \u0663 \u062A\u0639\u062F\u064A\u0644\u0627\u062A \u062A\u062D\u0631\u064A\u0631\u064A\u0629 \u062A\u0632\u064A\u062F \u0627\u0644\u0645\u0634\u0627\u0647\u062F\u0627\u062A.`;
+    router.push(`/chat?prompt=${encodeURIComponent(prompt)}`);
   };
 
   return (
