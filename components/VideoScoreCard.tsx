@@ -59,6 +59,13 @@ const toneBadgeStyle = (tone?: string) => {
   return "bg-zinc-500/15 text-zinc-400";
 };
 
+function coverSrc(video: VideoData): string {
+  const params = new URLSearchParams();
+  params.set("id", video.id);
+  if (video.coverUrl) params.set("url", video.coverUrl);
+  return `/api/proxy-image?${params.toString()}`;
+}
+
 const ScoreBar = ({ label, value, delay }: { label: string; value: number; delay: number }) => {
   const [mounted, setMounted] = useState(false);
   useEffect(() => { const t = setTimeout(() => setMounted(true), delay); return () => clearTimeout(t); }, [delay]);
@@ -92,7 +99,7 @@ export default function VideoScoreCard({ video, compact = false }: { video: Vide
       {showCover ? (
         <div className="relative w-full h-40 bg-black overflow-hidden">
           <img
-            src={video.coverUrl}
+            src={coverSrc(video)}
             alt={video.title}
             referrerPolicy="no-referrer"
             onError={() => setImgFailed(true)}

@@ -78,6 +78,21 @@ async function checkFfmpeg() {
   return _ffmpegAvailable;
 }
 
+// Download an image URL and return { data: base64String, mediaType: "image/jpeg" }
+async function fetchImageAsBase64(imageUrl) {
+  const res = await fetch(imageUrl, {
+    signal: AbortSignal.timeout(15000),
+    headers: {
+      "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+      "Referer": "https://www.tiktok.com/",
+    },
+  });
+  if (!res.ok) return null;
+  const buffer = Buffer.from(await res.arrayBuffer());
+  const mediaType = res.headers.get("content-type") || "image/jpeg";
+  return { data: buffer.toString("base64"), mediaType };
+}
+
 // Download video to temp file, return { videoPath, realDuration, cleanup }
 // Uses yt-dlp for TikTok page URLs (which need cookie auth), direct fetch for CDN links
 async function downloadVideoToTemp(videoUrl, fallbackDuration = 30) {
