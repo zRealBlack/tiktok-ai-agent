@@ -13,7 +13,7 @@ const ThemeContext = createContext<{
   theme: Theme;
   setTheme: (t: Theme) => void;
   toggle: () => void;
-}>({ theme: 'dark', setTheme: () => {}, toggle: () => {} });
+}>({ theme: 'light', setTheme: () => {}, toggle: () => {} });
 
 export function useTheme() {
   return useContext(ThemeContext);
@@ -26,10 +26,10 @@ function applyTheme(theme: Theme) {
 }
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
-  const [theme, setThemeState] = useState<Theme>('dark');
+  const [theme, setThemeState] = useState<Theme>('light');
 
   useEffect(() => {
-    const saved = (localStorage.getItem('theme') as Theme) || 'dark';
+    const saved = (localStorage.getItem('theme') as Theme) || 'light';
     setThemeState(saved);
     applyTheme(saved);
   }, []);
