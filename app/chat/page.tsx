@@ -618,30 +618,24 @@ function ChatPageInner() {
 
   return (
     <>
-    <div className="flex flex-col md:flex-row gap-4 h-[calc(100vh-140px)] md:h-[calc(100vh-56px)] overflow-hidden pb-4 pr-4 pl-4 md:pl-0 box-border">
+    <div className="flex flex-col md:flex-row gap-4 h-[calc(100dvh-160px)] md:h-[calc(100vh-56px)] overflow-hidden pb-4 pr-4 pl-4 md:pl-0 box-border">
 
       {/* ── LEFT: Conversation List ──────────────────────────────────────── */}
       <div className={`${showChatOnMobile ? 'hidden md:flex' : 'flex'} w-full md:w-[280px] shrink-0 flex-col overflow-hidden rounded-3xl border border-white/10 bg-black/40 backdrop-blur-xl`}>
         {/* Header */}
-        <div style={{ padding: "20px 20px 0" }}>
-          <div style={{ fontSize: 20, fontWeight: 900, color: "var(--text-primary)", marginBottom: 14 }}>
-            Messages
-          </div>
-          {/* Search */}
-          <div style={{
-            display: "flex", alignItems: "center", gap: 8,
-            background: "var(--glass-elevated)", borderRadius: 12,
-            padding: "8px 12px", marginBottom: 16,
-            border: "1px solid var(--glass-elevated-border)"
-          }}>
-            <Search size={13} color="var(--text-muted)" />
-            <input
-              placeholder="Search conversations..."
-              style={{
-                background: "transparent", border: "none", outline: "none",
-                fontSize: 12, color: "var(--text-primary)", flex: 1,
-              }}
-            />
+        <div className="px-4 py-4 md:p-5 md:pb-0 shrink-0">
+          <div className="flex flex-row md:flex-col items-center md:items-start justify-between gap-3">
+            <div className="text-lg md:text-xl font-black text-[var(--text-primary)] md:mb-3">
+              Messages
+            </div>
+            {/* Search */}
+            <div className="flex-1 md:w-full flex items-center gap-2 bg-[var(--glass-elevated)] rounded-xl px-3 py-2 border border-[var(--glass-elevated-border)] md:mb-4">
+              <Search size={13} color="var(--text-muted)" />
+              <input
+                placeholder="Search..."
+                className="bg-transparent border-none outline-none text-xs text-[var(--text-primary)] flex-1 min-w-0"
+              />
+            </div>
           </div>
         </div>
 

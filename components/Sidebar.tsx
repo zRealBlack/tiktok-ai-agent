@@ -27,7 +27,7 @@ export default function Sidebar() {
     <>
       <aside
         className="fixed z-40 flex bg-black/90 backdrop-blur-xl border-t border-white/5 md:bg-transparent md:border-none md:backdrop-blur-none
-                   bottom-0 left-0 right-0 h-[72px] flex-row justify-around items-center px-2 py-0
+                   bottom-0 left-0 right-0 h-[72px] flex-row justify-center gap-6 items-center px-4 py-0
                    md:top-0 md:bottom-auto md:w-[72px] md:h-full md:flex-col md:py-5 md:gap-2 md:justify-start md:pt-[68px]"
       >
       {/* Logo — fixed top-left, separate from sidebar icon flow */}
@@ -86,7 +86,12 @@ export default function Sidebar() {
           </button>
         ))}
 
-        <div style={{ flex: 1 }} />
+        <div className="hidden md:block" style={{ flex: 1 }} />
+
+        {/* Profile icon for mobile (hidden on desktop) */}
+        <div className="flex md:hidden items-center justify-center w-[42px] h-[42px] rounded-full bg-red-500 text-white font-bold text-sm shadow-[0_4px_16px_rgba(239,68,68,0.3)]">
+          {currentUser ? currentUser.name[0].toUpperCase() : "U"}
+        </div>
 
         {/* Messages Icon moved to bottom above profile card */}
         <Link

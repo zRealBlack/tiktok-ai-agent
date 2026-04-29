@@ -22,9 +22,9 @@ export default function RootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html lang="en" className={`${inter.variable} h-full dark`} suppressHydrationWarning>
+    <html lang="en" className={`${inter.variable} h-full`} suppressHydrationWarning>
       <head />
-      <body className="min-h-full flex antialiased">
+      <body className="min-h-full flex antialiased overflow-x-hidden">
         <ThemeProvider>
           <DataProvider>
             <PasswordGuard>
