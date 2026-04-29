@@ -68,16 +68,11 @@ export async function GET(request: NextRequest) {
     }
   }
 
-  // Strategy 3: Return a 1x1 transparent PNG placeholder
-  const pixel = Buffer.from(
-    "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==",
-    "base64"
-  );
-  return new NextResponse(pixel, {
-    status: 200,
+  // Strategy 3: Return a 404 so the frontend <img> tag's onError triggers and shows the fallback UI
+  return new NextResponse("Not Found or Expired", {
+    status: 404,
     headers: {
-      "Content-Type": "image/png",
-      "Cache-Control": "public, max-age=60",
+      "Cache-Control": "no-cache",
     },
   });
 }
