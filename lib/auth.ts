@@ -23,6 +23,22 @@ export const TEAM_MEMBERS: TeamMember[] = [
     name: "Dina Amer",
     role: "CEO & Content Creator",
     bio: "The podcaster of Rasayel podcast and CEO."
+  },
+  {
+    id: "hesham",
+    email: "hesham@mas.ai",
+    password: "Hesham@7482",
+    name: "Hesham Ahmed",
+    role: "Editor",
+    bio: "The video editor and post-production specialist."
+  },
+  {
+    id: "shahd",
+    email: "shahd@mas.ai",
+    password: "Shahd@9123",
+    name: "Shahd Sayed",
+    role: "Moderation",
+    bio: "The community moderator handling comments and engagement."
   }
 ];
 
