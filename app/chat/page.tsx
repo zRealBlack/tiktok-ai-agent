@@ -254,6 +254,17 @@ function ChatPageInner() {
   const [pendingAttachment, setPendingAttachment] = useState<Attachment | null>(null);
   const [teamMessages, setTeamMessages] = useState<Record<string, ChatMessage[]>>({});
   const [hoverMsg, setHoverMsg] = useState<number | null>(null);
+  const [activeMenu, setActiveMenu] = useState<number | null>(null);
+  const [forwardingMsg, setForwardingMsg] = useState<string | null>(null);
+  const bottomRef = useRef<HTMLDivElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const sarie = useSarieChat();
+  const { currentUser } = useData();
+  const searchParams = useSearchParams();
+  const promptHandled = useRef(false);
+  const sarieSendRef = useRef(sarie.send);
+  sarieSendRef.current = sarie.send;
+
 
   // 1-second polling for global team messages
   useEffect(() => {
@@ -297,17 +308,6 @@ function ChatPageInner() {
     fetchMsgs();
     return () => clearTimeout(timeout);
   }, [currentUser]);
-  const [activeMenu, setActiveMenu] = useState<number | null>(null);
-  const [forwardingMsg, setForwardingMsg] = useState<string | null>(null);
-  const bottomRef = useRef<HTMLDivElement>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
-  const sarie = useSarieChat();
-  const { currentUser } = useData();
-  const searchParams = useSearchParams();
-  const promptHandled = useRef(false);
-  const sarieSendRef = useRef(sarie.send);
-  sarieSendRef.current = sarie.send;
-
   // Auto-send prompt from URL (e.g. from "Fix with AI" button on audit page)
   useEffect(() => {
     const prompt = searchParams.get("prompt");
