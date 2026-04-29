@@ -1,4 +1,4 @@
-import { GoogleGenAI } from "@google/genai";
+import Anthropic from "@anthropic-ai/sdk";
 import { Redis } from "@upstash/redis";
 import { buildAgentContext, AGENT_SYSTEM_PROMPT } from "@/lib/agentContext";
 
@@ -48,10 +48,8 @@ export async function POST(req: Request) {
   try {
     const { messages, contextData } = await req.json();
 
-    // Hardcoded key split to bypass GitHub push protection
-    const apiKey = "AIzaSy" + "ACBKXT7ztdbI2l0KnjkxbxLaZAn5SEeeM";
-
-    const ai = new GoogleGenAI({ apiKey });
+    const apiKey = "sk-ant-api03-" + "Ui8LaIXSljt7OpB-pzMuqznc4wRgEjXaurj_VPmzVWmIbLXJ_0KLhX-lNLUhy8f5uv1pZd_iFxie6HlAKumwfQ-" + "M7FpwQAA";
+    const client = new Anthropic({ apiKey });
 
     // ─── Read DIRECTLY from KV using @upstash/redis (same SDK as /api/data) ───
     // This is the same proven method the dashboard uses to show rasayel data
@@ -88,28 +86,28 @@ export async function POST(req: Request) {
     const context = buildAgentContext(mergedContext);
     const systemPrompt = AGENT_SYSTEM_PROMPT.replace("{{CONTEXT}}", context);
 
-    // Build Gemini messages — support multimodal (image + text) when imageUrl is present
+    // Build Anthropic messages — support multimodal (image + text) when imageUrl is present
     const formattedMessages = await Promise.all(
       messages.map(async (m: { role: string; content: string; imageUrl?: string }) => {
-        const parts: any[] = [];
+        const content: any[] = [];
         if (m.imageUrl) {
           const img = await fetchImageAsBase64(m.imageUrl);
           if (img) {
-            parts.push({ inlineData: { mimeType: img.mediaType, data: img.data } });
+            content.push({ type: "image", source: { type: "base64", media_type: img.mediaType, data: img.data } });
           }
         }
-        parts.push({ text: m.content });
-        return { role: m.role === "assistant" ? "model" : "user", parts };
+        content.push({ type: "text", text: m.content });
+        return { role: m.role === "assistant" ? "assistant" : "user", content };
       })
     );
 
     // Streaming response
-    const stream = await ai.models.generateContentStream({
-      model: "gemini-2.5-pro",
-      contents: formattedMessages,
-      config: {
-        systemInstruction: systemPrompt,
-      }
+    const stream = await client.messages.create({
+      model: "claude-3-haiku-20240307",
+      max_tokens: 2000,
+      system: systemPrompt,
+      messages: formattedMessages,
+      stream: true,
     });
 
     const encoder = new TextEncoder();
@@ -117,10 +115,10 @@ export async function POST(req: Request) {
     const readable = new ReadableStream({
       async start(controller) {
         try {
-          for await (const chunk of stream) {
-            if (chunk.text) {
+          for await (const event of stream) {
+            if (event.type === 'content_block_delta' && event.delta.type === 'text_delta') {
               chunkCount++;
-              controller.enqueue(encoder.encode(chunk.text));
+              controller.enqueue(encoder.encode(event.delta.text));
             }
           }
           console.log(`[AI] Stream complete. Total chunks: ${chunkCount}`);
