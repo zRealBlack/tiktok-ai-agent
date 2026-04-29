@@ -15,6 +15,7 @@ const EMOJIS = ["😂","❤️","🔥","👏","😮","😢","🤔","💯","🚀"
 interface Attachment { name: string; url: string; type: "image" | "video" | "file"; }
 
 interface ChatMessage {
+  id?: string;
   role: "user" | "assistant";
   content: string;
   streaming?: boolean;
@@ -289,14 +290,14 @@ function ChatPageInner() {
                 // Sent by me
                 if (reconstructed[msg.receiverId]) {
                   reconstructed[msg.receiverId].push({
-                    role: "user", content: msg.content, ts: msg.ts, status: "delivered", attachment: msg.attachment, isForwarded: msg.isForwarded, reactions: msg.reactions
+                    id: msg.id, role: "user", content: msg.content, ts: msg.ts, status: "delivered", attachment: msg.attachment, isForwarded: msg.isForwarded, reactions: msg.reactions
                   });
                 }
               } else if (msg.receiverId === currentUser.id) {
                 // Sent to me
                 if (reconstructed[msg.senderId]) {
                   reconstructed[msg.senderId].push({
-                    role: "assistant", content: msg.content, ts: msg.ts, status: "seen", attachment: msg.attachment, isForwarded: msg.isForwarded, reactions: msg.reactions
+                    id: msg.id, role: "assistant", content: msg.content, ts: msg.ts, status: "seen", attachment: msg.attachment, isForwarded: msg.isForwarded, reactions: msg.reactions
                   });
                 }
               }
@@ -379,11 +380,22 @@ function ChatPageInner() {
         return u;
       });
     } else {
+      const msgs = teamMessages[activeId] || [];
+      const msgToDelete = msgs[index];
+      
       setTeamMessages(prev => {
         const u = [...(prev[activeId] || [])];
         u.splice(index, 1);
         return { ...prev, [activeId]: u };
       });
+
+      if (msgToDelete?.id) {
+        fetch("/api/messages", {
+          method: "DELETE",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ id: msgToDelete.id })
+        }).catch(console.error);
+      }
     }
     setActiveMenu(null);
   };
@@ -408,15 +420,15 @@ function ChatPageInner() {
     if (!forwardingMsg || !currentUser) return;
     
     targetIds.forEach(targetId => {
-      // Add the forwarded message to the target user's chat history optimistically
-      const msg: ChatMessage = { role: "user", content: forwardingMsg, ts: now(), isForwarded: true, status: "sent" };
+      const msgId = Date.now().toString() + "-" + Math.random().toString(36).substr(2, 9);
+      const msg: ChatMessage = { id: msgId, role: "user", content: forwardingMsg, ts: now(), isForwarded: true, status: "sent" };
       setTeamMessages(prev => ({ ...prev, [targetId]: [...(prev[targetId] || []), msg] }));
       
-      // Global Sync to Upstash Redis
       fetch("/api/messages", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
+          id: msgId,
           senderId: currentUser.id,
           receiverId: targetId,
           content: forwardingMsg,
@@ -436,15 +448,16 @@ function ChatPageInner() {
     if (isAI) {
       sarie.send(text || (pendingAttachment ? `[Sent: ${pendingAttachment.name}]` : ""));
     } else {
-      const msg: ChatMessage = { role: "user", content: text || "", ts: now(), status: "sent", ...(pendingAttachment ? { attachment: pendingAttachment } : {}) };
+      const msgId = Date.now().toString() + "-" + Math.random().toString(36).substr(2, 9);
+      const msg: ChatMessage = { id: msgId, role: "user", content: text || "", ts: now(), status: "sent", ...(pendingAttachment ? { attachment: pendingAttachment } : {}) };
       setTeamMessages(prev => ({ ...prev, [activeId]: [...(prev[activeId] || []), msg] }));
       
       if (currentUser) {
-        // Post globally to Upstash Redis via API
         fetch("/api/messages", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
+            id: msgId,
             senderId: currentUser.id,
             receiverId: activeId,
             content: text || "",
@@ -463,7 +476,6 @@ function ChatPageInner() {
         });
       }, 600);
       
-      // Reorder conversations to move activeId to the top (under Sarie)
       setConversations(prev => {
         const idx = prev.findIndex(c => c.id === activeId);
         if (idx <= 1) return prev;
@@ -480,9 +492,20 @@ function ChatPageInner() {
   const handleFile = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    const url = URL.createObjectURL(file);
-    const type: Attachment["type"] = file.type.startsWith("image") ? "image" : file.type.startsWith("video") ? "video" : "file";
-    setPendingAttachment({ name: file.name, url, type });
+
+    if (file.size > 800 * 1024) {
+      alert("⚠️ File is too large! Since you don't have a storage bucket set up yet, please upload files under 800KB.");
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      const base64Url = reader.result as string;
+      const type: Attachment["type"] = file.type.startsWith("image") ? "image" : file.type.startsWith("video") ? "video" : "file";
+      setPendingAttachment({ name: file.name, url: base64Url, type });
+    };
+    reader.readAsDataURL(file);
+    
     e.target.value = "";
   };
 
@@ -490,14 +513,25 @@ function ChatPageInner() {
 
   const addReaction = (msgIdx: number, emoji: string) => {
     if (isAI) return;
+    
+    let targetMsgId: string | undefined;
     setTeamMessages(prev => {
       const msgs = [...(prev[activeId] || [])];
       const m = { ...msgs[msgIdx] };
+      targetMsgId = m.id;
       const existing = m.reactions || [];
       m.reactions = existing.includes(emoji) ? existing.filter(r => r !== emoji) : [...existing, emoji];
       msgs[msgIdx] = m;
       return { ...prev, [activeId]: msgs };
     });
+
+    if (targetMsgId) {
+      fetch("/api/messages", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: targetMsgId, emoji })
+      }).catch(console.error);
+    }
   };
 
   const glass: React.CSSProperties = {
