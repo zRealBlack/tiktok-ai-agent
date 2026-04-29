@@ -21,7 +21,7 @@ export const TEAM_MEMBERS: TeamMember[] = [
     email: "dina@mas.ai",
     password: "Dina@1984",
     name: "Dina Amer",
-    role: "Podcaster",
+    role: "CEO & Podcaster",
     bio: "The podcaster of Rasayel podcast and CEO."
   },
   {

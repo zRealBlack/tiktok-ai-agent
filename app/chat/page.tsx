@@ -108,7 +108,7 @@ const INITIAL_CONVERSATIONS: Conversation[] = [
     time: "",
     unread: 0,
     online: true,
-    role: "Podcaster",
+    role: "CEO & Podcaster",
   },
   {
     id: "yassin",
