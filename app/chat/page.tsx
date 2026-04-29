@@ -108,7 +108,7 @@ const INITIAL_CONVERSATIONS: Conversation[] = [
     time: "",
     unread: 0,
     online: true,
-    role: "CEO / Creator",
+    role: "Podcaster",
   },
   {
     id: "yassin",
@@ -141,12 +141,56 @@ const INITIAL_CONVERSATIONS: Conversation[] = [
     time: "",
     unread: 0,
     online: true,
-    role: "Moderation",
+    role: "Ugc Creator",
+  },
+  {
+    id: "sara",
+    name: "Sara Hatem",
+    avatar: null,
+    isAI: false,
+    lastMessage: "",
+    time: "",
+    unread: 0,
+    online: true,
+    role: "Marketing & Operation",
+  },
+  {
+    id: "haitham",
+    name: "Haitham Abdel-aziz",
+    avatar: null,
+    isAI: false,
+    lastMessage: "",
+    time: "",
+    unread: 0,
+    online: true,
+    role: "Director & Production",
+  },
+  {
+    id: "shahdm",
+    name: "Shahd Mahmoud",
+    avatar: null,
+    isAI: false,
+    lastMessage: "",
+    time: "",
+    unread: 0,
+    online: true,
+    role: "Community Manager",
+  },
+  {
+    id: "yousef",
+    name: "Yousef Hatem",
+    avatar: null,
+    isAI: false,
+    lastMessage: "",
+    time: "",
+    unread: 0,
+    online: true,
+    role: "Ai Artist",
   },
 ];
 
 const INITIAL_TEAM_MESSAGES: Record<string, ChatMessage[]> = {
-  dina: [], yassin: [], hesham: [], shahd: []
+  dina: [], yassin: [], hesham: [], shahd: [], sara: [], haitham: [], shahdm: [], yousef: []
 };
 
 // ─── Sarie AI hook ────────────────────────────────────────────────────────────
@@ -280,7 +324,7 @@ function ChatPageInner() {
           const data = await res.json();
           if (data.messages && currentUser) {
             const reconstructed: Record<string, ChatMessage[]> = {
-              dina: [], yassin: [], hesham: [], shahd: []
+              dina: [], yassin: [], hesham: [], shahd: [], sara: [], haitham: [], shahdm: [], yousef: []
             };
             
             data.messages.forEach((rawMsg: any) => {
