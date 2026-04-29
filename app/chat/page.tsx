@@ -100,7 +100,7 @@ const INITIAL_CONVERSATIONS: Conversation[] = [
   },
   {
     id: "dina",
-    name: "Dina",
+    name: "Dina Amer",
     avatar: null,
     isAI: false,
     lastMessage: "Let's review the new strategy.",
@@ -144,23 +144,8 @@ const INITIAL_CONVERSATIONS: Conversation[] = [
   },
 ];
 
-const MOCK_TEAM_MESSAGES: Record<string, ChatMessage[]> = {
-  dina: [
-    { role: "assistant", content: "Hey! The new strategy document is ready.", ts: "10:30 AM" },
-    { role: "user", content: "Great, let's review it together.", ts: "10:32 AM" },
-    { role: "assistant", content: "Let's review the new strategy.", ts: "10:35 AM" },
-  ],
-  yassin: [
-    { role: "assistant", content: "Did you fix the API limit issue?", ts: "9:10 AM" },
-    { role: "user", content: "Yes, I rotated the keys.", ts: "9:11 AM" },
-    { role: "assistant", content: "API keys are updated.", ts: "9:12 AM" },
-  ],
-  hesham: [
-    { role: "assistant", content: "The new video edit is ready for review.", ts: "Yesterday" },
-  ],
-  shahd: [
-    { role: "assistant", content: "I handled the spam comments on the last post.", ts: "Yesterday" },
-  ],
+const INITIAL_TEAM_MESSAGES: Record<string, ChatMessage[]> = {
+  dina: [], yassin: [], hesham: [], shahd: []
 };
 
 // ─── Sarie AI hook ────────────────────────────────────────────────────────────
@@ -173,7 +158,7 @@ function useSarieChat() {
 
   useEffect(() => {
     try {
-      const saved = sessionStorage.getItem("chat_history");
+      const saved = localStorage.getItem("chat_history");
       if (saved) setMessages(JSON.parse(saved));
     } catch {}
   }, []);
@@ -224,7 +209,7 @@ function useSarieChat() {
       setMessages(p => {
         const u = [...p];
         u[u.length - 1] = { role: "assistant", content: acc, ts: now() };
-        try { sessionStorage.setItem("chat_history", JSON.stringify(u)); } catch {}
+        try { localStorage.setItem("chat_history", JSON.stringify(u)); } catch {}
         return u;
       });
     } catch (e: any) {
@@ -267,8 +252,27 @@ function ChatPageInner() {
   const [input, setInput] = useState("");
   const [showEmoji, setShowEmoji] = useState(false);
   const [pendingAttachment, setPendingAttachment] = useState<Attachment | null>(null);
-  const [teamMessages, setTeamMessages] = useState<Record<string, ChatMessage[]>>(MOCK_TEAM_MESSAGES);
+  const [teamMessages, setTeamMessages] = useState<Record<string, ChatMessage[]>>({});
   const [hoverMsg, setHoverMsg] = useState<number | null>(null);
+
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem("team_chat_history");
+      if (saved) {
+        setTeamMessages(JSON.parse(saved));
+      } else {
+        setTeamMessages(INITIAL_TEAM_MESSAGES);
+      }
+    } catch {
+      setTeamMessages(INITIAL_TEAM_MESSAGES);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (Object.keys(teamMessages).length > 0) {
+      localStorage.setItem("team_chat_history", JSON.stringify(teamMessages));
+    }
+  }, [teamMessages]);
   const [activeMenu, setActiveMenu] = useState<number | null>(null);
   const [forwardingMsg, setForwardingMsg] = useState<string | null>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
@@ -317,7 +321,7 @@ function ChatPageInner() {
     if (isAI) {
       sarie.setMessages(prev => {
         const u = prev.filter((_, i) => i !== index);
-        try { sessionStorage.setItem("chat_history", JSON.stringify(u)); } catch {}
+        try { localStorage.setItem("chat_history", JSON.stringify(u)); } catch {}
         return u;
       });
     } else {
@@ -524,20 +528,22 @@ function ChatPageInner() {
                 ) : (
                   <AvatarCircle name={c.name} size={42} online={c.online} />
                 )}
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 2 }}>
-                    <span style={{ fontSize: 13, fontWeight: 700, color: "var(--text-primary)" }}>{c.name}</span>
-                    <span style={{ fontSize: 10, color: "var(--text-faint)" }}>{c.time}</span>
-                  </div>
+                <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", gap: 2 }}>
+                  <span style={{ fontSize: 13, fontWeight: 700, color: "var(--text-primary)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                    {currentUser?.name && c.name.includes(currentUser.name.split(" ")[0]) ? `${c.name} (You)` : c.name}
+                  </span>
                   <div style={{ fontSize: 11, color: "var(--text-muted)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                     {c.lastMessage}
                   </div>
                 </div>
-                {c.unread > 0 && (
-                  <div style={{ width: 18, height: 18, borderRadius: "50%", background: "var(--btn-primary-bg)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 10, fontWeight: 700, color: "#fff", flexShrink: 0 }}>
-                    {c.unread}
-                  </div>
-                )}
+                <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", flexShrink: 0, gap: 4 }}>
+                  <span style={{ fontSize: 10, color: "var(--text-faint)", whiteSpace: "nowrap" }}>{c.time}</span>
+                  {c.unread > 0 ? (
+                    <div style={{ width: 18, height: 18, borderRadius: "50%", background: "var(--btn-primary-bg)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 10, fontWeight: 700, color: "#fff" }}>
+                      {c.unread}
+                    </div>
+                  ) : <div style={{ height: 18 }} />}
+                </div>
               </button>
             );
           })}
