@@ -72,7 +72,7 @@ export default function VideoDetailPage() {
   };
 
   return (
-    <div className="px-8 py-8 max-w-[1200px] mx-auto">
+    <div className="p-4 md:p-8 max-w-[1200px] mx-auto">
       {/* Back */}
       <button onClick={() => router.back()}
         className="flex items-center gap-2 text-[13px] font-semibold mb-6 hover:opacity-70 transition-opacity"

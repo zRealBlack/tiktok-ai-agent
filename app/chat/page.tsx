@@ -3,7 +3,7 @@
 import { useState, useRef, useEffect, useCallback, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import Image from "next/image";
-import { Send, Loader2, Square, Search, Phone, Video, MoreVertical, Smile, Paperclip, Check, CheckCheck, X, FileText, Film, Copy, Trash2, Pencil, Forward, MoreHorizontal } from "lucide-react";
+import { Send, Loader2, Square, Search, Phone, Video, MoreVertical, Smile, Paperclip, Check, CheckCheck, X, FileText, Film, Copy, Trash2, Pencil, Forward, MoreHorizontal, ArrowLeft } from "lucide-react";
 import { useData } from "@/components/DataContext";
 import MarkdownMessage from "@/components/MarkdownMessage";
 import SarieAvatar from "@/public/sarie_generated.png";
@@ -292,6 +292,7 @@ function ChatPageInner() {
   const [forwardingMsg, setForwardingMsg] = useState<string | null>(null);
   const [selectedForwards, setSelectedForwards] = useState<string[]>([]);
   const [contextMenu, setContextMenu] = useState<{ msgIdx: number } | null>(null);
+  const [showChatOnMobile, setShowChatOnMobile] = useState(false);
   const [readReceipts, setReadReceipts] = useState<Record<string, number>>({});
   const bottomRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -617,22 +618,10 @@ function ChatPageInner() {
 
   return (
     <>
-    <div style={{
-      display: "flex",
-      height: "calc(100vh - 56px)", // exactly the viewport minus the TopBar
-      overflow: "hidden",
-      paddingBottom: 12,
-      paddingRight: 20,
-      paddingLeft: 0,
-      gap: 16,
-      boxSizing: "border-box",
-    }}>
+    <div className="flex flex-col md:flex-row gap-4 h-[calc(100vh-140px)] md:h-[calc(100vh-56px)] overflow-hidden pb-4 pr-4 pl-4 md:pl-0 box-border">
 
       {/* ── LEFT: Conversation List ──────────────────────────────────────── */}
-      <div style={{
-        width: 280, flexShrink: 0, display: "flex", flexDirection: "column",
-        gap: 0, ...glass, borderRadius: 24, overflow: "hidden",
-      }}>
+      <div className={`${showChatOnMobile ? 'hidden md:flex' : 'flex'} w-full md:w-[280px] shrink-0 flex-col overflow-hidden rounded-3xl border border-white/10 bg-black/40 backdrop-blur-xl`}>
         {/* Header */}
         <div style={{ padding: "20px 20px 0" }}>
           <div style={{ fontSize: 20, fontWeight: 900, color: "var(--text-primary)", marginBottom: 14 }}>
@@ -663,7 +652,7 @@ function ChatPageInner() {
             return (
               <button
                 key={c.id}
-                onClick={() => setActiveId(c.id)}
+                onClick={() => { setActiveId(c.id); setShowChatOnMobile(true); }}
                 style={{
                   width: "100%", display: "flex", alignItems: "center", gap: 12,
                   padding: "10px 12px", borderRadius: 16, border: "none",
@@ -709,13 +698,12 @@ function ChatPageInner() {
       </div>
 
       {/* ── CENTER: Chat Window ──────────────────────────────────────────── */}
-      <div style={{ flex: 1, display: "flex", flexDirection: "column", minWidth: 0, ...glass, borderRadius: 24, overflow: "hidden" }}>
+      <div className={`${!showChatOnMobile ? 'hidden md:flex' : 'flex'} flex-1 flex-col min-w-0 rounded-3xl border border-white/10 bg-black/40 backdrop-blur-xl overflow-hidden`}>
         {/* Chat Header */}
-        <div style={{
-          display: "flex", alignItems: "center", gap: 12,
-          padding: "16px 20px", borderBottom: "1px solid var(--glass-border)",
-          flexShrink: 0
-        }}>
+        <div className="flex items-center gap-3 p-4 border-b border-white/10 shrink-0">
+          <button className="md:hidden flex items-center justify-center w-8 h-8 rounded-full border border-white/10 bg-white/5 mr-1" onClick={() => setShowChatOnMobile(false)}>
+            <ArrowLeft size={16} color="var(--text-primary)" />
+          </button>
           {activeConvo.isAI ? (
             <div style={{ width: 40, height: 40, borderRadius: "50%", overflow: "hidden", position: "relative", flexShrink: 0 }}>
               <Image src={SarieAvatar} alt="Sarie" width={40} height={40} style={{ objectFit: "cover" }} />
@@ -972,7 +960,7 @@ function ChatPageInner() {
         </div>
       )}
       {/* ── RIGHT: Contact Info ──────────────────────────────────────────── */}
-      <div style={{ width: 240, flexShrink: 0, display: "flex", flexDirection: "column", gap: 16, overflowY: "auto" }}>
+      <div className="hidden xl:flex w-[240px] shrink-0 flex-col gap-4 overflow-y-auto">
         {/* Profile Card */}
         <div style={{ ...glass, borderRadius: 24, padding: "28px 20px 20px", display: "flex", flexDirection: "column", alignItems: "center", textAlign: "center" }}>
           {activeConvo.isAI ? (

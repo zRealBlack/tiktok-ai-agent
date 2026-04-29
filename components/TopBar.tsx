@@ -11,13 +11,7 @@ export default function TopBar() {
   const currentAccount = account?.username || "@rasayel_podcast";
 
   return (
-    <div style={{
-      position: "sticky", top: 0, zIndex: 30,
-      display: "flex", alignItems: "center",
-      padding: "16px 28px 0",
-      gap: 20,
-      pointerEvents: "none", // let clicks pass through the empty space
-    }}>
+    <div className="sticky top-0 z-30 flex items-center pt-4 px-4 md:px-7 gap-3 md:gap-5 pointer-events-none w-full">
       {/* Account Dropdown — center */}
       <div style={{ flex: 1, display: "flex", justifyContent: "center", pointerEvents: "auto" }}>
         <div style={{ position: "relative" }}>
