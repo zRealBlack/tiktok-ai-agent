@@ -90,7 +90,13 @@ export default function VideoDetailPage() {
               {isPlaying ? (
                 <iframe
                   src={`https://www.tiktok.com/embed/v2/${video.id}`}
-                  style={{ width: '100%', height: '100%', border: 'none' }}
+                  style={{ 
+                    width: '325px', 
+                    height: '577.5px', 
+                    border: 'none',
+                    transform: 'scale(0.8)',
+                    transformOrigin: 'top left'
+                  }}
                   allow="fullscreen"
                   allowFullScreen
                 />
