@@ -21,24 +21,48 @@ export const TEAM_MEMBERS: TeamMember[] = [
     email: "dina@mas.ai",
     password: "Dina@1984",
     name: "Dina Amer",
-    role: "CEO & Content Creator",
+    role: "CEO & Podcaster",
     bio: "The podcaster of Rasayel podcast and CEO."
   },
   {
     id: "haitham",
     email: "haitham@mas.ai",
-    password: "Haitham@7482",
-    name: "Haitham Abdelaziz",
-    role: "Editor",
-    bio: "The video editor and post-production specialist."
+    password: "Haitham@5678",
+    name: "Haitham Abdel-aziz",
+    role: "Director & Head of Production",
+    bio: "The video director and post-production specialist."
   },
   {
     id: "shahd",
     email: "shahd@mas.ai",
     password: "Shahd@9123",
     name: "Shahd Sayed",
-    role: "Moderation",
-    bio: "The community moderator handling comments and engagement."
+    role: "Ugc Creator",
+    bio: "UGC content creator."
+  },
+  {
+    id: "sara",
+    email: "sara@mas.ai",
+    password: "Sara@1234",
+    name: "Sara Hatem",
+    role: "Marketing & Operation Management",
+    bio: "Handles marketing and operations."
+  },
+  {
+    id: "shahdm",
+    email: "shahdm@mas.ai",
+    password: "Shahdm@9012",
+    name: "Shahd Mahmoud",
+    role: "Content Creator & Community Manager",
+    bio: "Handles content, monthly plans, trends, and market research."
+  },
+  {
+    id: "yousef",
+    email: "yousef@mas.ai",
+    password: "Yousef@3456",
+    name: "Yousef Hatem",
+    role: "Ai Artist",
+    bio: "Generates videos with AI."
   }
 ];
 
