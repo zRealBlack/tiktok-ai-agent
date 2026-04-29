@@ -44,7 +44,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
 
   const loadUser = useCallback(() => {
     try {
-      const userStr = sessionStorage.getItem('mas_ai_authenticated_user');
+      const userStr = localStorage.getItem('mas_ai_authenticated_user');
       if (userStr) {
         setCurrentUser(JSON.parse(userStr));
       }

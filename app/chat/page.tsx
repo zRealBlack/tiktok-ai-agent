@@ -303,7 +303,23 @@ function ChatPageInner() {
   const [forwardingMsg, setForwardingMsg] = useState<string | null>(null);
   const [selectedForwards, setSelectedForwards] = useState<string[]>([]);
   const [contextMenu, setContextMenu] = useState<{ msgIdx: number } | null>(null);
-  const [readReceipts, setReadReceipts] = useState<Record<string, number>>({});
+  const [readReceipts, setReadReceipts] = useState<Record<string, number>>(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        const saved = localStorage.getItem("mas_chat_readReceipts");
+        return saved ? JSON.parse(saved) : {};
+      } catch {
+        return {};
+      }
+    }
+    return {};
+  });
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      localStorage.setItem("mas_chat_readReceipts", JSON.stringify(readReceipts));
+    }
+  }, [readReceipts]);
   const bottomRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const sarie = useSarieChat();
@@ -668,7 +684,7 @@ function ChatPageInner() {
         </div>
 
         {/* List */}
-        <div style={{ flex: 1, overflowY: "auto", padding: "0 12px 16px" }}>
+        <div style={{ flex: 1, overflowY: "auto", padding: "0 12px 120px" }}>
           {computedConversations.map(c => {
             const active = c.id === activeId;
             return (

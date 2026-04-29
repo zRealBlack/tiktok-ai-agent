@@ -16,7 +16,7 @@ export default function PasswordGuard({ children }: { children: React.ReactNode 
   const [isMounting, setIsMounting] = useState(true);
 
   useEffect(() => {
-    const authUserStr = sessionStorage.getItem(SESSION_KEY);
+    const authUserStr = localStorage.getItem(SESSION_KEY);
     if (authUserStr) {
       try {
         const user = JSON.parse(authUserStr);
@@ -38,7 +38,7 @@ export default function PasswordGuard({ children }: { children: React.ReactNode 
     e.preventDefault();
     const user = authenticateUser(email, password);
     if (user) {
-      sessionStorage.setItem(SESSION_KEY, JSON.stringify(user));
+      localStorage.setItem(SESSION_KEY, JSON.stringify(user));
       // Dispatch an event so other components (like DataContext) can pick up the login immediately
       window.dispatchEvent(new Event("mas_user_login"));
       setIsAuthenticated(true);
