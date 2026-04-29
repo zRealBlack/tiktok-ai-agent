@@ -38,7 +38,7 @@ export default function RootLayout({
                 }}
               />
               <Sidebar />
-              <main className="flex-1 flex flex-col overflow-auto min-h-screen relative" style={{ marginLeft: 72 }}>
+              <main className="flex-1 flex flex-col overflow-auto min-h-screen relative ml-0 md:ml-[72px] pb-[72px] md:pb-0 transition-all duration-300">
                 <TopBar />
                 <div className="flex-1 page-fade">{children}</div>
               </main>

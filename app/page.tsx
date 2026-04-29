@@ -101,7 +101,7 @@ export default function OverviewPage() {
   const totalViews = videos.reduce((s,v) => s+(v.views||0), 0);
 
   return (
-    <div style={{ padding: '32px 28px 32px', maxWidth: 1400, margin: '0 auto' }}>
+    <div className="p-4 md:p-8 max-w-[1400px] mx-auto">
 
       {/* ── PAGE TITLE ─────────────────────────── */}
       <div style={{ marginBottom: 28 }}>
@@ -126,14 +126,14 @@ export default function OverviewPage() {
       </div>
 
       {/* ── 4 STAT PILLS ───────────────────────── */}
-      <div style={{ display: 'flex', gap: 12, marginBottom: 24, flexWrap: 'wrap' as const }}>
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
         {[
           { icon: Users,       label: 'Followers',       value: fmt(account?.followers||0),       sub: `+${fmt(account?.followersGrowth||0)} this week`, up: true },
           { icon: Eye,         label: 'Weekly Views',    value: fmt(account?.weeklyViews||0),      sub: `${account?.weeklyViewsChange||0}% change`,       up: (account?.weeklyViewsChange||0)>=0 },
           { icon: TrendingUp,  label: 'Avg Engagement',  value: `${account?.avgEngagement||0}%`,  sub: 'engagement rate',                                 up: true },
           { icon: AlertTriangle,label:'Videos Audited', value: String(videos.length),             sub: 'analyzed by Sarie',                               up: true },
         ].map(({ icon: Icon, label, value, sub, up }) => (
-          <div key={label} style={{ ...card, padding: '18px 22px', display: 'flex', alignItems: 'center', gap: 16, flex: 1, minWidth: 180 }}>
+          <div key={label} className="flex items-center gap-3 md:gap-4 p-3 md:p-4 rounded-2xl border border-white/10 bg-white/5 shadow-lg overflow-hidden min-w-0">
             <div style={{ width: 40, height: 40, borderRadius: '50%', background: 'var(--glass-elevated)', border: '1px solid var(--glass-elevated-border)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
               <Icon size={16} color="var(--text-muted)" />
             </div>
@@ -149,7 +149,7 @@ export default function OverviewPage() {
       </div>
 
       {/* ── MAIN 3-COL GRID ────────────────────── */}
-      <div style={{ display: 'grid', gridTemplateColumns: '320px 1fr 1fr', gap: 18, alignItems: 'start' }}>
+      <div className="grid grid-cols-1 lg:grid-cols-[320px_1fr_1fr] gap-4 md:gap-5 items-start">
 
         {/* COL 1 — Top Videos list */}
         <div style={{ ...card, display: 'flex', flexDirection: 'column', maxHeight: 620 }}>

@@ -25,19 +25,19 @@ export default function AuditPage() {
   const needFix     = latestVideos.filter((v: any) => v.score < 60).length;
 
   return (
-    <div style={{ padding: '32px 28px', maxWidth: 1400, margin: '0 auto' }}>
+    <div className="p-4 md:p-8 max-w-[1400px] mx-auto">
 
       {/* ── PAGE TITLE ─────────────────────────── */}
       <div style={{ marginBottom: 28 }}>
         <div style={{ fontSize: 13, color: 'var(--text-muted)', fontWeight: 500, marginBottom: 6 }}>
           تحليل AI لآخر {latestVideos.length} فيديو
         </div>
-        <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between' }}>
+        <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
           <h1 style={{ fontSize: 46, fontWeight: 900, color: 'var(--text-primary)', margin: 0, letterSpacing: '-0.045em', lineHeight: 1 }}>
             Content Audit
           </h1>
           {/* Tabs */}
-          <div style={{ display: 'flex', gap: 6, background: 'var(--glass-elevated)', border: '1px solid var(--glass-elevated-border)', borderRadius: 100, padding: 4 }}>
+          <div className="flex gap-1.5 p-1 rounded-full bg-white/5 border border-white/10 self-start md:self-auto">
             {([
               { key: 'latest', icon: Video,  label: `Latest (${latestVideos.length})` },
               { key: 'pinned', icon: Pin,    label: `Pinned (${pinnedVideos.length})` },
@@ -58,14 +58,14 @@ export default function AuditPage() {
       </div>
 
       {/* ── SUMMARY STATS ─────────────────────── */}
-      <div style={{ display: 'flex', gap: 14, marginBottom: 24 }}>
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
         {[
           { icon: Video,         label: 'Total Videos',    value: String(latestVideos.length), color: 'var(--text-muted)' },
           { icon: TrendingUp,    label: 'Avg Score',       value: `${avgScore}/100`,           color: '#3b82f6'           },
           { icon: Star,          label: 'High Performers', value: String(highPerf),            color: '#22c55e'           },
           { icon: AlertTriangle, label: 'Need Fixing',     value: String(needFix),             color: '#ef4444'           },
         ].map(({ icon: Icon, label, value, color }) => (
-          <div key={label} style={{ ...card, padding: '16px 20px', display: 'flex', alignItems: 'center', gap: 14, flex: 1 }}>
+          <div key={label} className="flex items-center gap-3 p-3 md:p-4 rounded-2xl border border-white/10 bg-white/5 shadow-lg overflow-hidden min-w-0">
             <div style={{ width: 36, height: 36, borderRadius: '50%', background: 'var(--glass-elevated)', border: '1px solid var(--glass-elevated-border)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
               <Icon size={15} color={color} />
             </div>
@@ -83,7 +83,7 @@ export default function AuditPage() {
           {tab === "pinned" ? "مفيش فيديوهات مثبتة" : "لا توجد فيديوهات"}
         </div>
       ) : (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 18 }}>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-5">
           {[...activeVideos].sort((a: any, b: any) => b.score - a.score).map((video: any) => (
             <VideoScoreCard key={video.id} video={video} />
           ))}

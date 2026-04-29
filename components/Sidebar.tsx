@@ -26,11 +26,12 @@ export default function Sidebar() {
   return (
     <>
       <aside
-        className="fixed left-0 top-0 h-full z-40 flex flex-col items-center py-5 gap-2"
-        style={{ width: 72, paddingTop: 68 }}
+        className="fixed z-40 flex bg-black/90 backdrop-blur-xl border-t border-white/5 md:bg-transparent md:border-none md:backdrop-blur-none
+                   bottom-0 left-0 right-0 h-[72px] flex-row justify-around items-center px-2 py-0
+                   md:top-0 md:bottom-auto md:w-[72px] md:h-full md:flex-col md:py-5 md:gap-2 md:justify-start md:pt-[68px]"
       >
       {/* Logo — fixed top-left, separate from sidebar icon flow */}
-      <Link href="/" title="MAS AI Studio" style={{
+      <Link href="/" title="MAS AI Studio" className="hidden md:flex" style={{
         position: "fixed", top: 16, left: 8, zIndex: 50,
         textDecoration: "none",
       }}>
@@ -46,7 +47,7 @@ export default function Sidebar() {
       </Link>
 
         {/* Divider */}
-        <div style={{ width: 24, height: 1, background: "var(--glass-border)", margin: "2px 0 6px" }} />
+        <div className="hidden md:block" style={{ width: 24, height: 1, background: "var(--glass-border)", margin: "2px 0 6px" }} />
 
         {/* Nav icons */}
         {NAV.map(({ href, label, icon: Icon }) => {
@@ -71,13 +72,13 @@ export default function Sidebar() {
           );
         })}
 
-        <div style={{ height: 8 }} />
+        <div className="hidden md:block" style={{ height: 8 }} />
 
         {/* Extra icons (decorative) */}
         {EXTRA.map((Icon, i) => (
-          <button key={i} style={{
+          <button key={i} className="hidden md:flex" style={{
             width: 42, height: 42, borderRadius: "50%",
-            display: "flex", alignItems: "center", justifyContent: "center",
+            alignItems: "center", justifyContent: "center",
             background: "transparent", border: "none", cursor: "pointer",
             opacity: 0.4,
           }}>
@@ -91,6 +92,7 @@ export default function Sidebar() {
         <Link
           href="/chat"
           title="Messages"
+          className="md:mb-[72px]"
           style={{
             width: 42, height: 42, borderRadius: "50%",
             display: "flex", alignItems: "center", justifyContent: "center",
@@ -99,7 +101,6 @@ export default function Sidebar() {
             border: pathname.startsWith("/chat") ? "none" : "1px solid var(--glass-elevated-border)",
             boxShadow: pathname.startsWith("/chat") ? "0 4px 16px rgba(239,68,68,0.3)" : "none",
             transition: "all 0.18s",
-            marginBottom: 72, // Space to clear the floating profile card
           }}
         >
           <MessageSquare size={16} color={pathname.startsWith("/chat") ? "#fff" : "var(--text-faint)"} strokeWidth={pathname.startsWith("/chat") ? 2.5 : 2} />
@@ -107,9 +108,9 @@ export default function Sidebar() {
       </aside>
 
       {/* Floating Horizontal Profile Card (Bottom Left) */}
-      <div style={{
+      <div className="hidden md:flex" style={{
         position: "fixed", bottom: 20, left: 20, zIndex: 50,
-        display: "flex", alignItems: "center", gap: 12,
+        alignItems: "center", gap: 12,
         background: "var(--glass-bg)", border: "1px solid var(--glass-border)",
         padding: "8px 12px 8px 8px", borderRadius: 100,
         backdropFilter: "blur(24px)", boxShadow: "var(--glass-shadow)",
