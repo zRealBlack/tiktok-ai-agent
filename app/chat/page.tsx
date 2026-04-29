@@ -256,6 +256,8 @@ function ChatPageInner() {
   const [hoverMsg, setHoverMsg] = useState<number | null>(null);
   const [activeMenu, setActiveMenu] = useState<number | null>(null);
   const [forwardingMsg, setForwardingMsg] = useState<string | null>(null);
+  const [contextMenu, setContextMenu] = useState<{ msgIdx: number, x: number, y: number } | null>(null);
+  const [readReceipts, setReadReceipts] = useState<Record<string, number>>({});
   const bottomRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const sarie = useSarieChat();
@@ -309,6 +311,33 @@ function ChatPageInner() {
     return () => clearTimeout(timeout);
   }, [currentUser]);
   // Auto-send prompt from URL (e.g. from "Fix with AI" button on audit page)
+  useEffect(() => {
+    setReadReceipts(prev => ({ ...prev, [activeId]: (teamMessages[activeId] || []).length }));
+  }, [activeId, teamMessages]);
+
+  useEffect(() => {
+    if (contextMenu === null) return;
+    const clickHandler = () => setContextMenu(null);
+    window.addEventListener("click", clickHandler);
+    return () => window.removeEventListener("click", clickHandler);
+  }, [contextMenu]);
+
+  // Compute conversations dynamically
+  const computedConversations = conversations.map(c => {
+    if (c.isAI) return c;
+    const msgs = teamMessages[c.id] || [];
+    if (msgs.length === 0) return c;
+    const lastMsg = msgs[msgs.length - 1];
+    const readLen = readReceipts[c.id] || 0;
+    const unread = Math.max(0, msgs.length - readLen);
+    return {
+      ...c,
+      lastMessage: lastMsg.content || (lastMsg.attachment ? `[${lastMsg.attachment.type}]` : ""),
+      time: lastMsg.ts || c.time,
+      unread: c.id === activeId ? 0 : unread
+    };
+  });
+
   useEffect(() => {
     const prompt = searchParams.get("prompt");
     if (prompt && !promptHandled.current && sarie.messages.length > 0) {
@@ -532,7 +561,7 @@ function ChatPageInner() {
 
         {/* List */}
         <div style={{ flex: 1, overflowY: "auto", padding: "0 12px 16px" }}>
-          {conversations.map(c => {
+          {computedConversations.map(c => {
             const active = c.id === activeId;
             return (
               <button
@@ -632,7 +661,15 @@ function ChatPageInner() {
                     </div>
                   ) : <AvatarCircle name={activeConvo.name} size={30} />
                 )}
-                <div style={{ maxWidth: "68%", position: "relative", display: "flex", alignItems: "flex-end", gap: 8, flexDirection: isUser ? "row-reverse" : "row" }}>
+                <div 
+                  onContextMenu={(e) => {
+                    if (!isUser && !activeConvo.isAI) {
+                      e.preventDefault();
+                      setContextMenu({ msgIdx: i, x: e.clientX, y: e.clientY });
+                    }
+                  }}
+                  style={{ maxWidth: "68%", position: "relative", display: "flex", alignItems: "flex-end", gap: 8, flexDirection: isUser ? "row-reverse" : "row" }}
+                >
                   <div style={{ position: "relative", display: "flex", flexDirection: "column", width: "100%" }}>
 
                     <div dir="auto" style={{
@@ -771,13 +808,8 @@ function ChatPageInner() {
             </div>
           )}
 
-          <div style={{ display: "flex", alignItems: "center", gap: 10, background: "var(--glass-elevated)", border: "1px solid var(--glass-elevated-border)", borderRadius: 100, padding: "8px 12px" }}>
-            <input value={input} onChange={e => setInput(e.target.value)}
-              onKeyDown={e => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleSend(); } }}
-              placeholder={isAI ? "اسأل ساري..." : "Write a message..."}
-              style={{ flex: 1, background: "transparent", border: "none", outline: "none", fontSize: 13, color: "var(--text-primary)", direction: isAI ? "rtl" : "ltr" }}
-            />
-            <div style={{ display: "flex", gap: 6, alignItems: "center", flexShrink: 0 }}>
+          <div style={{ display: "flex", alignItems: "flex-end", gap: 10, background: "var(--glass-elevated)", border: "1px solid var(--glass-elevated-border)", borderRadius: 24, padding: "8px 12px", minHeight: 52 }}>
+            <div style={{ display: "flex", gap: 6, alignItems: "center", flexShrink: 0, paddingBottom: 4 }}>
               <button onClick={() => fileInputRef.current?.click()} title="Attach file"
                 style={{ background: "none", border: "none", cursor: "pointer", display: "flex", alignItems: "center", padding: 2 }}>
                 <Paperclip size={15} color="var(--text-muted)" />
@@ -788,19 +820,41 @@ function ChatPageInner() {
                 <Smile size={15} color={showEmoji ? "var(--btn-primary-bg)" : "var(--text-muted)"} />
               </button>
             </div>
-            {streaming ? (
-              <button onClick={sarie.stop} style={{ width: 36, height: 36, borderRadius: "50%", background: "var(--btn-primary-bg)", border: "none", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-                <Square size={13} color="#fff" fill="#fff" />
-              </button>
-            ) : (
-              <button onClick={handleSend} disabled={!input.trim() && !pendingAttachment}
-                style={{ width: 36, height: 36, borderRadius: "50%", background: (input.trim() || pendingAttachment) ? "var(--btn-primary-bg)" : "var(--glass-elevated)", border: "none", cursor: (input.trim() || pendingAttachment) ? "pointer" : "default", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, transition: "background 0.2s", opacity: (input.trim() || pendingAttachment) ? 1 : 0.5 }}>
-                <Send size={14} color={(input.trim() || pendingAttachment) ? "#fff" : "var(--text-muted)"} />
-              </button>
-            )}
+            
+            <textarea value={input} onChange={e => {
+                setInput(e.target.value);
+                e.target.style.height = 'auto';
+                e.target.style.height = Math.min(e.target.scrollHeight, 120) + 'px';
+              }}
+              onKeyDown={e => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleSend(); } }}
+              placeholder={isAI ? "اسأل ساري..." : "Write a message..."}
+              rows={1}
+              style={{ flex: 1, background: "transparent", border: "none", outline: "none", fontSize: 13, color: "var(--text-primary)", direction: isAI ? "rtl" : "ltr", resize: "none", padding: "8px 0", maxHeight: 120, minHeight: 34, lineHeight: "1.5", fontFamily: "inherit" }}
+            />
+
+            <div style={{ paddingBottom: 0, flexShrink: 0 }}>
+              {streaming ? (
+                <button onClick={sarie.stop} style={{ width: 36, height: 36, borderRadius: "50%", background: "var(--btn-primary-bg)", border: "none", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                  <Square size={13} color="#fff" fill="#fff" />
+                </button>
+              ) : (
+                <button onClick={handleSend} disabled={!input.trim() && !pendingAttachment}
+                  style={{ width: 36, height: 36, borderRadius: "50%", background: (input.trim() || pendingAttachment) ? "var(--btn-primary-bg)" : "var(--glass-elevated)", border: "none", cursor: (input.trim() || pendingAttachment) ? "pointer" : "default", display: "flex", alignItems: "center", justifyContent: "center", transition: "background 0.2s", opacity: (input.trim() || pendingAttachment) ? 1 : 0.5 }}>
+                  <Send size={14} color={(input.trim() || pendingAttachment) ? "#fff" : "var(--text-muted)"} />
+                </button>
+              )}
+            </div>
           </div>
         </div>
       </div>
+
+      {contextMenu && (
+        <div style={{ position: "fixed", top: contextMenu.y, left: contextMenu.x, zIndex: 100, background: "var(--glass-panel-bg)", border: "1px solid var(--glass-border)", borderRadius: 16, padding: "8px", boxShadow: "var(--glass-shadow)", display: "flex", flexWrap: "wrap", width: 220, gap: 6 }} onClick={e => e.stopPropagation()}>
+          {EMOJIS.map(e => (
+            <button key={e} onClick={() => { addReaction(contextMenu.msgIdx, e); setContextMenu(null); }} style={{ fontSize: 22, background: "none", border: "none", cursor: "pointer", padding: "4px", borderRadius: 8, transition: "background 0.1s" }} onMouseEnter={el => el.currentTarget.style.background = "var(--glass-elevated)"} onMouseLeave={el => el.currentTarget.style.background = "none"}>{e}</button>
+          ))}
+        </div>
+      )}
 
       {/* ── RIGHT: Contact Info ──────────────────────────────────────────── */}
       <div style={{ width: 240, flexShrink: 0, display: "flex", flexDirection: "column", gap: 16, overflowY: "auto" }}>
