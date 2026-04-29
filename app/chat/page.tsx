@@ -103,9 +103,9 @@ const INITIAL_CONVERSATIONS: Conversation[] = [
     name: "Dina Amer",
     avatar: null,
     isAI: false,
-    lastMessage: "Let's review the new strategy.",
-    time: "10:35 AM",
-    unread: 2,
+    lastMessage: "",
+    time: "",
+    unread: 0,
     online: true,
     role: "CEO / Creator",
   },
@@ -114,8 +114,8 @@ const INITIAL_CONVERSATIONS: Conversation[] = [
     name: "Yassin Gaml",
     avatar: null,
     isAI: false,
-    lastMessage: "API keys are updated.",
-    time: "9:12 AM",
+    lastMessage: "",
+    time: "",
     unread: 0,
     online: true,
     role: "Developer / AI Specialist",
@@ -125,10 +125,10 @@ const INITIAL_CONVERSATIONS: Conversation[] = [
     name: "Hesham Ahmed",
     avatar: null,
     isAI: false,
-    lastMessage: "The new video edit is ready for review.",
-    time: "Yesterday",
-    unread: 1,
-    online: false,
+    lastMessage: "",
+    time: "",
+    unread: 0,
+    online: true,
     role: "Editor",
   },
   {
@@ -136,8 +136,8 @@ const INITIAL_CONVERSATIONS: Conversation[] = [
     name: "Shahd Sayed",
     avatar: null,
     isAI: false,
-    lastMessage: "I handled the spam comments on the last post.",
-    time: "Yesterday",
+    lastMessage: "",
+    time: "",
     unread: 0,
     online: true,
     role: "Moderation",
@@ -255,24 +255,48 @@ function ChatPageInner() {
   const [teamMessages, setTeamMessages] = useState<Record<string, ChatMessage[]>>({});
   const [hoverMsg, setHoverMsg] = useState<number | null>(null);
 
+  // 1-second polling for global team messages
   useEffect(() => {
-    try {
-      const saved = localStorage.getItem("team_chat_history");
-      if (saved) {
-        setTeamMessages(JSON.parse(saved));
-      } else {
-        setTeamMessages(INITIAL_TEAM_MESSAGES);
-      }
-    } catch {
-      setTeamMessages(INITIAL_TEAM_MESSAGES);
-    }
-  }, []);
-
-  useEffect(() => {
-    if (Object.keys(teamMessages).length > 0) {
-      localStorage.setItem("team_chat_history", JSON.stringify(teamMessages));
-    }
-  }, [teamMessages]);
+    let timeout: NodeJS.Timeout;
+    const fetchMsgs = async () => {
+      try {
+        const res = await fetch("/api/messages");
+        if (res.ok) {
+          const data = await res.json();
+          if (data.messages && currentUser) {
+            const reconstructed: Record<string, ChatMessage[]> = {
+              dina: [], yassin: [], hesham: [], shahd: []
+            };
+            
+            data.messages.forEach((rawMsg: any) => {
+              const msg = typeof rawMsg === 'string' ? JSON.parse(rawMsg) : rawMsg;
+              
+              if (msg.senderId === currentUser.id) {
+                // Sent by me
+                if (reconstructed[msg.receiverId]) {
+                  reconstructed[msg.receiverId].push({
+                    role: "user", content: msg.content, ts: msg.ts, status: "delivered", attachment: msg.attachment
+                  });
+                }
+              } else if (msg.receiverId === currentUser.id) {
+                // Sent to me
+                if (reconstructed[msg.senderId]) {
+                  reconstructed[msg.senderId].push({
+                    role: "assistant", content: msg.content, ts: msg.ts, status: "seen", attachment: msg.attachment
+                  });
+                }
+              }
+            });
+            setTeamMessages(reconstructed);
+          }
+        }
+      } catch (err) {}
+      timeout = setTimeout(fetchMsgs, 1000);
+    };
+    
+    fetchMsgs();
+    return () => clearTimeout(timeout);
+  }, [currentUser]);
   const [activeMenu, setActiveMenu] = useState<number | null>(null);
   const [forwardingMsg, setForwardingMsg] = useState<string | null>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
@@ -397,6 +421,21 @@ function ChatPageInner() {
       const msg: ChatMessage = { role: "user", content: text || "", ts: now(), status: "sent", ...(pendingAttachment ? { attachment: pendingAttachment } : {}) };
       setTeamMessages(prev => ({ ...prev, [activeId]: [...(prev[activeId] || []), msg] }));
       
+      if (currentUser) {
+        // Post globally to Upstash Redis via API
+        fetch("/api/messages", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            senderId: currentUser.id,
+            receiverId: activeId,
+            content: text || "",
+            ts: now(),
+            attachment: pendingAttachment
+          })
+        }).catch(console.error);
+      }
+      
       const targetId = activeId;
       setTimeout(() => {
         setTeamMessages(prev => {
@@ -404,13 +443,6 @@ function ChatPageInner() {
           if (arr.length > 0) arr[arr.length - 1] = { ...arr[arr.length - 1], status: "delivered" };
           return { ...prev, [targetId]: arr };
         });
-        setTimeout(() => {
-          setTeamMessages(prev => {
-            const arr = [...(prev[targetId] || [])];
-            if (arr.length > 0) arr[arr.length - 1] = { ...arr[arr.length - 1], status: "seen" };
-            return { ...prev, [targetId]: arr };
-          });
-        }, 1200);
       }, 600);
       
       // Reorder conversations to move activeId to the top (under Sarie)
