@@ -5,7 +5,7 @@ import { useData } from "@/components/DataContext";
 import { useEffect, useState } from "react";
 import {
   Eye, Heart, MessageCircle, Share2, ArrowLeft,
-  ExternalLink, Zap, TrendingUp, TrendingDown
+  ExternalLink, Zap, TrendingUp, TrendingDown, Play
 } from "lucide-react";
 import { dispatchAgentPrompt } from "@/lib/events";
 
@@ -37,6 +37,7 @@ export default function VideoDetailPage() {
   const { videos } = useData();
   const router = useRouter();
   const [coverFailed, setCoverFailed] = useState(false);
+  const [isPlaying, setIsPlaying] = useState(false);
 
   const video = videos.find((v) => v.id === id);
 
@@ -84,20 +85,35 @@ export default function VideoDetailPage() {
         <div>
           {/* Cover — 9:16 TikTok vertical */}
           <div className="flex justify-center mb-5">
-            <div className="relative rounded-2xl overflow-hidden bg-black shadow-2xl"
+            <div className="relative rounded-2xl overflow-hidden bg-black shadow-2xl group"
               style={{ width: '260px', height: '462px' }}>
-              {video.coverUrl && !coverFailed ? (
-                <>
+              {isPlaying ? (
+                <iframe
+                  src={`https://www.tiktok.com/embed/v2/${video.id}`}
+                  style={{ width: '100%', height: '100%', border: 'none' }}
+                  allow="fullscreen"
+                  allowFullScreen
+                />
+              ) : video.coverUrl && !coverFailed ? (
+                <div onClick={() => setIsPlaying(true)} className="cursor-pointer w-full h-full">
                   <img
                     src={`/api/proxy-image?id=${video.id}&url=${encodeURIComponent(video.coverUrl || '')}`}
                     alt={video.title}
                     referrerPolicy="no-referrer"
                     onError={() => setCoverFailed(true)}
-                    className="absolute inset-0 w-full h-full object-cover"
+                    className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
                   />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-transparent to-transparent" />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/20 to-transparent" />
+                  
+                  {/* Play Button Overlay */}
+                  <div className="absolute inset-0 flex items-center justify-center">
+                    <div className="w-14 h-14 rounded-full bg-black/40 backdrop-blur-md border border-white/20 flex items-center justify-center text-white opacity-90 group-hover:opacity-100 group-hover:scale-110 transition-all duration-300">
+                      <Play size={24} fill="currentColor" style={{ marginLeft: 3 }} />
+                    </div>
+                  </div>
+
                   {/* Score badge */}
-                  <div className={`absolute top-3 right-3 w-11 h-11 rounded-full flex items-center justify-center text-[14px] font-black ${scoreBg(video.score)}`}>
+                  <div className={`absolute top-3 right-3 w-11 h-11 rounded-full flex items-center justify-center text-[14px] font-black ${scoreBg(video.score)} shadow-lg`}>
                     {video.score}
                   </div>
                   {/* Title + date at bottom */}
@@ -105,10 +121,13 @@ export default function VideoDetailPage() {
                     <p className="text-white text-[13px] font-semibold leading-snug line-clamp-3">{video.title}</p>
                     <p className="text-white/50 text-[10px] mt-1">{video.posted}</p>
                   </div>
-                </>
+                </div>
               ) : (
-                <div className="w-full h-full flex items-center justify-center text-[13px]" style={{ color: 'var(--text-faint)' }}>
-                  No cover
+                <div className="w-full h-full flex flex-col items-center justify-center gap-3 bg-zinc-900 cursor-pointer" onClick={() => setIsPlaying(true)}>
+                  <div className="w-12 h-12 rounded-full bg-white/10 flex items-center justify-center text-white">
+                    <Play size={20} fill="currentColor" style={{ marginLeft: 2 }} />
+                  </div>
+                  <span className="text-[12px] font-semibold" style={{ color: 'var(--text-faint)' }}>Play Video</span>
                 </div>
               )}
             </div>
