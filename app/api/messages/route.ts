@@ -45,15 +45,18 @@ export async function POST(req: Request) {
 
 export async function PUT(req: Request) {
   try {
-    const { id, emoji } = await req.json();
-    if (!id || !emoji) return NextResponse.json({ error: "Missing fields" }, { status: 400 });
+    const { id, content, ts, emoji } = await req.json();
+    if ((!id && (!content || !ts)) || !emoji) return NextResponse.json({ error: "Missing fields" }, { status: 400 });
 
     const messages = await redis.lrange("mas_team_messages", 0, -1);
     let updated = false;
 
     const newMessages = messages.map((rawMsg: any) => {
       const msg = typeof rawMsg === "string" ? JSON.parse(rawMsg) : rawMsg;
-      if (msg.id === id) {
+      
+      const isMatch = id ? msg.id === id : (msg.content === content && msg.ts === ts);
+      
+      if (isMatch) {
         updated = true;
         const reactions = msg.reactions || [];
         msg.reactions = reactions.includes(emoji)
@@ -78,14 +81,15 @@ export async function PUT(req: Request) {
 
 export async function DELETE(req: Request) {
   try {
-    const { id } = await req.json();
-    if (!id) return NextResponse.json({ error: "Missing id" }, { status: 400 });
+    const { id, content, ts } = await req.json();
+    if (!id && (!content || !ts)) return NextResponse.json({ error: "Missing fields" }, { status: 400 });
 
     const messages = await redis.lrange("mas_team_messages", 0, -1);
     let updated = false;
     
     const newMessages = messages.map((m: any) => typeof m === "string" ? JSON.parse(m) : m).filter((m: any) => {
-      if (m.id === id) {
+      const isMatch = id ? m.id === id : (m.content === content && m.ts === ts);
+      if (isMatch) {
         updated = true;
         return false;
       }

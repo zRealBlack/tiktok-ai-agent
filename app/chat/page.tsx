@@ -389,11 +389,15 @@ function ChatPageInner() {
         return { ...prev, [activeId]: u };
       });
 
-      if (msgToDelete?.id) {
+      if (msgToDelete?.id || (msgToDelete?.content && msgToDelete?.ts)) {
         fetch("/api/messages", {
           method: "DELETE",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ id: msgToDelete.id })
+          body: JSON.stringify({ 
+            id: msgToDelete.id,
+            content: msgToDelete.content,
+            ts: msgToDelete.ts 
+          })
         }).catch(console.error);
       }
     }
@@ -493,18 +497,50 @@ function ChatPageInner() {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    if (file.size > 800 * 1024) {
+    const isImage = file.type.startsWith("image");
+
+    if (file.size > 800 * 1024 && !isImage) {
       alert("⚠️ File is too large! Since you don't have a storage bucket set up yet, please upload files under 800KB.");
+      e.target.value = "";
       return;
     }
 
-    const reader = new FileReader();
-    reader.onloadend = () => {
-      const base64Url = reader.result as string;
-      const type: Attachment["type"] = file.type.startsWith("image") ? "image" : file.type.startsWith("video") ? "video" : "file";
-      setPendingAttachment({ name: file.name, url: base64Url, type });
-    };
-    reader.readAsDataURL(file);
+    if (isImage) {
+      // Compress image
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const img = new window.Image();
+        img.onload = () => {
+          const canvas = document.createElement("canvas");
+          let width = img.width;
+          let height = img.height;
+          const MAX = 1200;
+          if (width > height && width > MAX) {
+            height *= MAX / width;
+            width = MAX;
+          } else if (height > MAX) {
+            width *= MAX / height;
+            height = MAX;
+          }
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext("2d");
+          ctx?.drawImage(img, 0, 0, width, height);
+          const compressedBase64 = canvas.toDataURL("image/jpeg", 0.7);
+          setPendingAttachment({ name: file.name, url: compressedBase64, type: "image" });
+        };
+        img.src = e.target?.result as string;
+      };
+      reader.readAsDataURL(file);
+    } else {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        const base64Url = reader.result as string;
+        const type: Attachment["type"] = file.type.startsWith("video") ? "video" : "file";
+        setPendingAttachment({ name: file.name, url: base64Url, type });
+      };
+      reader.readAsDataURL(file);
+    }
     
     e.target.value = "";
   };
@@ -514,22 +550,27 @@ function ChatPageInner() {
   const addReaction = (msgIdx: number, emoji: string) => {
     if (isAI) return;
     
-    let targetMsgId: string | undefined;
+    let targetMsg: ChatMessage | undefined;
     setTeamMessages(prev => {
       const msgs = [...(prev[activeId] || [])];
       const m = { ...msgs[msgIdx] };
-      targetMsgId = m.id;
+      targetMsg = m;
       const existing = m.reactions || [];
       m.reactions = existing.includes(emoji) ? existing.filter(r => r !== emoji) : [...existing, emoji];
       msgs[msgIdx] = m;
       return { ...prev, [activeId]: msgs };
     });
 
-    if (targetMsgId) {
+    if (targetMsg) {
       fetch("/api/messages", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ id: targetMsgId, emoji })
+        body: JSON.stringify({ 
+          id: targetMsg.id, 
+          content: targetMsg.content,
+          ts: targetMsg.ts,
+          emoji 
+        })
       }).catch(console.error);
     }
   };
