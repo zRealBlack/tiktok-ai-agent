@@ -802,15 +802,17 @@ function ChatPageInner() {
                     }}>
                       <button onClick={() => handleForward(m.content)} title="Forward" style={{ background: "none", border: "none", cursor: "pointer", color: "var(--text-faint)", padding: 4 }} onMouseEnter={e => e.currentTarget.style.color="var(--text-primary)"} onMouseLeave={e => e.currentTarget.style.color="var(--text-faint)"}><Forward size={14} /></button>
                       <button onClick={() => handleCopy(m.content)} title="Copy" style={{ background: "none", border: "none", cursor: "pointer", color: "var(--text-faint)", padding: 4 }} onMouseEnter={e => e.currentTarget.style.color="var(--text-primary)"} onMouseLeave={e => e.currentTarget.style.color="var(--text-faint)"}><Copy size={14} /></button>
-                      <div style={{ position: "relative" }}>
-                        <button onClick={(e) => { e.stopPropagation(); setActiveMenu(activeMenu === i ? null : i); }} title="More" style={{ background: "none", border: "none", cursor: "pointer", color: "var(--text-faint)", padding: 4 }} onMouseEnter={e => e.currentTarget.style.color="var(--text-primary)"} onMouseLeave={e => e.currentTarget.style.color="var(--text-faint)"}><MoreHorizontal size={14} /></button>
-                        {activeMenu === i && (
-                          <div style={{ position: "absolute", top: "100%", [isUser ? "right" : "left"]: 0, marginTop: 4, background: "var(--glass-panel-bg)", border: "1px solid var(--glass-border)", borderRadius: 12, padding: 4, boxShadow: "var(--glass-shadow)", zIndex: 20, minWidth: 120 }}>
-                            {isUser && <button onClick={() => handleEdit(i, m.content)} style={{ width: "100%", display: "flex", alignItems: "center", gap: 8, background: "none", border: "none", color: "var(--text-primary)", fontSize: 13, padding: "8px 12px", cursor: "pointer", borderRadius: 8, textAlign: "left" }} onMouseEnter={e => e.currentTarget.style.background="rgba(255,255,255,0.05)"} onMouseLeave={e => e.currentTarget.style.background="none"}><Pencil size={14}/> Edit</button>}
-                            <button onClick={() => handleDelete(i)} style={{ width: "100%", display: "flex", alignItems: "center", gap: 8, background: "none", border: "none", color: "#ef4444", fontSize: 13, padding: "8px 12px", cursor: "pointer", borderRadius: 8, textAlign: "left" }} onMouseEnter={e => e.currentTarget.style.background="rgba(239,68,68,0.1)"} onMouseLeave={e => e.currentTarget.style.background="none"}><Trash2 size={14}/> Delete</button>
-                          </div>
-                        )}
-                      </div>
+                      {isUser && (
+                        <div style={{ position: "relative" }}>
+                          <button onClick={(e) => { e.stopPropagation(); setActiveMenu(activeMenu === i ? null : i); }} title="More" style={{ background: "none", border: "none", cursor: "pointer", color: "var(--text-faint)", padding: 4 }} onMouseEnter={e => e.currentTarget.style.color="var(--text-primary)"} onMouseLeave={e => e.currentTarget.style.color="var(--text-faint)"}><MoreHorizontal size={14} /></button>
+                          {activeMenu === i && (
+                            <div style={{ position: "absolute", top: "100%", right: 0, marginTop: 4, background: "var(--glass-panel-bg)", border: "1px solid var(--glass-border)", borderRadius: 12, padding: 4, boxShadow: "var(--glass-shadow)", zIndex: 20, minWidth: 120 }}>
+                              <button onClick={() => handleEdit(i, m.content)} style={{ width: "100%", display: "flex", alignItems: "center", gap: 8, background: "none", border: "none", color: "var(--text-primary)", fontSize: 13, padding: "8px 12px", cursor: "pointer", borderRadius: 8, textAlign: "left" }} onMouseEnter={e => e.currentTarget.style.background="rgba(255,255,255,0.05)"} onMouseLeave={e => e.currentTarget.style.background="none"}><Pencil size={14}/> Edit</button>
+                              <button onClick={() => handleDelete(i)} style={{ width: "100%", display: "flex", alignItems: "center", gap: 8, background: "none", border: "none", color: "#ef4444", fontSize: 13, padding: "8px 12px", cursor: "pointer", borderRadius: 8, textAlign: "left" }} onMouseEnter={e => e.currentTarget.style.background="rgba(239,68,68,0.1)"} onMouseLeave={e => e.currentTarget.style.background="none"}><Trash2 size={14}/> Delete</button>
+                            </div>
+                          )}
+                        </div>
+                      )}
                     </div>
                   </div>
 
