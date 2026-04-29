@@ -14,7 +14,6 @@ const NAV = [
   { href: "/audit",       label: "Content Audit", icon: Video           },
   { href: "/competitors", label: "Competitors",   icon: Users           },
   { href: "/ideas",       label: "Ideas",         icon: Lightbulb       },
-  { href: "/chat",        label: "Messages",      icon: MessageSquare   },
 ];
 
 const EXTRA = [Calendar, Layers, HelpCircle];
@@ -87,6 +86,24 @@ export default function Sidebar() {
         ))}
 
         <div style={{ flex: 1 }} />
+
+        {/* Messages Icon moved to bottom above profile card */}
+        <Link
+          href="/chat"
+          title="Messages"
+          style={{
+            width: 42, height: 42, borderRadius: "50%",
+            display: "flex", alignItems: "center", justifyContent: "center",
+            textDecoration: "none",
+            background: pathname.startsWith("/chat") ? "var(--btn-primary-bg)" : "var(--glass-elevated)",
+            border: pathname.startsWith("/chat") ? "none" : "1px solid var(--glass-elevated-border)",
+            boxShadow: pathname.startsWith("/chat") ? "0 4px 16px rgba(239,68,68,0.3)" : "none",
+            transition: "all 0.18s",
+            marginBottom: 72, // Space to clear the floating profile card
+          }}
+        >
+          <MessageSquare size={16} color={pathname.startsWith("/chat") ? "#fff" : "var(--text-faint)"} strokeWidth={pathname.startsWith("/chat") ? 2.5 : 2} />
+        </Link>
       </aside>
 
       {/* Floating Horizontal Profile Card (Bottom Left) */}
