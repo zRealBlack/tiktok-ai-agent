@@ -46,7 +46,7 @@ export async function POST(req: Request) {
 export async function PUT(req: Request) {
   try {
     const { id, content, ts, emoji } = await req.json();
-    if ((!id && (!content || !ts)) || !emoji) return NextResponse.json({ error: "Missing fields" }, { status: 400 });
+    if ((!id && (content === undefined || !ts)) || !emoji) return NextResponse.json({ error: "Missing fields" }, { status: 400 });
 
     const messages = await redis.lrange("mas_team_messages", 0, -1);
     let updated = false;
@@ -82,7 +82,7 @@ export async function PUT(req: Request) {
 export async function DELETE(req: Request) {
   try {
     const { id, content, ts } = await req.json();
-    if (!id && (!content || !ts)) return NextResponse.json({ error: "Missing fields" }, { status: 400 });
+    if (!id && (content === undefined || !ts)) return NextResponse.json({ error: "Missing fields" }, { status: 400 });
 
     const messages = await redis.lrange("mas_team_messages", 0, -1);
     let updated = false;

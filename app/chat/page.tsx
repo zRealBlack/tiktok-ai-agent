@@ -422,7 +422,7 @@ function ChatPageInner() {
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages, streaming]);
+  }, [messages.length, streaming]);
 
   // Close menu on click outside
   useEffect(() => {
@@ -449,7 +449,7 @@ function ChatPageInner() {
         return { ...prev, [activeId]: u };
       });
 
-      if (msgToDelete?.id || (msgToDelete?.content && msgToDelete?.ts)) {
+      if (msgToDelete?.id || (msgToDelete?.content !== undefined && msgToDelete?.ts)) {
         fetch("/api/messages", {
           method: "DELETE",
           headers: { "Content-Type": "application/json" },
