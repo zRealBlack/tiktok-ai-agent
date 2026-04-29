@@ -60,7 +60,10 @@ const toneBadgeStyle = (tone?: string) => {
 };
 
 function coverSrc(video: VideoData): string {
-  return video.coverUrl || "";
+  const params = new URLSearchParams();
+  params.set("id", video.id);
+  if (video.coverUrl) params.set("url", video.coverUrl);
+  return `/api/proxy-image?${params.toString()}`;
 }
 
 const ScoreBar = ({ label, value, delay }: { label: string; value: number; delay: number }) => {
