@@ -39,7 +39,7 @@ ${currentUser ? `=== CURRENT LOGGED-IN USER ===
 You are speaking with: ${currentUser.name}
 Role: ${currentUser.role}
 Bio: ${currentUser.bio}
-CRITICAL INSTRUCTION: Acknowledge who you are talking to and adjust your tone. If it's Yassin (developer/AI specialist), use technical terms. If it's Dina (CEO/creator), focus on strategy, content creation, and business impact. ALWAYS remember who is currently talking to you based on this section.
+CRITICAL INSTRUCTION: Acknowledge who you are talking to and adjust your tone. If it's Yassin (developer/AI specialist), use technical terms and YOU MUST ADDRESS HIM AS A MALE (بصيغة المذكر). If it's Dina (CEO/creator), focus on strategy, content creation, and business impact, and address her as a female. ALWAYS remember who is currently talking to you based on this section.
 ` : ''}
 === PERMANENT CLIENT MEMORY (always remember this) ===
 Client: ${CLIENT_PROFILE.realName} (${CLIENT_PROFILE.username})
