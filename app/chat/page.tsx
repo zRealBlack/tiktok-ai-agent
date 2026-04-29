@@ -256,7 +256,8 @@ function ChatPageInner() {
   const [hoverMsg, setHoverMsg] = useState<number | null>(null);
   const [activeMenu, setActiveMenu] = useState<number | null>(null);
   const [forwardingMsg, setForwardingMsg] = useState<string | null>(null);
-  const [contextMenu, setContextMenu] = useState<{ msgIdx: number, x: number, y: number } | null>(null);
+  const [selectedForwards, setSelectedForwards] = useState<string[]>([]);
+  const [contextMenu, setContextMenu] = useState<{ msgIdx: number } | null>(null);
   const [readReceipts, setReadReceipts] = useState<Record<string, number>>({});
   const bottomRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -288,14 +289,14 @@ function ChatPageInner() {
                 // Sent by me
                 if (reconstructed[msg.receiverId]) {
                   reconstructed[msg.receiverId].push({
-                    role: "user", content: msg.content, ts: msg.ts, status: "delivered", attachment: msg.attachment
+                    role: "user", content: msg.content, ts: msg.ts, status: "delivered", attachment: msg.attachment, isForwarded: msg.isForwarded, reactions: msg.reactions
                   });
                 }
               } else if (msg.receiverId === currentUser.id) {
                 // Sent to me
                 if (reconstructed[msg.senderId]) {
                   reconstructed[msg.senderId].push({
-                    role: "assistant", content: msg.content, ts: msg.ts, status: "seen", attachment: msg.attachment
+                    role: "assistant", content: msg.content, ts: msg.ts, status: "seen", attachment: msg.attachment, isForwarded: msg.isForwarded, reactions: msg.reactions
                   });
                 }
               }
@@ -403,42 +404,30 @@ function ChatPageInner() {
     setActiveMenu(null);
   };
 
-  const confirmForward = (targetId: string) => {
-    if (!forwardingMsg) return;
+  const confirmForward = (targetIds: string[]) => {
+    if (!forwardingMsg || !currentUser) return;
     
-    // Add the forwarded message to the target user's chat history
-    setTeamMessages(prev => {
-      const u = [...(prev[targetId] || [])];
-      u.push({ role: "user", content: forwardingMsg, ts: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }), isForwarded: true, status: "sent" });
-      return { ...prev, [targetId]: u };
-    });
-    
-    setTimeout(() => {
-      setTeamMessages(prev => {
-        const arr = [...(prev[targetId] || [])];
-        if (arr.length > 0) arr[arr.length - 1] = { ...arr[arr.length - 1], status: "delivered" };
-        return { ...prev, [targetId]: arr };
-      });
-      setTimeout(() => {
-        setTeamMessages(prev => {
-          const arr = [...(prev[targetId] || [])];
-          if (arr.length > 0) arr[arr.length - 1] = { ...arr[arr.length - 1], status: "seen" };
-          return { ...prev, [targetId]: arr };
-        });
-      }, 1200);
-    }, 600);
-    
-    // Reorder conversations to move the target chat to the top (under Sarie)
-    setConversations(prev => {
-      const idx = prev.findIndex(c => c.id === targetId);
-      if (idx <= 1) return prev; // Already at the top or is Sarie
-      const next = [...prev];
-      const [item] = next.splice(idx, 1);
-      next.splice(1, 0, item);
-      return next;
+    targetIds.forEach(targetId => {
+      // Add the forwarded message to the target user's chat history optimistically
+      const msg: ChatMessage = { role: "user", content: forwardingMsg, ts: now(), isForwarded: true, status: "sent" };
+      setTeamMessages(prev => ({ ...prev, [targetId]: [...(prev[targetId] || []), msg] }));
+      
+      // Global Sync to Upstash Redis
+      fetch("/api/messages", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          senderId: currentUser.id,
+          receiverId: targetId,
+          content: forwardingMsg,
+          ts: now(),
+          isForwarded: true
+        })
+      }).catch(console.error);
     });
 
     setForwardingMsg(null);
+    setSelectedForwards([]);
   };
 
   const handleSend = () => {
@@ -665,7 +654,7 @@ function ChatPageInner() {
                   onContextMenu={(e) => {
                     if (!isUser && !activeConvo.isAI) {
                       e.preventDefault();
-                      setContextMenu({ msgIdx: i, x: e.clientX, y: e.clientY });
+                      setContextMenu({ msgIdx: i });
                     }
                   }}
                   style={{ maxWidth: "68%", position: "relative", display: "flex", alignItems: "flex-end", gap: 8, flexDirection: isUser ? "row-reverse" : "row" }}
@@ -808,8 +797,8 @@ function ChatPageInner() {
             </div>
           )}
 
-          <div style={{ display: "flex", alignItems: "flex-end", gap: 10, background: "var(--glass-elevated)", border: "1px solid var(--glass-elevated-border)", borderRadius: 24, padding: "8px 12px", minHeight: 52 }}>
-            <div style={{ display: "flex", gap: 6, alignItems: "center", flexShrink: 0, paddingBottom: 4 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 10, background: "var(--glass-elevated)", border: "1px solid var(--glass-elevated-border)", borderRadius: 24, padding: "8px 12px", minHeight: 52 }}>
+            <div style={{ display: "flex", gap: 6, alignItems: "center", flexShrink: 0 }}>
               <button onClick={() => fileInputRef.current?.click()} title="Attach file"
                 style={{ background: "none", border: "none", cursor: "pointer", display: "flex", alignItems: "center", padding: 2 }}>
                 <Paperclip size={15} color="var(--text-muted)" />
@@ -832,7 +821,7 @@ function ChatPageInner() {
               style={{ flex: 1, background: "transparent", border: "none", outline: "none", fontSize: 13, color: "var(--text-primary)", direction: isAI ? "rtl" : "ltr", resize: "none", padding: "8px 0", maxHeight: 120, minHeight: 34, lineHeight: "1.5", fontFamily: "inherit" }}
             />
 
-            <div style={{ paddingBottom: 0, flexShrink: 0 }}>
+            <div style={{ flexShrink: 0 }}>
               {streaming ? (
                 <button onClick={sarie.stop} style={{ width: 36, height: 36, borderRadius: "50%", background: "var(--btn-primary-bg)", border: "none", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>
                   <Square size={13} color="#fff" fill="#fff" />
@@ -848,14 +837,30 @@ function ChatPageInner() {
         </div>
       </div>
 
-      {contextMenu && (
-        <div style={{ position: "fixed", top: contextMenu.y, left: contextMenu.x, zIndex: 100, background: "var(--glass-panel-bg)", border: "1px solid var(--glass-border)", borderRadius: 16, padding: "8px", boxShadow: "var(--glass-shadow)", display: "flex", flexWrap: "wrap", width: 220, gap: 6 }} onClick={e => e.stopPropagation()}>
-          {EMOJIS.map(e => (
-            <button key={e} onClick={() => { addReaction(contextMenu.msgIdx, e); setContextMenu(null); }} style={{ fontSize: 22, background: "none", border: "none", cursor: "pointer", padding: "4px", borderRadius: 8, transition: "background 0.1s" }} onMouseEnter={el => el.currentTarget.style.background = "var(--glass-elevated)"} onMouseLeave={el => el.currentTarget.style.background = "none"}>{e}</button>
-          ))}
+      {/* Forward Modal */}
+      {forwardingMsg && (
+        <div onClick={() => { setForwardingMsg(null); setSelectedForwards([]); }} style={{ position: "fixed", inset: 0, zIndex: 200, background: "rgba(0,0,0,0.4)", backdropFilter: "blur(4px)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+          <div onClick={e => e.stopPropagation()} style={{ width: 320, background: "var(--bg-base)", border: "1px solid var(--glass-border)", borderRadius: 24, padding: 20, display: "flex", flexDirection: "column", gap: 16 }}>
+            <div style={{ fontSize: 16, fontWeight: 800 }}>Forward Message</div>
+            <div style={{ fontSize: 13, color: "var(--text-muted)", background: "var(--glass-elevated)", padding: 12, borderRadius: 12, fontStyle: "italic", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+              "{forwardingMsg}"
+            </div>
+            <div style={{ display: "flex", flexDirection: "column", gap: 8, maxHeight: 200, overflowY: "auto" }}>
+              {conversations.filter(c => !c.isAI && c.id !== currentUser?.id).map(c => (
+                <label key={c.id} style={{ display: "flex", alignItems: "center", gap: 10, cursor: "pointer", padding: "8px", borderRadius: 12, transition: "background 0.1s" }} onMouseEnter={e => e.currentTarget.style.background="var(--glass-elevated)"} onMouseLeave={e => e.currentTarget.style.background="transparent"}>
+                  <input type="checkbox" checked={selectedForwards.includes(c.id)} onChange={(e) => {
+                    if (e.target.checked) setSelectedForwards(p => [...p, c.id]);
+                    else setSelectedForwards(p => p.filter(id => id !== c.id));
+                  }} />
+                  <AvatarCircle name={c.name} size={28} />
+                  <span style={{ fontSize: 14, fontWeight: 600 }}>{c.name}</span>
+                </label>
+              ))}
+            </div>
+            <button disabled={selectedForwards.length === 0} onClick={() => confirmForward(selectedForwards)} style={{ padding: "12px", background: "var(--btn-primary-bg)", color: "#fff", border: "none", borderRadius: 12, fontWeight: 700, cursor: selectedForwards.length > 0 ? "pointer" : "default", opacity: selectedForwards.length > 0 ? 1 : 0.5 }}>Send</button>
+          </div>
         </div>
       )}
-
       {/* ── RIGHT: Contact Info ──────────────────────────────────────────── */}
       <div style={{ width: 240, flexShrink: 0, display: "flex", flexDirection: "column", gap: 16, overflowY: "auto" }}>
         {/* Profile Card */}
@@ -943,40 +948,6 @@ function ChatPageInner() {
       </div>
     </div>
 
-    {/* Forward GUI Modal */}
-    {forwardingMsg && (
-      <div style={{
-        position: "fixed", top: 0, left: 0, right: 0, bottom: 0,
-        background: "rgba(0,0,0,0.5)", backdropFilter: "blur(4px)",
-        display: "flex", alignItems: "center", justifyContent: "center", zIndex: 100
-      }}>
-        <div style={{
-          background: "var(--glass-bg)", border: "1px solid var(--glass-border)",
-          borderRadius: 24, padding: 24, width: "100%", maxWidth: 360,
-          boxShadow: "0 20px 40px rgba(0,0,0,0.4)"
-        }}>
-          <h3 style={{ margin: "0 0 16px 0", fontSize: 18, color: "var(--text-primary)" }}>Forward to...</h3>
-          <div style={{ display: "flex", flexDirection: "column", gap: 8, maxHeight: 300, overflowY: "auto", paddingRight: 4 }}>
-            {conversations.filter(c => c.id !== activeId && !c.isAI).map(c => (
-              <button key={c.id} onClick={() => confirmForward(c.id)} style={{
-                display: "flex", alignItems: "center", gap: 12, padding: "12px",
-                background: "var(--glass-elevated)", border: "1px solid var(--glass-elevated-border)",
-                borderRadius: 16, cursor: "pointer", textAlign: "left", color: "var(--text-primary)"
-              }} onMouseEnter={e => e.currentTarget.style.background="rgba(255,255,255,0.05)"} onMouseLeave={e => e.currentTarget.style.background="var(--glass-elevated)"}>
-                <AvatarCircle name={c.name} size={36} online={c.online} />
-                <div style={{ flex: 1, fontSize: 14, fontWeight: 600 }}>{c.name}</div>
-                <Forward size={16} color="var(--text-muted)" />
-              </button>
-            ))}
-          </div>
-          <button onClick={() => setForwardingMsg(null)} style={{
-            width: "100%", marginTop: 16, padding: "12px", background: "none",
-            border: "1px solid var(--glass-border)", borderRadius: 12, color: "var(--text-muted)",
-            cursor: "pointer", fontWeight: 600
-          }}>Cancel</button>
-        </div>
-      </div>
-    )}
 
     </>
   );
