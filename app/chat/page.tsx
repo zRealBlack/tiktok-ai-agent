@@ -108,7 +108,7 @@ const INITIAL_CONVERSATIONS: Conversation[] = [
     time: "",
     unread: 0,
     online: true,
-    role: "CEO & Podcaster",
+    role: "CEO / Creator",
   },
   {
     id: "yassin",
@@ -122,8 +122,8 @@ const INITIAL_CONVERSATIONS: Conversation[] = [
     role: "Developer / AI Specialist",
   },
   {
-    id: "hesham",
-    name: "Hesham Ahmed",
+    id: "haitham",
+    name: "Haitham Abdelaziz",
     avatar: null,
     isAI: false,
     lastMessage: "",
@@ -141,56 +141,12 @@ const INITIAL_CONVERSATIONS: Conversation[] = [
     time: "",
     unread: 0,
     online: true,
-    role: "Ugc Creator",
-  },
-  {
-    id: "sara",
-    name: "Sara Hatem",
-    avatar: null,
-    isAI: false,
-    lastMessage: "",
-    time: "",
-    unread: 0,
-    online: true,
-    role: "Marketing & Operation",
-  },
-  {
-    id: "haitham",
-    name: "Haitham Abdel-aziz",
-    avatar: null,
-    isAI: false,
-    lastMessage: "",
-    time: "",
-    unread: 0,
-    online: true,
-    role: "Director & Production",
-  },
-  {
-    id: "shahdm",
-    name: "Shahd Mahmoud",
-    avatar: null,
-    isAI: false,
-    lastMessage: "",
-    time: "",
-    unread: 0,
-    online: true,
-    role: "Community Manager",
-  },
-  {
-    id: "yousef",
-    name: "Yousef Hatem",
-    avatar: null,
-    isAI: false,
-    lastMessage: "",
-    time: "",
-    unread: 0,
-    online: true,
-    role: "Ai Artist",
+    role: "Moderation",
   },
 ];
 
 const INITIAL_TEAM_MESSAGES: Record<string, ChatMessage[]> = {
-  dina: [], yassin: [], hesham: [], shahd: [], sara: [], haitham: [], shahdm: [], yousef: []
+  dina: [], yassin: [], hesham: [], shahd: []
 };
 
 // ─── Sarie AI hook ────────────────────────────────────────────────────────────
@@ -303,23 +259,7 @@ function ChatPageInner() {
   const [forwardingMsg, setForwardingMsg] = useState<string | null>(null);
   const [selectedForwards, setSelectedForwards] = useState<string[]>([]);
   const [contextMenu, setContextMenu] = useState<{ msgIdx: number } | null>(null);
-  const [readReceipts, setReadReceipts] = useState<Record<string, number>>(() => {
-    if (typeof window !== 'undefined') {
-      try {
-        const saved = localStorage.getItem("mas_chat_readReceipts");
-        return saved ? JSON.parse(saved) : {};
-      } catch {
-        return {};
-      }
-    }
-    return {};
-  });
-
-  useEffect(() => {
-    if (typeof window !== 'undefined') {
-      localStorage.setItem("mas_chat_readReceipts", JSON.stringify(readReceipts));
-    }
-  }, [readReceipts]);
+  const [readReceipts, setReadReceipts] = useState<Record<string, number>>({});
   const bottomRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const sarie = useSarieChat();
@@ -340,7 +280,7 @@ function ChatPageInner() {
           const data = await res.json();
           if (data.messages && currentUser) {
             const reconstructed: Record<string, ChatMessage[]> = {
-              dina: [], yassin: [], hesham: [], shahd: [], sara: [], haitham: [], shahdm: [], yousef: []
+              dina: [], yassin: [], hesham: [], shahd: []
             };
             
             data.messages.forEach((rawMsg: any) => {
@@ -422,7 +362,7 @@ function ChatPageInner() {
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages.length, streaming]);
+  }, [messages, streaming]);
 
   // Close menu on click outside
   useEffect(() => {
@@ -449,7 +389,7 @@ function ChatPageInner() {
         return { ...prev, [activeId]: u };
       });
 
-      if (msgToDelete?.id || (msgToDelete?.content !== undefined && msgToDelete?.ts)) {
+      if (msgToDelete?.id || (msgToDelete?.content && msgToDelete?.ts)) {
         fetch("/api/messages", {
           method: "DELETE",
           headers: { "Content-Type": "application/json" },
@@ -684,7 +624,7 @@ function ChatPageInner() {
         </div>
 
         {/* List */}
-        <div style={{ flex: 1, overflowY: "auto", padding: "0 12px 120px" }}>
+        <div style={{ flex: 1, overflowY: "auto", padding: "0 12px 16px" }}>
           {computedConversations.map(c => {
             const active = c.id === activeId;
             return (
