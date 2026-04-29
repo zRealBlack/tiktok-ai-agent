@@ -26,7 +26,7 @@ export default function Sidebar() {
   return (
     <>
       <aside
-        className="fixed z-40 flex bg-black/90 backdrop-blur-xl border-t border-white/5 md:bg-transparent md:border-none md:backdrop-blur-none
+        className="fixed z-40 flex bg-[var(--glass-bg)] backdrop-blur-xl border-t border-[var(--glass-border)] md:bg-transparent md:border-none md:backdrop-blur-none
                    bottom-0 left-0 right-0 h-[72px] flex-row justify-center gap-6 items-center px-4 py-0
                    md:top-0 md:bottom-auto md:w-[72px] md:h-full md:flex-col md:py-5 md:gap-2 md:justify-start md:pt-[68px]"
       >

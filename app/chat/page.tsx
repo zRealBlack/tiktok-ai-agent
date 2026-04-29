@@ -621,19 +621,19 @@ function ChatPageInner() {
     <div className="flex flex-col md:flex-row gap-4 h-[calc(100dvh-160px)] md:h-[calc(100vh-56px)] overflow-hidden pb-4 pr-4 pl-4 md:pl-0 box-border">
 
       {/* ── LEFT: Conversation List ──────────────────────────────────────── */}
-      <div className={`${showChatOnMobile ? 'hidden md:flex' : 'flex'} w-full md:w-[280px] shrink-0 flex-col overflow-hidden rounded-3xl border border-white/10 bg-black/40 backdrop-blur-xl`}>
+      <div className={`${showChatOnMobile ? 'hidden md:flex' : 'flex'} w-full md:w-[280px] shrink-0 flex-col overflow-hidden rounded-3xl border border-[var(--glass-border)] bg-[var(--glass-bg)] backdrop-blur-xl shadow-[var(--glass-shadow)]`}>
         {/* Header */}
         <div className="px-4 py-4 md:p-5 md:pb-0 shrink-0">
-          <div className="flex flex-row md:flex-col items-center md:items-start justify-between gap-3">
-            <div className="text-lg md:text-xl font-black text-[var(--text-primary)] md:mb-3">
+          <div className="flex flex-col items-center justify-center md:items-start gap-3 w-full">
+            <div className="text-lg md:text-xl font-black text-[var(--text-primary)] md:mb-1">
               Messages
             </div>
             {/* Search */}
-            <div className="flex-1 md:w-full flex items-center gap-2 bg-[var(--glass-elevated)] rounded-xl px-3 py-2 border border-[var(--glass-elevated-border)] md:mb-4">
+            <div className="w-full max-w-[400px] flex items-center gap-2 bg-[var(--glass-elevated)] rounded-xl px-3 py-2 border border-[var(--glass-elevated-border)] md:mb-4">
               <Search size={13} color="var(--text-muted)" />
               <input
                 placeholder="Search..."
-                className="bg-transparent border-none outline-none text-xs text-[var(--text-primary)] flex-1 min-w-0"
+                className="bg-transparent border-none outline-none text-xs text-[var(--text-primary)] flex-1 min-w-0 text-center md:text-left"
               />
             </div>
           </div>
@@ -692,10 +692,10 @@ function ChatPageInner() {
       </div>
 
       {/* ── CENTER: Chat Window ──────────────────────────────────────────── */}
-      <div className={`${!showChatOnMobile ? 'hidden md:flex' : 'flex'} flex-1 flex-col min-w-0 rounded-3xl border border-white/10 bg-black/40 backdrop-blur-xl overflow-hidden`}>
+      <div className={`${!showChatOnMobile ? 'hidden md:flex' : 'flex'} flex-1 flex-col min-w-0 rounded-3xl border border-[var(--glass-border)] bg-[var(--glass-bg)] backdrop-blur-xl overflow-hidden shadow-[var(--glass-shadow)]`}>
         {/* Chat Header */}
-        <div className="flex items-center gap-3 p-4 border-b border-white/10 shrink-0">
-          <button className="md:hidden flex items-center justify-center w-8 h-8 rounded-full border border-white/10 bg-white/5 mr-1" onClick={() => setShowChatOnMobile(false)}>
+        <div className="flex items-center gap-3 p-4 border-b border-[var(--glass-border)] shrink-0">
+          <button className="md:hidden flex items-center justify-center w-8 h-8 rounded-full border border-[var(--glass-elevated-border)] bg-[var(--glass-elevated)] mr-1" onClick={() => setShowChatOnMobile(false)}>
             <ArrowLeft size={16} color="var(--text-primary)" />
           </button>
           {activeConvo.isAI ? (
@@ -953,8 +953,8 @@ function ChatPageInner() {
           </div>
         </div>
       )}
-      {/* ── RIGHT: Contact Info ──────────────────────────────────────────── */}
-      <div className="hidden xl:flex w-[240px] shrink-0 flex-col gap-4 overflow-y-auto">
+      {/* ── RIGHT: Context Panel ─────────────────────────────────────────── */}
+      <div className="hidden lg:flex w-[280px] xl:w-[320px] shrink-0 flex-col overflow-hidden rounded-3xl border border-[var(--glass-border)] bg-[var(--glass-bg)] backdrop-blur-xl shadow-[var(--glass-shadow)]">
         {/* Profile Card */}
         <div style={{ ...glass, borderRadius: 24, padding: "28px 20px 20px", display: "flex", flexDirection: "column", alignItems: "center", textAlign: "center" }}>
           {activeConvo.isAI ? (
