@@ -394,9 +394,10 @@ function ChatPageInner() {
     : (teamMessages[activeId] || []);
   const streaming = isAI ? sarie.streaming : false;
 
+  const messagesLength = messages.length;
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages, streaming]);
+  }, [messagesLength, streaming]);
 
   // Close menu on click outside
   useEffect(() => {
@@ -640,7 +641,7 @@ function ChatPageInner() {
         </div>
 
         {/* List */}
-        <div style={{ flex: 1, overflowY: "auto", padding: "0 12px 80px", WebkitOverflowScrolling: "touch", overscrollBehaviorY: "contain" }}>
+        <div style={{ flex: 1, overflowY: "auto", padding: "0 12px 140px", WebkitOverflowScrolling: "touch", overscrollBehaviorY: "contain" }}>
           {computedConversations.map(c => {
             const active = c.id === activeId;
             return (
