@@ -76,7 +76,7 @@ export default function PasswordGuard({ children }: { children: React.ReactNode 
             alt="Mas AI Studio" 
             width={240} 
             height={80} 
-            className="relative dynamic-logo opacity-90"
+            className="relative opacity-90"
             priority
           />
         </div>
