@@ -337,6 +337,8 @@ export default function NeuralGraph() {
         <Node x={30} y={400} label="API Spending" glowColor="#f97316"><div className="w-4 h-4 bg-orange-500 border border-orange-300 rounded-full" /></Node>
         <Node x={150} y={430} label="Auth Context" glowColor="#f97316"><div className="w-4 h-4 bg-orange-500 border border-orange-300 rounded-full" /></Node>
 
+      </div>
+      
       {/* UI Overlay Controls (Non-draggable) */}
       <div className="absolute top-8 left-8 pointer-events-none z-20">
         <h2 className="text-2xl font-black text-black drop-shadow-[0_2px_10px_rgba(255,255,255,1)] tracking-tight">Sarie Memory Graph</h2>
