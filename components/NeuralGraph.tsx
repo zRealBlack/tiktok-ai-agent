@@ -115,17 +115,18 @@ export default function NeuralGraph() {
           {/* PILLAR 1: MEMORY (0, 400) */}
           {/* ----------------------------------------------------- */}
           
-          {/* CENTER: To Team (0, 600) */}
-          <path d="M 0 400 C 0 500, 0 550, 0 600" stroke="rgba(168,85,247,0.3)" strokeWidth="2" fill="none" />
+          {/* CENTER: To Team (0, 700) */}
+          <path d="M 0 400 C 0 500, 0 600, 0 700" stroke="rgba(168,85,247,0.3)" strokeWidth="2" fill="none" />
           {TEAM_MEMBERS.map((user, i) => {
-             const x = (i === 0) ? -250 : 250;
-             const y = 850;
+             const mid = (TEAM_MEMBERS.length - 1) / 2;
+             const x = Math.round((i - mid) * 450);
+             const y = 1000;
              return (
                <g key={`line-group-${user.id}`}>
-                 <path d={`M 0 600 C ${x/2} 700, ${x} 750, ${x} ${y}`} stroke="rgba(168,85,247,0.2)" strokeWidth="1.5" fill="none" />
-                 <path d={`M ${x} ${y} C ${x - 100} ${y + 50}, ${x - 150} ${y + 100}, ${x - 100} ${y + 150}`} stroke="rgba(168,85,247,0.2)" strokeWidth="1" fill="none" />
-                 <path d={`M ${x} ${y} C ${x} ${y + 50}, ${x} ${y + 100}, ${x} ${y + 150}`} stroke="rgba(168,85,247,0.2)" strokeWidth="1" fill="none" />
-                 <path d={`M ${x} ${y} C ${x + 100} ${y + 50}, ${x + 150} ${y + 100}, ${x + 100} ${y + 150}`} stroke="rgba(168,85,247,0.2)" strokeWidth="1" fill="none" />
+                 <path d={`M 0 700 C ${x * 0.3} 800, ${x * 0.7} 900, ${x} ${y}`} stroke="rgba(168,85,247,0.2)" strokeWidth="1.5" fill="none" />
+                 <path d={`M ${x} ${y} C ${x - 80} ${y + 80}, ${x - 120} ${y + 140}, ${x - 150} ${y + 200}`} stroke="rgba(168,85,247,0.15)" strokeWidth="1" fill="none" />
+                 <path d={`M ${x} ${y} C ${x} ${y + 80}, ${x} ${y + 140}, ${x} ${y + 200}`} stroke="rgba(168,85,247,0.15)" strokeWidth="1" fill="none" />
+                 <path d={`M ${x} ${y} C ${x + 80} ${y + 80}, ${x + 120} ${y + 140}, ${x + 150} ${y + 200}`} stroke="rgba(168,85,247,0.15)" strokeWidth="1" fill="none" />
                </g>
              );
           })}
@@ -261,24 +262,25 @@ export default function NeuralGraph() {
         </Node>
 
         {/* ======================= */}
-        {/* CENTER: TEAM (0, 600) */}
+        {/* CENTER: TEAM (0, 700) */}
         {/* ======================= */}
-        <Node x={0} y={600} label="Team Context" glowColor="#a855f7" subLabel="Identities">
+        <Node x={0} y={700} label="Team Context" glowColor="#a855f7" subLabel="7 Members">
           <div className="w-16 h-16 bg-purple-500/5 border border-purple-500/40 rounded-full flex items-center justify-center backdrop-blur-md">
             <Users size={24} className="text-purple-500" />
           </div>
         </Node>
         {TEAM_MEMBERS.map((user, i) => {
-             const x = (i === 0) ? -250 : 250;
-             const y = 850;
+             const mid = (TEAM_MEMBERS.length - 1) / 2;
+             const x = Math.round((i - mid) * 450);
+             const y = 1000;
              return (
                <div key={`node-group-${user.id}`}>
                  <Node x={x} y={y} label={user.name} subLabel={user.role} glowColor="#a855f7">
                    <div className="w-14 h-14 bg-purple-500/10 border border-purple-500/30 rounded-full flex items-center justify-center text-purple-400 font-bold text-lg backdrop-blur-sm">{user.name.charAt(0)}</div>
                  </Node>
-                 <Node x={x - 100} y={y + 150} glowColor="#a855f7" label="Session Context"><div className="w-3 h-3 bg-purple-500/50 border border-purple-300/50 rounded-full" /></Node>
-                 <Node x={x} y={y + 150} glowColor="#a855f7" label={user.id === 'yassin' ? 'Admin Privileges' : 'Query History'}><div className="w-3 h-3 bg-purple-500/50 border border-purple-300/50 rounded-full" /></Node>
-                 <Node x={x + 100} y={y + 150} glowColor="#a855f7" label="API Quota Logs"><div className="w-3 h-3 bg-purple-500/50 border border-purple-300/50 rounded-full" /></Node>
+                 <Node x={x - 150} y={y + 200} glowColor="#a855f7" label="Session Context"><div className="w-3 h-3 bg-purple-500/50 border border-purple-300/50 rounded-full" /></Node>
+                 <Node x={x} y={y + 200} glowColor="#a855f7" label={user.id === 'yassin' ? 'Admin Privileges' : 'Query History'}><div className="w-3 h-3 bg-purple-500/50 border border-purple-300/50 rounded-full" /></Node>
+                 <Node x={x + 150} y={y + 200} glowColor="#a855f7" label="API Quota Logs"><div className="w-3 h-3 bg-purple-500/50 border border-purple-300/50 rounded-full" /></Node>
                </div>
              );
         })}
