@@ -4,7 +4,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
-import { LayoutDashboard, Video, Users, Lightbulb, Settings, Calendar, Layers, HelpCircle, MessageSquare } from "lucide-react";
+import { LayoutDashboard, Video, Users, Lightbulb, Settings, Calendar, Layers, HelpCircle, MessageSquare, ShieldAlert } from "lucide-react";
 import SettingsModal from "@/components/SettingsModal";
 import MASLogo from "@/public/MAS-aistudiored.png";
 import { useData } from "@/components/DataContext";
@@ -70,7 +70,25 @@ export default function Sidebar() {
               <Icon size={16} color={active ? "#fff" : "var(--text-faint)"} strokeWidth={active ? 2.5 : 2} />
             </Link>
           );
-        })}
+        {/* Developer Admin Icon (Yassin Only) */}
+        {currentUser?.id === "yassin" && (
+          <Link
+            href="/developer"
+            title="Developer Admin"
+            style={{
+              width: 42, height: 42, borderRadius: "50%",
+              display: "flex", alignItems: "center", justifyContent: "center",
+              textDecoration: "none",
+              background: pathname.startsWith("/developer") ? "var(--btn-primary-bg)" : "var(--glass-elevated)",
+              border: pathname.startsWith("/developer") ? "none" : "1px solid var(--glass-elevated-border)",
+              boxShadow: pathname.startsWith("/developer") ? "0 4px 16px rgba(239,68,68,0.3)" : "none",
+              transition: "all 0.18s",
+              marginTop: 4,
+            }}
+          >
+            <ShieldAlert size={16} color={pathname.startsWith("/developer") ? "#fff" : "var(--text-faint)"} strokeWidth={pathname.startsWith("/developer") ? 2.5 : 2} />
+          </Link>
+        )}
 
         <div className="hidden md:block" style={{ height: 8 }} />
 
