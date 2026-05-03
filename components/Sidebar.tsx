@@ -70,6 +70,7 @@ export default function Sidebar() {
               <Icon size={16} color={active ? "#fff" : "var(--text-faint)"} strokeWidth={active ? 2.5 : 2} />
             </Link>
           );
+        })}
         {/* Developer Admin Icon (Yassin Only) */}
         {currentUser?.id === "yassin" && (
           <Link
