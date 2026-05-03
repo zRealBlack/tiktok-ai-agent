@@ -102,7 +102,7 @@ export default function NeuralGraph() {
           </defs>
 
           {/* Main Branches */}
-          <path d="M 0 0 C -150 -50, -250 -100, -350 -100" stroke="url(#glowRed)" strokeWidth="3" fill="none" className="animate-[pulse_3s_ease-in-out_infinite]" />
+          <path d="M 0 0 C -150 0, -250 0, -350 0" stroke="url(#glowRed)" strokeWidth="3" fill="none" className="animate-[pulse_3s_ease-in-out_infinite]" />
           <path d="M 0 0 C 150 -50, 250 -150, 400 -150" stroke="url(#glowPurple)" strokeWidth="3" fill="none" className="animate-[pulse_4s_ease-in-out_infinite]" />
           <path d="M 0 0 C 100 150, 200 200, 300 250" stroke="rgba(59,130,246,0.5)" strokeWidth="2" fill="none" />
           <path d="M 0 0 C -100 150, -200 250, -250 350" stroke="rgba(16,185,129,0.5)" strokeWidth="2" fill="none" />
@@ -113,20 +113,20 @@ export default function NeuralGraph() {
           <path d="M 0 0 C 100 -150, 150 -250, 250 -350" stroke="url(#glowPink)" strokeWidth="3" fill="none" className="animate-[pulse_2.5s_ease-in-out_infinite]" />
           <path d="M 0 0 C -100 -150, -150 -250, -250 -350" stroke="rgba(234,179,8,0.5)" strokeWidth="2" fill="none" />
 
-          {/* Sub Roots for Team (-350, -100) */}
+          {/* Sub Roots for Team (-350, 0) */}
           {TEAM_MEMBERS.map((user, i) => {
-             const angle = -Math.PI / 2 + (Math.PI / Math.max(1, TEAM_MEMBERS.length - 1)) * i;
-             const dist = 180;
-             const x = -350 + Math.cos(angle) * dist;
-             const y = -100 + Math.sin(angle) * dist;
+             // Space them vertically and push far left
+             const yOffset = (i - (TEAM_MEMBERS.length - 1) / 2) * 250;
+             const x = -550;
+             const y = yOffset;
              return (
                <g key={`line-group-${user.id}`}>
-                 <path d={`M -350 -100 C ${-350 + (x+350)/2} -100, ${x} ${y - (y+100)/2}, ${x} ${y}`} stroke="rgba(239,68,68,0.2)" strokeWidth="1.5" fill="none" />
+                 <path d={`M -350 0 C -450 0, -450 ${y}, ${x} ${y}`} stroke="rgba(239,68,68,0.2)" strokeWidth="1.5" fill="none" />
                  
                  {/* Tier 3 nested paths for User Knowledge */}
-                 <path d={`M ${x} ${y} C ${x - 30} ${y - 15}, ${x - 40} ${y - 20}, ${x - 50} ${y - 30}`} stroke="rgba(239,68,68,0.2)" strokeWidth="1" fill="none" />
-                 <path d={`M ${x} ${y} C ${x - 40} ${y + 10}, ${x - 60} ${y + 15}, ${x - 70} ${y + 20}`} stroke="rgba(239,68,68,0.2)" strokeWidth="1" fill="none" />
-                 <path d={`M ${x} ${y} C ${x + 20} ${y - 15}, ${x + 30} ${y - 25}, ${x + 50} ${y - 30}`} stroke="rgba(239,68,68,0.2)" strokeWidth="1" fill="none" />
+                 <path d={`M ${x} ${y} C ${x - 40} ${y - 10}, ${x - 70} ${y - 30}, ${x - 100} ${y - 40}`} stroke="rgba(239,68,68,0.2)" strokeWidth="1" fill="none" />
+                 <path d={`M ${x} ${y} C ${x - 50} ${y + 5}, ${x - 90} ${y + 5}, ${x - 130} ${y + 10}`} stroke="rgba(239,68,68,0.2)" strokeWidth="1" fill="none" />
+                 <path d={`M ${x} ${y} C ${x - 30} ${y + 20}, ${x - 50} ${y + 40}, ${x - 70} ${y + 60}`} stroke="rgba(239,68,68,0.2)" strokeWidth="1" fill="none" />
                </g>
              );
           })}
@@ -212,7 +212,7 @@ export default function NeuralGraph() {
         </Node>
 
         {/* --- LEFT BRANCH: TEAM --- */}
-        <Node x={-350} y={-100} label="Team Context" glowColor="#ef4444" subLabel="Authorized Identities">
+        <Node x={-350} y={0} label="Team Context" glowColor="#ef4444" subLabel="Authorized Identities">
           <div className="w-16 h-16 bg-red-500/5 border border-red-500/40 rounded-full flex items-center justify-center backdrop-blur-md">
             <Users size={24} className="text-red-500" />
           </div>
@@ -220,10 +220,9 @@ export default function NeuralGraph() {
         
         {/* Team Sub Nodes mapped organically */}
         {TEAM_MEMBERS.map((user, i) => {
-             const angle = -Math.PI / 2 + (Math.PI / Math.max(1, TEAM_MEMBERS.length - 1)) * i;
-             const dist = 180;
-             const x = -350 + Math.cos(angle) * dist;
-             const y = -100 + Math.sin(angle) * dist;
+             const yOffset = (i - (TEAM_MEMBERS.length - 1) / 2) * 250;
+             const x = -550;
+             const y = yOffset;
              return (
                <div key={`node-group-${user.id}`}>
                  <Node x={x} y={y} label={user.name} subLabel={user.role} glowColor="#ef4444">
@@ -233,13 +232,13 @@ export default function NeuralGraph() {
                  </Node>
                  
                  {/* Tier 3 User Knowledge Nodes */}
-                 <Node x={x - 50} y={y - 30} glowColor="#ef4444" label="Session Context">
+                 <Node x={x - 100} y={y - 40} glowColor="#ef4444" label="Session Context">
                     <div className="w-2 h-2 bg-red-500/50 border border-red-300/50 rounded-full" />
                  </Node>
-                 <Node x={x - 70} y={y + 20} glowColor="#ef4444" label={user.id === 'yassin' ? 'Admin Privileges' : 'Query History'}>
+                 <Node x={x - 130} y={y + 10} glowColor="#ef4444" label={user.id === 'yassin' ? 'Admin Privileges' : 'Query History'}>
                     <div className="w-2 h-2 bg-red-500/50 border border-red-300/50 rounded-full" />
                  </Node>
-                 <Node x={x + 50} y={y - 30} glowColor="#ef4444" label="API Quota Logs">
+                 <Node x={x - 70} y={y + 60} glowColor="#ef4444" label="API Quota Logs">
                     <div className="w-2 h-2 bg-red-500/50 border border-red-300/50 rounded-full" />
                  </Node>
                </div>
