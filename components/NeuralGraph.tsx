@@ -121,13 +121,13 @@ export default function NeuralGraph() {
         
         {/* Core Brain Node (mix-blend-mode: screen is critical here!) */}
         <Node x={0} y={0} label="Sarie Central Intelligence" glowColor="#ef4444" subLabel="Core Memory Hub">
-          <div className="w-[300px] h-[300px] flex items-center justify-center pointer-events-auto relative">
+          <div className="w-[300px] h-[300px] flex items-center justify-center pointer-events-auto relative" style={{ mixBlendMode: 'multiply' }}>
             <Image 
               src={BrainImage} 
               alt="Brain" 
               fill
               className="object-contain"
-              style={{ mixBlendMode: 'multiply', filter: 'invert(1) grayscale(1) contrast(5)' }} 
+              style={{ filter: 'invert(1) grayscale(1) contrast(5)' }} 
               priority
               draggable={false}
             />
