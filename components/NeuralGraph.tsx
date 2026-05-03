@@ -102,85 +102,71 @@ export default function NeuralGraph() {
           </defs>
 
           {/* Main Branches */}
-          <path d="M 0 0 C -150 0, -250 0, -350 0" stroke="url(#glowRed)" strokeWidth="3" fill="none" className="animate-[pulse_3s_ease-in-out_infinite]" />
-          <path d="M 0 0 C 150 -50, 250 -150, 400 -150" stroke="url(#glowPurple)" strokeWidth="3" fill="none" className="animate-[pulse_4s_ease-in-out_infinite]" />
-          <path d="M 0 0 C 100 150, 200 200, 300 250" stroke="rgba(59,130,246,0.5)" strokeWidth="2" fill="none" />
-          <path d="M 0 0 C -100 150, -200 250, -250 350" stroke="rgba(16,185,129,0.5)" strokeWidth="2" fill="none" />
+          <path d="M 0 0 C -150 0, -250 0, -350 0" stroke="url(#glowPurple)" strokeWidth="3" fill="none" className="animate-[pulse_4s_ease-in-out_infinite]" />
+          <path d="M 0 0 C 150 -50, 200 -150, 300 -250" stroke="url(#glowCyan)" strokeWidth="3" fill="none" className="animate-[pulse_3s_ease-in-out_infinite]" />
+          <path d="M 0 0 C 150 50, 200 150, 300 250" stroke="url(#glowOrange)" strokeWidth="3" fill="none" className="animate-[pulse_3.5s_ease-in-out_infinite]" />
           
-          {/* New Main Branches */}
-          <path d="M 0 0 C 0 -150, 0 -250, 0 -350" stroke="url(#glowOrange)" strokeWidth="3" fill="none" className="animate-[pulse_3.5s_ease-in-out_infinite]" />
-          <path d="M 0 0 C 0 150, 0 250, 0 350" stroke="url(#glowCyan)" strokeWidth="3" fill="none" className="animate-[pulse_4.5s_ease-in-out_infinite]" />
-          <path d="M 0 0 C 100 -150, 150 -250, 250 -350" stroke="url(#glowPink)" strokeWidth="3" fill="none" className="animate-[pulse_2.5s_ease-in-out_infinite]" />
-          <path d="M 0 0 C -100 -150, -150 -250, -250 -350" stroke="rgba(234,179,8,0.5)" strokeWidth="2" fill="none" />
+          {/* --- 1. MEMORY SUB-ROOTS (-350, 0) --- */}
+          {/* To Persona (-500, -150) */}
+          <path d="M -350 0 C -400 -50, -450 -100, -500 -150" stroke="rgba(168,85,247,0.3)" strokeWidth="1.5" fill="none" />
+          <path d="M -500 -150 C -550 -160, -600 -180, -650 -200" stroke="rgba(168,85,247,0.2)" strokeWidth="1" fill="none" />
+          <path d="M -500 -150 C -550 -150, -600 -150, -650 -150" stroke="rgba(168,85,247,0.2)" strokeWidth="1" fill="none" />
+          <path d="M -500 -150 C -550 -140, -600 -120, -650 -100" stroke="rgba(168,85,247,0.2)" strokeWidth="1" fill="none" />
+          
+          {/* To Entities (-550, 0) */}
+          <path d="M -350 0 C -400 0, -500 0, -550 0" stroke="rgba(168,85,247,0.3)" strokeWidth="1.5" fill="none" />
+          <path d="M -550 0 C -600 -10, -650 -20, -700 -20" stroke="rgba(168,85,247,0.2)" strokeWidth="1" fill="none" />
+          <path d="M -550 0 C -600 10, -650 20, -700 20" stroke="rgba(168,85,247,0.2)" strokeWidth="1" fill="none" />
+          <path d="M -550 0 C -600 30, -650 50, -700 60" stroke="rgba(168,85,247,0.2)" strokeWidth="1" fill="none" />
+          
+          {/* To Storage (-500, 150) */}
+          <path d="M -350 0 C -400 50, -450 100, -500 150" stroke="rgba(168,85,247,0.3)" strokeWidth="1.5" fill="none" />
+          <path d="M -500 150 C -550 140, -600 120, -650 100" stroke="rgba(168,85,247,0.2)" strokeWidth="1" fill="none" />
+          <path d="M -500 150 C -550 150, -600 150, -650 150" stroke="rgba(168,85,247,0.2)" strokeWidth="1" fill="none" />
+          <path d="M -500 150 C -550 160, -600 180, -650 200" stroke="rgba(168,85,247,0.2)" strokeWidth="1" fill="none" />
 
-          {/* Sub Roots for Team (-350, 0) */}
-          {TEAM_MEMBERS.map((user, i) => {
-             // Space them vertically and push far left
-             const yOffset = (i - (TEAM_MEMBERS.length - 1) / 2) * 250;
-             const x = -550;
-             const y = yOffset;
-             return (
-               <g key={`line-group-${user.id}`}>
-                 <path d={`M -350 0 C -450 0, -450 ${y}, ${x} ${y}`} stroke="rgba(239,68,68,0.2)" strokeWidth="1.5" fill="none" />
-                 
-                 {/* Tier 3 nested paths for User Knowledge */}
-                 <path d={`M ${x} ${y} C ${x - 40} ${y - 10}, ${x - 70} ${y - 30}, ${x - 100} ${y - 40}`} stroke="rgba(239,68,68,0.2)" strokeWidth="1" fill="none" />
-                 <path d={`M ${x} ${y} C ${x - 50} ${y + 5}, ${x - 90} ${y + 5}, ${x - 130} ${y + 10}`} stroke="rgba(239,68,68,0.2)" strokeWidth="1" fill="none" />
-                 <path d={`M ${x} ${y} C ${x - 30} ${y + 20}, ${x - 50} ${y + 40}, ${x - 70} ${y + 60}`} stroke="rgba(239,68,68,0.2)" strokeWidth="1" fill="none" />
-               </g>
-             );
-          })}
-          
-          {/* Sub Roots for Client (400, -150) */}
-          <path d="M 400 -150 C 450 -150, 500 -250, 550 -250" stroke="rgba(168,85,247,0.3)" strokeWidth="1.5" fill="none" />
-          <path d="M 400 -150 C 450 -150, 550 -150, 600 -150" stroke="rgba(168,85,247,0.3)" strokeWidth="1.5" fill="none" />
-          <path d="M 400 -150 C 450 -150, 500 -50, 550 -50" stroke="rgba(168,85,247,0.3)" strokeWidth="1.5" fill="none" />
+          {/* --- 2. ANALYSIS SUB-ROOTS (300, -250) --- */}
+          {/* To Video Analytics (400, -350) */}
+          <path d="M 300 -250 C 330 -280, 360 -310, 400 -350" stroke="rgba(6,182,212,0.3)" strokeWidth="1.5" fill="none" />
+          <path d="M 400 -350 C 430 -370, 460 -390, 500 -400" stroke="rgba(6,182,212,0.2)" strokeWidth="1" fill="none" />
+          <path d="M 400 -350 C 450 -350, 500 -350, 550 -350" stroke="rgba(6,182,212,0.2)" strokeWidth="1" fill="none" />
+          <path d="M 400 -350 C 430 -330, 460 -310, 500 -300" stroke="rgba(6,182,212,0.2)" strokeWidth="1" fill="none" />
 
-          {/* Sub Roots for Competitors (300, 250) */}
-          <path d="M 300 250 L 400 200" stroke="rgba(59,130,246,0.3)" strokeWidth="1.5" fill="none" />
-          <path d="M 300 250 L 450 280" stroke="rgba(59,130,246,0.3)" strokeWidth="1.5" fill="none" />
-          <path d="M 300 250 L 380 350" stroke="rgba(59,130,246,0.3)" strokeWidth="1.5" fill="none" />
-          
-          {/* Sub Roots for AI Engine (0, -350) */}
-          <path d="M 0 -350 C -30 -380, -50 -400, -70 -420" stroke="rgba(249,115,22,0.3)" strokeWidth="1.5" fill="none" />
-          <path d="M 0 -350 C 30 -380, 50 -400, 70 -420" stroke="rgba(249,115,22,0.3)" strokeWidth="1.5" fill="none" />
-          
-          {/* Sub Roots for Conversational (0, 350) */}
-          <path d="M 0 350 C -20 390, -40 410, -50 430" stroke="rgba(6,182,212,0.3)" strokeWidth="1.5" fill="none" />
-          <path d="M 0 350 C 20 390, 40 410, 50 430" stroke="rgba(6,182,212,0.3)" strokeWidth="1.5" fill="none" />
-          
-          {/* Sub Roots for Video Analytics (250, -350) */}
-          <path d="M 250 -350 C 270 -380, 290 -400, 300 -420" stroke="rgba(236,72,153,0.3)" strokeWidth="1.5" fill="none" />
-          <path d="M 250 -350 C 300 -350, 340 -350, 380 -350" stroke="rgba(236,72,153,0.3)" strokeWidth="1.5" fill="none" />
-          
-          {/* Sub Roots for Admin Ops (-250, -350) */}
-          <path d="M -250 -350 C -280 -370, -300 -390, -320 -400" stroke="rgba(234,179,8,0.3)" strokeWidth="1.5" fill="none" />
-          <path d="M -250 -350 C -230 -390, -210 -410, -200 -430" stroke="rgba(234,179,8,0.3)" strokeWidth="1.5" fill="none" />
+          {/* To Audio Processing (450, -200) */}
+          <path d="M 300 -250 C 350 -230, 400 -210, 450 -200" stroke="rgba(6,182,212,0.3)" strokeWidth="1.5" fill="none" />
+          <path d="M 450 -200 C 500 -220, 550 -240, 600 -250" stroke="rgba(6,182,212,0.2)" strokeWidth="1" fill="none" />
+          <path d="M 450 -200 C 500 -200, 550 -200, 600 -200" stroke="rgba(6,182,212,0.2)" strokeWidth="1" fill="none" />
+          <path d="M 450 -200 C 500 -180, 550 -160, 600 -150" stroke="rgba(6,182,212,0.2)" strokeWidth="1" fill="none" />
 
-          {/* --- TIER 3 NESTED ROOTS (ROOTS IN ROOTS) --- */}
-          
-          {/* Nested for AI Engine / Anthropic & Apify */}
-          <path d="M -70 -420 C -80 -450, -90 -460, -100 -480" stroke="rgba(249,115,22,0.2)" strokeWidth="1" fill="none" />
-          <path d="M -70 -420 C -60 -450, -50 -460, -40 -480" stroke="rgba(249,115,22,0.2)" strokeWidth="1" fill="none" />
-          <path d="M 70 -420 C 60 -450, 55 -460, 50 -480" stroke="rgba(249,115,22,0.2)" strokeWidth="1" fill="none" />
-          <path d="M 70 -420 C 90 -440, 100 -450, 120 -460" stroke="rgba(249,115,22,0.2)" strokeWidth="1" fill="none" />
-          
-          {/* Nested for Video Analytics / Visual Hooks & Audio */}
-          <path d="M 300 -420 C 310 -450, 315 -460, 320 -480" stroke="rgba(236,72,153,0.2)" strokeWidth="1" fill="none" />
-          <path d="M 300 -420 C 330 -430, 345 -440, 360 -450" stroke="rgba(236,72,153,0.2)" strokeWidth="1" fill="none" />
-          <path d="M 380 -350 C 400 -340, 415 -335, 430 -330" stroke="rgba(236,72,153,0.2)" strokeWidth="1" fill="none" />
-          <path d="M 380 -350 C 410 -360, 430 -370, 450 -380" stroke="rgba(236,72,153,0.2)" strokeWidth="1" fill="none" />
+          {/* To Content Metrics (400, -100) */}
+          <path d="M 300 -250 C 330 -200, 360 -150, 400 -100" stroke="rgba(6,182,212,0.3)" strokeWidth="1.5" fill="none" />
+          <path d="M 400 -100 C 430 -110, 460 -120, 500 -130" stroke="rgba(6,182,212,0.2)" strokeWidth="1" fill="none" />
+          <path d="M 400 -100 C 450 -90, 500 -80, 550 -70" stroke="rgba(6,182,212,0.2)" strokeWidth="1" fill="none" />
 
-          {/* Nested for Client / Content Strategy */}
-          <path d="M 600 -150 C 620 -180, 630 -190, 650 -200" stroke="rgba(168,85,247,0.2)" strokeWidth="1" fill="none" />
-          <path d="M 600 -150 C 630 -150, 650 -150, 680 -150" stroke="rgba(168,85,247,0.2)" strokeWidth="1" fill="none" />
-          <path d="M 600 -150 C 620 -120, 630 -110, 650 -100" stroke="rgba(168,85,247,0.2)" strokeWidth="1" fill="none" />
+          {/* --- 3. COGNITION SUB-ROOTS (300, 250) --- */}
+          {/* To AI Orchestration (400, 100) */}
+          <path d="M 300 250 C 330 200, 360 150, 400 100" stroke="rgba(249,115,22,0.3)" strokeWidth="1.5" fill="none" />
+          <path d="M 400 100 C 430 80, 460 60, 500 50" stroke="rgba(249,115,22,0.2)" strokeWidth="1" fill="none" />
+          <path d="M 400 100 C 450 100, 500 100, 550 100" stroke="rgba(249,115,22,0.2)" strokeWidth="1" fill="none" />
+          <path d="M 400 100 C 430 120, 460 140, 500 150" stroke="rgba(249,115,22,0.2)" strokeWidth="1" fill="none" />
+
+          {/* To I/O Engines (450, 250) */}
+          <path d="M 300 250 C 350 250, 400 250, 450 250" stroke="rgba(249,115,22,0.3)" strokeWidth="1.5" fill="none" />
+          <path d="M 450 250 C 500 230, 550 210, 600 200" stroke="rgba(249,115,22,0.2)" strokeWidth="1" fill="none" />
+          <path d="M 450 250 C 500 250, 550 250, 600 250" stroke="rgba(249,115,22,0.2)" strokeWidth="1" fill="none" />
+          <path d="M 450 250 C 500 270, 550 290, 600 300" stroke="rgba(249,115,22,0.2)" strokeWidth="1" fill="none" />
+
+          {/* To System Constraints (400, 400) */}
+          <path d="M 300 250 C 330 300, 360 350, 400 400" stroke="rgba(249,115,22,0.3)" strokeWidth="1.5" fill="none" />
+          <path d="M 400 400 C 430 380, 460 360, 500 350" stroke="rgba(249,115,22,0.2)" strokeWidth="1" fill="none" />
+          <path d="M 400 400 C 450 400, 500 400, 550 400" stroke="rgba(249,115,22,0.2)" strokeWidth="1" fill="none" />
+          <path d="M 400 400 C 430 420, 460 440, 500 450" stroke="rgba(249,115,22,0.2)" strokeWidth="1" fill="none" />
         </svg>
 
         {/* --- NODES --- */}
         
         {/* Core Brain Node (mix-blend-mode: screen is critical here!) */}
-        <Node x={0} y={0} label="Sarie Central Intelligence" glowColor="#ef4444" subLabel="Core Memory Hub">
+        <Node x={0} y={0} label="Sarie Central Intelligence" glowColor="#ef4444" subLabel="Core Hub">
           <div className="w-[300px] h-[300px] flex items-center justify-center pointer-events-auto relative" style={{ mixBlendMode: 'multiply' }}>
             <Image 
               src={BrainImage} 
@@ -191,195 +177,172 @@ export default function NeuralGraph() {
               priority
               draggable={false}
             />
-            {/* Color Overlay that matches root directions */}
+            {/* 3-Point Color Overlay */}
             <div 
               className="absolute inset-0 pointer-events-none"
               style={{
                 mixBlendMode: 'screen',
                 background: `
-                  radial-gradient(circle at 10% 10%, #ef4444 0%, transparent 60%),
-                  radial-gradient(circle at 90% 10%, #a855f7 0%, transparent 60%),
-                  radial-gradient(circle at 90% 90%, #3b82f6 0%, transparent 60%),
-                  radial-gradient(circle at 10% 90%, #10b981 0%, transparent 60%),
-                  radial-gradient(circle at 50% 10%, #f97316 0%, transparent 60%),
-                  radial-gradient(circle at 50% 90%, #06b6d4 0%, transparent 60%),
-                  radial-gradient(circle at 80% 20%, #ec4899 0%, transparent 60%),
-                  radial-gradient(circle at 20% 20%, #eab308 0%, transparent 60%)
+                  radial-gradient(circle at 10% 50%, #a855f7 0%, transparent 70%),
+                  radial-gradient(circle at 80% 10%, #06b6d4 0%, transparent 70%),
+                  radial-gradient(circle at 80% 90%, #f97316 0%, transparent 70%)
                 `
               }}
             />
           </div>
         </Node>
 
-        {/* --- LEFT BRANCH: TEAM --- */}
-        <Node x={-350} y={0} label="Team Context" glowColor="#ef4444" subLabel="Authorized Identities">
-          <div className="w-16 h-16 bg-red-500/5 border border-red-500/40 rounded-full flex items-center justify-center backdrop-blur-md">
-            <Users size={24} className="text-red-500" />
-          </div>
-        </Node>
-        
-        {/* Team Sub Nodes mapped organically */}
-        {TEAM_MEMBERS.map((user, i) => {
-             const yOffset = (i - (TEAM_MEMBERS.length - 1) / 2) * 250;
-             const x = -550;
-             const y = yOffset;
-             return (
-               <div key={`node-group-${user.id}`}>
-                 <Node x={x} y={y} label={user.name} subLabel={user.role} glowColor="#ef4444">
-                   <div className="w-10 h-10 bg-red-500/10 border border-red-500/30 rounded-full flex items-center justify-center text-red-400 font-bold text-xs backdrop-blur-sm">
-                     {user.name.charAt(0)}
-                   </div>
-                 </Node>
-                 
-                 {/* Tier 3 User Knowledge Nodes */}
-                 <Node x={x - 100} y={y - 40} glowColor="#ef4444" label="Session Context">
-                    <div className="w-2 h-2 bg-red-500/50 border border-red-300/50 rounded-full" />
-                 </Node>
-                 <Node x={x - 130} y={y + 10} glowColor="#ef4444" label={user.id === 'yassin' ? 'Admin Privileges' : 'Query History'}>
-                    <div className="w-2 h-2 bg-red-500/50 border border-red-300/50 rounded-full" />
-                 </Node>
-                 <Node x={x - 70} y={y + 60} glowColor="#ef4444" label="API Quota Logs">
-                    <div className="w-2 h-2 bg-red-500/50 border border-red-300/50 rounded-full" />
-                 </Node>
-               </div>
-             );
-        })}
-
-        {/* --- RIGHT BRANCH: CLIENT --- */}
-        <Node x={400} y={-150} label="@rasayel_podcast" glowColor="#a855f7" subLabel="Active Memory Target">
+        {/* ======================================================= */}
+        {/* 1. MEMORY VAULT (PURPLE) */}
+        {/* ======================================================= */}
+        <Node x={-350} y={0} label="Memory" glowColor="#a855f7" subLabel="Persona & History">
           <div className="w-16 h-16 bg-purple-500/5 border border-purple-500/40 rounded-full flex items-center justify-center backdrop-blur-md">
-            <Building2 size={24} className="text-purple-500" />
+            <Database size={24} className="text-purple-500" />
           </div>
         </Node>
 
-        {/* Client Sub Nodes */}
-        <Node x={550} y={-250} label="Follower Base" subLabel="Deep demographics parsed" glowColor="#a855f7">
-           <div className="w-6 h-6 bg-purple-500/20 border border-purple-500/40 rounded-full flex items-center justify-center shadow-[0_0_10px_#a855f7]" />
+        {/* Persona */}
+        <Node x={-500} y={-150} label="Persona Identity" glowColor="#a855f7">
+           <div className="w-6 h-6 bg-purple-500/20 border border-purple-500/40 rounded-full shadow-[0_0_10px_#a855f7]" />
         </Node>
-        <Node x={600} y={-150} label="Content Strategy" subLabel="15 Active hooks aligned" glowColor="#a855f7">
-           <div className="w-8 h-8 bg-purple-500/20 border border-purple-500/40 rounded-full flex items-center justify-center shadow-[0_0_15px_#a855f7]" />
-        </Node>
-        
-        {/* Client Tier 3 Nested Nodes */}
-        <Node x={650} y={-200} glowColor="#a855f7" label="Hook #1: Controversy">
+        <Node x={-650} y={-200} glowColor="#a855f7" label="Appearance: Male">
            <div className="w-2 h-2 bg-purple-500/50 border border-purple-300/50 rounded-full" />
         </Node>
-        <Node x={680} y={-150} glowColor="#a855f7" label="Hook #2: Value Drop">
+        <Node x={-650} y={-150} glowColor="#a855f7" label="Character: Friendly & Direct">
            <div className="w-2 h-2 bg-purple-500/50 border border-purple-300/50 rounded-full" />
         </Node>
-        <Node x={650} y={-100} glowColor="#a855f7" label="Hook #3: Storytime">
+        <Node x={-650} y={-100} glowColor="#a855f7" label="Hopes: Scale Content">
            <div className="w-2 h-2 bg-purple-500/50 border border-purple-300/50 rounded-full" />
         </Node>
 
-        <Node x={550} y={-50} label="Recent Viral Data" subLabel="1.2M views analyzed" glowColor="#a855f7">
-           <div className="w-6 h-6 bg-purple-500/20 border border-purple-500/40 rounded-full flex items-center justify-center shadow-[0_0_10px_#a855f7]" />
+        {/* Entities */}
+        <Node x={-550} y={0} label="Entities & Targets" glowColor="#a855f7">
+           <div className="w-6 h-6 bg-purple-500/20 border border-purple-500/40 rounded-full shadow-[0_0_10px_#a855f7]" />
+        </Node>
+        <Node x={-700} y={-20} glowColor="#a855f7" label="Client: @rasayel_podcast">
+           <div className="w-2 h-2 bg-purple-500/50 border border-purple-300/50 rounded-full" />
+        </Node>
+        {TEAM_MEMBERS.map((user, i) => (
+           <Node key={`team-${user.id}`} x={-700} y={20 + (i * 40)} glowColor="#a855f7" label={`Team: ${user.name} (${user.role})`}>
+             <div className="w-2 h-2 bg-purple-500/50 border border-purple-300/50 rounded-full" />
+           </Node>
+        ))}
+
+        {/* Data Storage */}
+        <Node x={-500} y={150} label="Storage Systems" glowColor="#a855f7">
+           <div className="w-6 h-6 bg-purple-500/20 border border-purple-500/40 rounded-full shadow-[0_0_10px_#a855f7]" />
+        </Node>
+        <Node x={-650} y={100} glowColor="#a855f7" label="Upstash KV Vector Sync">
+           <div className="w-2 h-2 bg-purple-500/50 border border-purple-300/50 rounded-full" />
+        </Node>
+        <Node x={-650} y={150} glowColor="#a855f7" label="Session IndexedDB">
+           <div className="w-2 h-2 bg-purple-500/50 border border-purple-300/50 rounded-full" />
+        </Node>
+        <Node x={-650} y={200} glowColor="#a855f7" label="Cached Transcript Hooks">
+           <div className="w-2 h-2 bg-purple-500/50 border border-purple-300/50 rounded-full" />
         </Node>
 
-        {/* --- BOTTOM BRANCHES: COMPETITORS & DB --- */}
-        <Node x={300} y={250} label="Competitor Matrix" glowColor="#3b82f6" subLabel="Tracking 6 Rivals">
-          <div className="w-16 h-16 bg-blue-500/5 border border-blue-500/40 rounded-full flex items-center justify-center backdrop-blur-md">
-            <TrendingUp size={24} className="text-blue-500" />
+        {/* ======================================================= */}
+        {/* 2. ANALYSIS ENGINE (CYAN) */}
+        {/* ======================================================= */}
+        <Node x={300} y={-250} label="Analysis" glowColor="#06b6d4" subLabel="Audits & Metrics">
+          <div className="w-16 h-16 bg-cyan-500/5 border border-cyan-500/40 rounded-full flex items-center justify-center backdrop-blur-md">
+            <TrendingUp size={24} className="text-cyan-500" />
           </div>
         </Node>
 
-        <Node x={400} y={200} label="Mahmoud Ismail" glowColor="#3b82f6">
-           <div className="w-4 h-4 bg-blue-500 border border-blue-300 rounded-full shadow-[0_0_10px_#3b82f6]" />
+        {/* Video Analytics */}
+        <Node x={400} y={-350} label="Video Audits" glowColor="#06b6d4">
+           <div className="w-6 h-6 bg-cyan-500/20 border border-cyan-500/40 rounded-full shadow-[0_0_10px_#06b6d4]" />
         </Node>
-        <Node x={450} y={280} label="Nadya Alnoor" glowColor="#3b82f6">
-           <div className="w-4 h-4 bg-blue-500 border border-blue-300 rounded-full shadow-[0_0_10px_#3b82f6]" />
+        <Node x={500} y={-400} glowColor="#06b6d4" label="Object Recognition">
+           <div className="w-2 h-2 bg-cyan-500/50 border border-cyan-300/50 rounded-full" />
         </Node>
-        <Node x={380} y={350} label="Other Competitors" glowColor="#3b82f6">
-           <div className="w-4 h-4 bg-blue-500 border border-blue-300 rounded-full shadow-[0_0_10px_#3b82f6]" />
+        <Node x={550} y={-350} glowColor="#06b6d4" label="Facial Expressions">
+           <div className="w-2 h-2 bg-cyan-500/50 border border-cyan-300/50 rounded-full" />
         </Node>
-
-        <Node x={-250} y={350} label="Upstash KV DB" glowColor="#10b981" subLabel="Live Vector Sync">
-          <div className="w-16 h-16 bg-emerald-500/5 border border-emerald-500/40 rounded-full flex items-center justify-center backdrop-blur-md">
-            <Database size={24} className="text-emerald-500" />
-          </div>
+        <Node x={500} y={-300} glowColor="#06b6d4" label="Scene Pacing Changes">
+           <div className="w-2 h-2 bg-cyan-500/50 border border-cyan-300/50 rounded-full" />
         </Node>
 
-        {/* --- TOP BRANCH: AI ENGINE --- */}
-        <Node x={0} y={-350} label="AI Models Engine" glowColor="#f97316" subLabel="LLMs & Web Scraping">
+        {/* Audio Processing */}
+        <Node x={450} y={-200} label="Audio & NLP" glowColor="#06b6d4">
+           <div className="w-6 h-6 bg-cyan-500/20 border border-cyan-500/40 rounded-full shadow-[0_0_10px_#06b6d4]" />
+        </Node>
+        <Node x={600} y={-250} glowColor="#06b6d4" label="Whisper Transcripts">
+           <div className="w-2 h-2 bg-cyan-500/50 border border-cyan-300/50 rounded-full" />
+        </Node>
+        <Node x={600} y={-200} glowColor="#06b6d4" label="Sentiment Polarity">
+           <div className="w-2 h-2 bg-cyan-500/50 border border-cyan-300/50 rounded-full" />
+        </Node>
+        <Node x={600} y={-150} glowColor="#06b6d4" label="Tone Audits">
+           <div className="w-2 h-2 bg-cyan-500/50 border border-cyan-300/50 rounded-full" />
+        </Node>
+
+        {/* Content Metrics */}
+        <Node x={400} y={-100} label="Content Metrics" glowColor="#06b6d4">
+           <div className="w-6 h-6 bg-cyan-500/20 border border-cyan-500/40 rounded-full shadow-[0_0_10px_#06b6d4]" />
+        </Node>
+        <Node x={500} y={-130} glowColor="#06b6d4" label="1.2M Views Analyzed">
+           <div className="w-2 h-2 bg-cyan-500/50 border border-cyan-300/50 rounded-full" />
+        </Node>
+        <Node x={550} y={-70} glowColor="#06b6d4" label="Engagement Velocity">
+           <div className="w-2 h-2 bg-cyan-500/50 border border-cyan-300/50 rounded-full" />
+        </Node>
+
+        {/* ======================================================= */}
+        {/* 3. COGNITION CORE (ORANGE) */}
+        {/* ======================================================= */}
+        <Node x={300} y={250} label="Cognition" glowColor="#f97316" subLabel="AI & Execution">
           <div className="w-16 h-16 bg-orange-500/5 border border-orange-500/40 rounded-full flex items-center justify-center backdrop-blur-md">
             <Cpu size={24} className="text-orange-500" />
           </div>
         </Node>
-        <Node x={-70} y={-420} label="Anthropic / OpenAI" glowColor="#f97316">
-           <div className="w-4 h-4 bg-orange-500 border border-orange-300 rounded-full shadow-[0_0_10px_#f97316]" />
+
+        {/* AI Orchestration */}
+        <Node x={400} y={100} label="AI Orchestration" glowColor="#f97316">
+           <div className="w-6 h-6 bg-orange-500/20 border border-orange-500/40 rounded-full shadow-[0_0_10px_#f97316]" />
         </Node>
-        <Node x={70} y={-420} label="Apify Actor" glowColor="#f97316">
-           <div className="w-4 h-4 bg-orange-500 border border-orange-300 rounded-full shadow-[0_0_10px_#f97316]" />
-        </Node>
-        
-        {/* AI Engine Tier 3 Nested Nodes */}
-        <Node x={-100} y={-480} glowColor="#f97316" label="Claude 3.5 Sonnet">
+        <Node x={500} y={50} glowColor="#f97316" label="Claude 3.5 Sonnet">
            <div className="w-2 h-2 bg-orange-500/50 border border-orange-300/50 rounded-full" />
         </Node>
-        <Node x={-40} y={-480} glowColor="#f97316" label="GPT-4o Mini">
+        <Node x={550} y={100} glowColor="#f97316" label="GPT-4o Mini">
            <div className="w-2 h-2 bg-orange-500/50 border border-orange-300/50 rounded-full" />
         </Node>
-        <Node x={50} y={-480} glowColor="#f97316" label="Meta Graph API">
-           <div className="w-2 h-2 bg-orange-500/50 border border-orange-300/50 rounded-full" />
-        </Node>
-        <Node x={120} y={-460} glowColor="#f97316" label="TikTok Scraper">
+        <Node x={500} y={150} glowColor="#f97316" label="Fallback Inference">
            <div className="w-2 h-2 bg-orange-500/50 border border-orange-300/50 rounded-full" />
         </Node>
 
-        {/* --- BOTTOM BRANCH: CONVERSATIONAL --- */}
-        <Node x={0} y={350} label="Conversational Engine" glowColor="#06b6d4" subLabel="Voice & Messaging">
-          <div className="w-16 h-16 bg-cyan-500/5 border border-cyan-500/40 rounded-full flex items-center justify-center backdrop-blur-md">
-            <MessageSquare size={24} className="text-cyan-500" />
-          </div>
+        {/* I/O Engines */}
+        <Node x={450} y={250} label="I/O Pipelines" glowColor="#f97316">
+           <div className="w-6 h-6 bg-orange-500/20 border border-orange-500/40 rounded-full shadow-[0_0_10px_#f97316]" />
         </Node>
-        <Node x={-50} y={430} label="WhatsApp Webview" glowColor="#06b6d4">
-           <div className="w-4 h-4 bg-cyan-500 border border-cyan-300 rounded-full shadow-[0_0_10px_#06b6d4]" />
+        <Node x={600} y={200} glowColor="#f97316" label="Apify Meta Scraper">
+           <div className="w-2 h-2 bg-orange-500/50 border border-orange-300/50 rounded-full" />
         </Node>
-        <Node x={50} y={430} label="Voice TTS" glowColor="#06b6d4">
-           <div className="w-4 h-4 bg-cyan-500 border border-cyan-300 rounded-full shadow-[0_0_10px_#06b6d4]" />
+        <Node x={600} y={250} glowColor="#f97316" label="Voice TTS Engine">
+           <div className="w-2 h-2 bg-orange-500/50 border border-orange-300/50 rounded-full" />
         </Node>
-
-        {/* --- TOP RIGHT BRANCH: VIDEO ANALYTICS --- */}
-        <Node x={250} y={-350} label="Video Analytics" glowColor="#ec4899" subLabel="Content Audits">
-          <div className="w-16 h-16 bg-pink-500/5 border border-pink-500/40 rounded-full flex items-center justify-center backdrop-blur-md">
-            <Video size={24} className="text-pink-500" />
-          </div>
-        </Node>
-        <Node x={300} y={-420} label="Visual Hooks" glowColor="#ec4899">
-           <div className="w-4 h-4 bg-pink-500 border border-pink-300 rounded-full shadow-[0_0_10px_#ec4899]" />
-        </Node>
-        <Node x={380} y={-350} label="Audio Transcripts" glowColor="#ec4899">
-           <div className="w-4 h-4 bg-pink-500 border border-pink-300 rounded-full shadow-[0_0_10px_#ec4899]" />
-        </Node>
-        
-        {/* Video Analytics Tier 3 Nested Nodes */}
-        <Node x={320} y={-480} glowColor="#ec4899" label="Object Recognition">
-           <div className="w-2 h-2 bg-pink-500/50 border border-pink-300/50 rounded-full" />
-        </Node>
-        <Node x={360} y={-450} glowColor="#ec4899" label="Facial Expressions">
-           <div className="w-2 h-2 bg-pink-500/50 border border-pink-300/50 rounded-full" />
-        </Node>
-        <Node x={430} y={-330} glowColor="#ec4899" label="Speech-to-Text">
-           <div className="w-2 h-2 bg-pink-500/50 border border-pink-300/50 rounded-full" />
-        </Node>
-        <Node x={450} y={-380} glowColor="#ec4899" label="Sentiment NLP">
-           <div className="w-2 h-2 bg-pink-500/50 border border-pink-300/50 rounded-full" />
+        <Node x={600} y={300} glowColor="#f97316" label="WhatsApp Webview">
+           <div className="w-2 h-2 bg-orange-500/50 border border-orange-300/50 rounded-full" />
         </Node>
 
-        {/* --- TOP LEFT BRANCH: ADMIN OPS --- */}
-        <Node x={-250} y={-350} label="Admin Operations" glowColor="#eab308" subLabel="Global Settings">
-          <div className="w-16 h-16 bg-yellow-500/5 border border-yellow-500/40 rounded-full flex items-center justify-center backdrop-blur-md">
-            <Settings size={24} className="text-yellow-500" />
-          </div>
+        {/* System Constraints */}
+        <Node x={400} y={400} label="System Op-Params" glowColor="#f97316">
+           <div className="w-6 h-6 bg-orange-500/20 border border-orange-500/40 rounded-full shadow-[0_0_10px_#f97316]" />
         </Node>
-        <Node x={-320} y={-400} label="API Spending" glowColor="#eab308">
-           <div className="w-4 h-4 bg-yellow-500 border border-yellow-300 rounded-full shadow-[0_0_10px_#eab308]" />
+        <Node x={500} y={350} glowColor="#f97316" label="Global Auth Context">
+           <div className="w-2 h-2 bg-orange-500/50 border border-orange-300/50 rounded-full" />
         </Node>
-        <Node x={-200} y={-430} label="Auth Context" glowColor="#eab308">
-           <div className="w-4 h-4 bg-yellow-500 border border-yellow-300 rounded-full shadow-[0_0_10px_#eab308]" />
+        <Node x={550} y={400} glowColor="#f97316" label="API Rate Limits">
+           <div className="w-2 h-2 bg-orange-500/50 border border-orange-300/50 rounded-full" />
         </Node>
-        
+        <Node x={500} y={450} glowColor="#f97316" label="Security Context">
+           <div className="w-2 h-2 bg-orange-500/50 border border-orange-300/50 rounded-full" />
+        </Node>
+
       </div>
-      
+
       {/* UI Overlay Controls (Non-draggable) */}
       <div className="absolute top-8 left-8 pointer-events-none z-20">
         <h2 className="text-2xl font-black text-black drop-shadow-[0_2px_10px_rgba(255,255,255,1)] tracking-tight">Sarie Memory Graph</h2>
