@@ -120,7 +120,14 @@ export default function NeuralGraph() {
              const x = -350 + Math.cos(angle) * dist;
              const y = -100 + Math.sin(angle) * dist;
              return (
-               <path key={`line-${user.id}`} d={`M -350 -100 C ${-350 + (x+350)/2} -100, ${x} ${y - (y+100)/2}, ${x} ${y}`} stroke="rgba(239,68,68,0.2)" strokeWidth="1.5" fill="none" />
+               <g key={`line-group-${user.id}`}>
+                 <path d={`M -350 -100 C ${-350 + (x+350)/2} -100, ${x} ${y - (y+100)/2}, ${x} ${y}`} stroke="rgba(239,68,68,0.2)" strokeWidth="1.5" fill="none" />
+                 
+                 {/* Tier 3 nested paths for User Knowledge */}
+                 <path d={`M ${x} ${y} C ${x - 30} ${y - 15}, ${x - 40} ${y - 20}, ${x - 50} ${y - 30}`} stroke="rgba(239,68,68,0.2)" strokeWidth="1" fill="none" />
+                 <path d={`M ${x} ${y} C ${x - 40} ${y + 10}, ${x - 60} ${y + 15}, ${x - 70} ${y + 20}`} stroke="rgba(239,68,68,0.2)" strokeWidth="1" fill="none" />
+                 <path d={`M ${x} ${y} C ${x + 20} ${y - 15}, ${x + 30} ${y - 25}, ${x + 50} ${y - 30}`} stroke="rgba(239,68,68,0.2)" strokeWidth="1" fill="none" />
+               </g>
              );
           })}
           
@@ -218,11 +225,24 @@ export default function NeuralGraph() {
              const x = -350 + Math.cos(angle) * dist;
              const y = -100 + Math.sin(angle) * dist;
              return (
-               <Node key={user.id} x={x} y={y} label={user.name} subLabel={user.role} glowColor="#ef4444">
-                 <div className="w-10 h-10 bg-red-500/10 border border-red-500/30 rounded-full flex items-center justify-center text-red-400 font-bold text-xs backdrop-blur-sm">
-                   {user.name.charAt(0)}
-                 </div>
-               </Node>
+               <div key={`node-group-${user.id}`}>
+                 <Node x={x} y={y} label={user.name} subLabel={user.role} glowColor="#ef4444">
+                   <div className="w-10 h-10 bg-red-500/10 border border-red-500/30 rounded-full flex items-center justify-center text-red-400 font-bold text-xs backdrop-blur-sm">
+                     {user.name.charAt(0)}
+                   </div>
+                 </Node>
+                 
+                 {/* Tier 3 User Knowledge Nodes */}
+                 <Node x={x - 50} y={y - 30} glowColor="#ef4444" label="Session Context">
+                    <div className="w-2 h-2 bg-red-500/50 border border-red-300/50 rounded-full" />
+                 </Node>
+                 <Node x={x - 70} y={y + 20} glowColor="#ef4444" label={user.id === 'yassin' ? 'Admin Privileges' : 'Query History'}>
+                    <div className="w-2 h-2 bg-red-500/50 border border-red-300/50 rounded-full" />
+                 </Node>
+                 <Node x={x + 50} y={y - 30} glowColor="#ef4444" label="API Quota Logs">
+                    <div className="w-2 h-2 bg-red-500/50 border border-red-300/50 rounded-full" />
+                 </Node>
+               </div>
              );
         })}
 
