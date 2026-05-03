@@ -1,0 +1,17 @@
+{
+  "name": "Mas Ai Studio",
+  "short_name": "Mas AI",
+  "description": "Mas Sarie — AI-powered TikTok content strategy",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0c0c0c",
+  "theme_color": "#0c0c0c",
+  "icons": [
+    {
+      "src": "/mas-logo.png",
+      "sizes": "192x192 512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}

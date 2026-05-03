@@ -6,6 +6,7 @@ import TopBar from "@/components/TopBar";
 import { ThemeProvider } from "@/components/ThemeProvider";
 import { DataProvider } from "@/components/DataContext";
 import PasswordGuard from "@/components/PasswordGuard";
+import PwaRegister from "@/components/PwaRegister";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -16,6 +17,15 @@ const inter = Inter({
 export const metadata: Metadata = {
   title: "Mas AI Studio",
   description: "Mas Sarie — AI-powered TikTok content strategy, audit, competitor intelligence, and idea generation.",
+  manifest: "/manifest.json",
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "black-translucent",
+    title: "Mas Ai Studio",
+  },
+  formatDetection: {
+    telephone: false,
+  },
 };
 
 export const viewport: Viewport = {
@@ -23,6 +33,7 @@ export const viewport: Viewport = {
   initialScale: 1,
   maximumScale: 1,
   userScalable: false,
+  themeColor: "#0c0c0c",
 };
 
 export default function RootLayout({
@@ -44,6 +55,7 @@ export default function RootLayout({
                   filter: "blur(56px)", pointerEvents: "none", zIndex: 0,
                 }}
               />
+              <PwaRegister />
               <Sidebar />
               <main className="flex-1 flex flex-col overflow-auto h-full relative ml-0 md:ml-[72px] pb-[72px] md:pb-0 transition-all duration-300">
                 <TopBar />
