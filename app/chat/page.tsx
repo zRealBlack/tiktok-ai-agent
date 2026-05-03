@@ -640,7 +640,7 @@ function ChatPageInner() {
         </div>
 
         {/* List */}
-        <div style={{ flex: 1, overflowY: "auto", padding: "0 12px 16px" }}>
+        <div style={{ flex: 1, overflowY: "auto", padding: "0 12px 80px", WebkitOverflowScrolling: "touch", overscrollBehaviorY: "contain" }}>
           {computedConversations.map(c => {
             const active = c.id === activeId;
             return (
@@ -725,7 +725,7 @@ function ChatPageInner() {
         </div>
 
         {/* Messages */}
-        <div style={{ flex: 1, overflowY: "auto", padding: "20px 20px", display: "flex", flexDirection: "column", gap: 14 }}>
+        <div style={{ flex: 1, overflowY: "auto", padding: "20px 20px 40px", display: "flex", flexDirection: "column", gap: 14, WebkitOverflowScrolling: "touch", overscrollBehaviorY: "contain" }}>
           {messages.map((m, i) => {
             const isUser = m.role === "user";
             return (

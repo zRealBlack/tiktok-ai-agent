@@ -114,11 +114,11 @@ export default function OverviewPage() {
           </h1>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
             {(account?.actionItems||0) > 0 && (
-              <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 14px', borderRadius: 100, background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.2)', fontSize: 12, fontWeight: 700, color: '#ef4444' }}>
+              <div className="hidden md:flex" style={{ alignItems: 'center', gap: 6, padding: '8px 14px', borderRadius: 100, background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.2)', fontSize: 12, fontWeight: 700, color: '#ef4444' }}>
                 <AlertTriangle size={13}/> {account.actionItems} action items
               </div>
             )}
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 16px', borderRadius: 100, background: 'var(--glass-elevated)', border: '1px solid var(--glass-elevated-border)', fontSize: 13, color: 'var(--text-muted)' }}>
+            <div className="hidden md:flex" style={{ alignItems: 'center', gap: 8, padding: '8px 16px', borderRadius: 100, background: 'var(--glass-elevated)', border: '1px solid var(--glass-elevated-border)', fontSize: 13, color: 'var(--text-muted)' }}>
               {account?.username || '@rasayel_podcast'}
             </div>
           </div>

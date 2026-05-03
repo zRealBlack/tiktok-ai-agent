@@ -65,7 +65,7 @@ export default function TopBar() {
       </div>
 
       {/* Search pill — right */}
-      <div style={{ pointerEvents: "auto" }}>
+      <div className="hidden md:block" style={{ pointerEvents: "auto" }}>
         <div style={{
           display: "flex", alignItems: "center", gap: 10,
           background: "var(--glass-bg)",
