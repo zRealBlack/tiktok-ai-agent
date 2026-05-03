@@ -127,7 +127,7 @@ export default function NeuralGraph() {
               alt="Brain" 
               fill
               className="object-contain"
-              style={{ mixBlendMode: 'multiply', filter: 'invert(1) contrast(1.2)' }} 
+              style={{ mixBlendMode: 'multiply', filter: 'invert(1) grayscale(1) contrast(5)' }} 
               priority
               draggable={false}
             />
