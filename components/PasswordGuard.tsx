@@ -58,39 +58,44 @@ export default function PasswordGuard({ children }: { children: React.ReactNode 
   }
 
   return (
-    <div className="fixed inset-0 z-[9999] bg-[#f8f9fa] flex items-center justify-center overflow-hidden font-sans">
+    <div className="fixed inset-0 z-[9999] bg-[var(--bg-base)] flex items-center justify-center overflow-hidden font-sans">
       {/* Background Decor */}
-      <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] rounded-full bg-purple-500/5 blur-[120px] pointer-events-none" />
-      <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] rounded-full bg-red-500/5 blur-[120px] pointer-events-none" />
+      <div
+        aria-hidden
+        style={{
+          position: "absolute", top: -100, left: -100, width: 640, height: 640,
+          background: "radial-gradient(ellipse at 35% 35%, rgba(239,68,68,0.18) 0%, rgba(139,92,246,0.12) 42%, transparent 68%)",
+          filter: "blur(56px)", pointerEvents: "none", zIndex: 0,
+        }}
+      />
       
-      <div className="max-w-md w-full px-6 flex flex-col items-center animate-in fade-in zoom-in-95 duration-700">
+      <div className="max-w-md w-full px-6 flex flex-col items-center animate-in fade-in zoom-in-95 duration-700 z-10">
         <div className="mb-10 relative">
           <Image 
             src={MasLogo} 
             alt="Mas AI Studio" 
             width={240} 
             height={80} 
-            className="relative brightness-0 opacity-90"
+            className="relative dynamic-logo opacity-90"
             priority
           />
         </div>
 
-        <div className="w-full bg-white rounded-3xl border border-zinc-200 p-8 shadow-[0_32px_64px_-12px_rgba(0,0,0,0.08)] relative overflow-hidden">
-          <div className="absolute top-0 left-0 w-full h-1 bg-zinc-100" />
+        <div className="w-full bg-[var(--glass-bg)] backdrop-blur-2xl rounded-3xl border border-[var(--glass-border)] p-8 shadow-[var(--glass-shadow)] relative overflow-hidden">
           
           <div className="flex flex-col items-center text-center mb-8">
-            <div className="w-12 h-12 rounded-2xl bg-zinc-50 border border-zinc-100 flex items-center justify-center mb-4">
-              <Users size={20} className="text-zinc-900" />
+            <div className="w-12 h-12 rounded-2xl bg-[var(--glass-elevated)] border border-[var(--glass-elevated-border)] flex items-center justify-center mb-4">
+              <Users size={20} className="text-[var(--text-primary)]" />
             </div>
-            <h1 className="text-xl font-bold text-zinc-900 mb-2 tracking-tight">Team Login</h1>
-            <p className="text-[12px] text-zinc-500 leading-relaxed max-w-[240px]">
+            <h1 className="text-xl font-bold text-[var(--text-primary)] mb-2 tracking-tight">Team Login</h1>
+            <p className="text-[12px] text-[var(--text-muted)] leading-relaxed max-w-[240px]">
               Secure access to Mas AI Studio. Authorized usage only.
             </p>
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="relative group">
-              <div className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400">
+              <div className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-muted)]">
                 <Mail size={16} />
               </div>
               <input
@@ -101,8 +106,8 @@ export default function PasswordGuard({ children }: { children: React.ReactNode 
                   if (error) setError(false);
                 }}
                 placeholder="Email Address"
-                className={`w-full h-12 bg-zinc-50 rounded-xl pl-10 pr-4 text-[13px] text-zinc-900 border transition-all outline-none placeholder:text-zinc-400 focus:bg-white ${
-                  error ? 'border-red-500/50 focus:border-red-500' : 'border-zinc-200 focus:border-zinc-300'
+                className={`w-full h-12 bg-[var(--input-bg)] rounded-xl pl-10 pr-4 text-[13px] text-[var(--text-primary)] border transition-all outline-none placeholder:text-[var(--text-faint)] focus:bg-[var(--glass-elevated)] ${
+                  error ? 'border-red-500/50 focus:border-red-500' : 'border-[var(--input-border)] focus:border-[var(--text-muted)]'
                 }`}
                 autoFocus
                 required
@@ -110,7 +115,7 @@ export default function PasswordGuard({ children }: { children: React.ReactNode 
             </div>
 
             <div className="relative group">
-              <div className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400">
+              <div className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-muted)]">
                 <Key size={16} />
               </div>
               <input
@@ -121,13 +126,13 @@ export default function PasswordGuard({ children }: { children: React.ReactNode 
                   if (error) setError(false);
                 }}
                 placeholder="Password"
-                className={`w-full h-12 bg-zinc-50 rounded-xl pl-10 pr-4 text-[13px] text-zinc-900 border transition-all outline-none placeholder:text-zinc-400 focus:bg-white ${
-                  error ? 'border-red-500/50 focus:border-red-500' : 'border-zinc-200 focus:border-zinc-300'
+                className={`w-full h-12 bg-[var(--input-bg)] rounded-xl pl-10 pr-4 text-[13px] text-[var(--text-primary)] border transition-all outline-none placeholder:text-[var(--text-faint)] focus:bg-[var(--glass-elevated)] ${
+                  error ? 'border-red-500/50 focus:border-red-500' : 'border-[var(--input-border)] focus:border-[var(--text-muted)]'
                 }`}
                 required
               />
               {error && (
-                <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-1.5 text-red-600 animate-in fade-in slide-in-from-right-1">
+                <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-1.5 text-[#ef4444] animate-in fade-in slide-in-from-right-1">
                   <AlertCircle size={14} />
                   <span className="text-[10px] font-bold uppercase tracking-tight">Incorrect</span>
                 </div>
@@ -136,7 +141,7 @@ export default function PasswordGuard({ children }: { children: React.ReactNode 
             
             <button
               type="submit"
-              className="w-full h-12 bg-zinc-900 text-white rounded-xl text-[13px] font-bold flex items-center justify-center gap-2 transition-all hover:bg-black active:scale-[0.98] mt-2"
+              className="w-full h-12 bg-[var(--btn-primary-bg)] text-[#fff] rounded-xl text-[13px] font-bold flex items-center justify-center gap-2 transition-all hover:opacity-90 active:scale-[0.98] mt-2 shadow-[0_4px_16px_rgba(239,68,68,0.3)]"
             >
               Sign In
               <ArrowRight size={14} />
@@ -148,28 +153,28 @@ export default function PasswordGuard({ children }: { children: React.ReactNode 
         <div className="mt-12 flex flex-col items-center gap-6">
           <div className="flex items-center gap-8">
             <div className="flex flex-col items-center gap-1.5">
-              <div className="w-8 h-8 rounded-full bg-zinc-100 flex items-center justify-center">
-                <Users size={14} className="text-zinc-600" />
+              <div className="w-8 h-8 rounded-full bg-[var(--glass-elevated)] border border-[var(--glass-border)] flex items-center justify-center">
+                <Users size={14} className="text-[var(--text-muted)]" />
               </div>
-              <span className="text-[10px] text-zinc-500 font-medium tracking-tight">Mas Ai Team</span>
+              <span className="text-[10px] text-[var(--text-faint)] font-medium tracking-tight">Mas Ai Team</span>
             </div>
             <div className="flex flex-col items-center gap-1.5">
-              <div className="w-8 h-8 rounded-full bg-zinc-100 flex items-center justify-center">
-                <Cpu size={14} className="text-zinc-600" />
+              <div className="w-8 h-8 rounded-full bg-[var(--glass-elevated)] border border-[var(--glass-border)] flex items-center justify-center">
+                <Cpu size={14} className="text-[var(--text-muted)]" />
               </div>
-              <span className="text-[10px] text-zinc-500 font-medium uppercase tracking-widest leading-none">100% AI Developed</span>
+              <span className="text-[10px] text-[var(--text-faint)] font-medium uppercase tracking-widest leading-none">100% AI Developed</span>
             </div>
             <div className="flex flex-col items-center gap-1.5">
-              <div className="w-8 h-8 rounded-full bg-zinc-100 flex items-center justify-center">
-                <ShieldCheck size={14} className="text-zinc-600" />
+              <div className="w-8 h-8 rounded-full bg-[var(--glass-elevated)] border border-[var(--glass-border)] flex items-center justify-center">
+                <ShieldCheck size={14} className="text-[var(--text-muted)]" />
               </div>
-              <span className="text-[10px] text-zinc-500 font-medium tracking-tight">Session Secure</span>
+              <span className="text-[10px] text-[var(--text-faint)] font-medium tracking-tight">Session Secure</span>
             </div>
           </div>
           
-          <div className="flex items-center gap-2.5 py-1.5 px-4 rounded-full bg-zinc-100 border border-zinc-200/50">
+          <div className="flex items-center gap-2.5 py-1.5 px-4 rounded-full bg-[var(--glass-elevated)] border border-[var(--glass-border)]">
             <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
-            <span className="text-[10px] text-zinc-600 font-bold uppercase tracking-tighter">System Authenticated</span>
+            <span className="text-[10px] text-[var(--text-muted)] font-bold uppercase tracking-tighter">System Authenticated</span>
           </div>
         </div>
       </div>
