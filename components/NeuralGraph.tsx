@@ -131,6 +131,19 @@ export default function NeuralGraph() {
               priority
               draggable={false}
             />
+            {/* Color Overlay that matches root directions */}
+            <div 
+              className="absolute inset-0 pointer-events-none"
+              style={{
+                mixBlendMode: 'screen',
+                background: `
+                  radial-gradient(circle at 10% 10%, #ef4444 0%, transparent 60%),
+                  radial-gradient(circle at 90% 10%, #a855f7 0%, transparent 60%),
+                  radial-gradient(circle at 90% 90%, #3b82f6 0%, transparent 60%),
+                  radial-gradient(circle at 10% 90%, #10b981 0%, transparent 60%)
+                `
+              }}
+            />
           </div>
         </Node>
 
