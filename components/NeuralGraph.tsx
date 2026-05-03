@@ -3,7 +3,7 @@
 import { useState, useRef } from "react";
 import Image from "next/image";
 import BrainImage from "@/public/brain.png";
-import { Users, Building2, TrendingUp, Cpu, Database } from "lucide-react";
+import { Users, Building2, TrendingUp, Cpu, Database, MessageSquare, Video, Settings } from "lucide-react";
 import { TEAM_MEMBERS } from "@/lib/auth";
 
 export default function NeuralGraph() {
@@ -87,6 +87,18 @@ export default function NeuralGraph() {
               <stop offset="0%" stopColor="#a855f7" stopOpacity="0.8" />
               <stop offset="100%" stopColor="#ef4444" stopOpacity="0.1" />
             </linearGradient>
+            <linearGradient id="glowOrange" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stopColor="#f97316" stopOpacity="0.8" />
+              <stop offset="100%" stopColor="#f97316" stopOpacity="0.1" />
+            </linearGradient>
+            <linearGradient id="glowCyan" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stopColor="#06b6d4" stopOpacity="0.8" />
+              <stop offset="100%" stopColor="#06b6d4" stopOpacity="0.1" />
+            </linearGradient>
+            <linearGradient id="glowPink" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stopColor="#ec4899" stopOpacity="0.8" />
+              <stop offset="100%" stopColor="#ec4899" stopOpacity="0.1" />
+            </linearGradient>
           </defs>
 
           {/* Main Branches */}
@@ -94,6 +106,12 @@ export default function NeuralGraph() {
           <path d="M 0 0 C 150 -50, 250 -150, 400 -150" stroke="url(#glowPurple)" strokeWidth="3" fill="none" className="animate-[pulse_4s_ease-in-out_infinite]" />
           <path d="M 0 0 C 100 150, 200 200, 300 250" stroke="rgba(59,130,246,0.5)" strokeWidth="2" fill="none" />
           <path d="M 0 0 C -100 150, -200 250, -250 350" stroke="rgba(16,185,129,0.5)" strokeWidth="2" fill="none" />
+          
+          {/* New Main Branches */}
+          <path d="M 0 0 C 0 -150, 0 -250, 0 -350" stroke="url(#glowOrange)" strokeWidth="3" fill="none" className="animate-[pulse_3.5s_ease-in-out_infinite]" />
+          <path d="M 0 0 C 0 150, 0 250, 0 350" stroke="url(#glowCyan)" strokeWidth="3" fill="none" className="animate-[pulse_4.5s_ease-in-out_infinite]" />
+          <path d="M 0 0 C 100 -150, 150 -250, 250 -350" stroke="url(#glowPink)" strokeWidth="3" fill="none" className="animate-[pulse_2.5s_ease-in-out_infinite]" />
+          <path d="M 0 0 C -100 -150, -150 -250, -250 -350" stroke="rgba(234,179,8,0.5)" strokeWidth="2" fill="none" />
 
           {/* Sub Roots for Team (-350, -100) */}
           {TEAM_MEMBERS.map((user, i) => {
@@ -115,6 +133,22 @@ export default function NeuralGraph() {
           <path d="M 300 250 L 400 200" stroke="rgba(59,130,246,0.3)" strokeWidth="1.5" fill="none" />
           <path d="M 300 250 L 450 280" stroke="rgba(59,130,246,0.3)" strokeWidth="1.5" fill="none" />
           <path d="M 300 250 L 380 350" stroke="rgba(59,130,246,0.3)" strokeWidth="1.5" fill="none" />
+          
+          {/* Sub Roots for AI Engine (0, -350) */}
+          <path d="M 0 -350 C -30 -380, -50 -400, -70 -420" stroke="rgba(249,115,22,0.3)" strokeWidth="1.5" fill="none" />
+          <path d="M 0 -350 C 30 -380, 50 -400, 70 -420" stroke="rgba(249,115,22,0.3)" strokeWidth="1.5" fill="none" />
+          
+          {/* Sub Roots for Conversational (0, 350) */}
+          <path d="M 0 350 C -20 390, -40 410, -50 430" stroke="rgba(6,182,212,0.3)" strokeWidth="1.5" fill="none" />
+          <path d="M 0 350 C 20 390, 40 410, 50 430" stroke="rgba(6,182,212,0.3)" strokeWidth="1.5" fill="none" />
+          
+          {/* Sub Roots for Video Analytics (250, -350) */}
+          <path d="M 250 -350 C 270 -380, 290 -400, 300 -420" stroke="rgba(236,72,153,0.3)" strokeWidth="1.5" fill="none" />
+          <path d="M 250 -350 C 300 -350, 340 -350, 380 -350" stroke="rgba(236,72,153,0.3)" strokeWidth="1.5" fill="none" />
+          
+          {/* Sub Roots for Admin Ops (-250, -350) */}
+          <path d="M -250 -350 C -280 -370, -300 -390, -320 -400" stroke="rgba(234,179,8,0.3)" strokeWidth="1.5" fill="none" />
+          <path d="M -250 -350 C -230 -390, -210 -410, -200 -430" stroke="rgba(234,179,8,0.3)" strokeWidth="1.5" fill="none" />
         </svg>
 
         {/* --- NODES --- */}
@@ -140,7 +174,11 @@ export default function NeuralGraph() {
                   radial-gradient(circle at 10% 10%, #ef4444 0%, transparent 60%),
                   radial-gradient(circle at 90% 10%, #a855f7 0%, transparent 60%),
                   radial-gradient(circle at 90% 90%, #3b82f6 0%, transparent 60%),
-                  radial-gradient(circle at 10% 90%, #10b981 0%, transparent 60%)
+                  radial-gradient(circle at 10% 90%, #10b981 0%, transparent 60%),
+                  radial-gradient(circle at 50% 10%, #f97316 0%, transparent 60%),
+                  radial-gradient(circle at 50% 90%, #06b6d4 0%, transparent 60%),
+                  radial-gradient(circle at 80% 20%, #ec4899 0%, transparent 60%),
+                  radial-gradient(circle at 20% 20%, #eab308 0%, transparent 60%)
                 `
               }}
             />
@@ -208,6 +246,58 @@ export default function NeuralGraph() {
           <div className="w-16 h-16 bg-emerald-500/5 border border-emerald-500/40 rounded-full flex items-center justify-center backdrop-blur-md">
             <Database size={24} className="text-emerald-500" />
           </div>
+        </Node>
+
+        {/* --- TOP BRANCH: AI ENGINE --- */}
+        <Node x={0} y={-350} label="AI Models Engine" glowColor="#f97316" subLabel="LLMs & Web Scraping">
+          <div className="w-16 h-16 bg-orange-500/5 border border-orange-500/40 rounded-full flex items-center justify-center backdrop-blur-md">
+            <Cpu size={24} className="text-orange-500" />
+          </div>
+        </Node>
+        <Node x={-70} y={-420} label="Anthropic / OpenAI" glowColor="#f97316">
+           <div className="w-4 h-4 bg-orange-500 border border-orange-300 rounded-full shadow-[0_0_10px_#f97316]" />
+        </Node>
+        <Node x={70} y={-420} label="Apify Actor" glowColor="#f97316">
+           <div className="w-4 h-4 bg-orange-500 border border-orange-300 rounded-full shadow-[0_0_10px_#f97316]" />
+        </Node>
+
+        {/* --- BOTTOM BRANCH: CONVERSATIONAL --- */}
+        <Node x={0} y={350} label="Conversational Engine" glowColor="#06b6d4" subLabel="Voice & Messaging">
+          <div className="w-16 h-16 bg-cyan-500/5 border border-cyan-500/40 rounded-full flex items-center justify-center backdrop-blur-md">
+            <MessageSquare size={24} className="text-cyan-500" />
+          </div>
+        </Node>
+        <Node x={-50} y={430} label="WhatsApp Webview" glowColor="#06b6d4">
+           <div className="w-4 h-4 bg-cyan-500 border border-cyan-300 rounded-full shadow-[0_0_10px_#06b6d4]" />
+        </Node>
+        <Node x={50} y={430} label="Voice TTS" glowColor="#06b6d4">
+           <div className="w-4 h-4 bg-cyan-500 border border-cyan-300 rounded-full shadow-[0_0_10px_#06b6d4]" />
+        </Node>
+
+        {/* --- TOP RIGHT BRANCH: VIDEO ANALYTICS --- */}
+        <Node x={250} y={-350} label="Video Analytics" glowColor="#ec4899" subLabel="Content Audits">
+          <div className="w-16 h-16 bg-pink-500/5 border border-pink-500/40 rounded-full flex items-center justify-center backdrop-blur-md">
+            <Video size={24} className="text-pink-500" />
+          </div>
+        </Node>
+        <Node x={300} y={-420} label="Visual Hooks" glowColor="#ec4899">
+           <div className="w-4 h-4 bg-pink-500 border border-pink-300 rounded-full shadow-[0_0_10px_#ec4899]" />
+        </Node>
+        <Node x={380} y={-350} label="Audio Transcripts" glowColor="#ec4899">
+           <div className="w-4 h-4 bg-pink-500 border border-pink-300 rounded-full shadow-[0_0_10px_#ec4899]" />
+        </Node>
+
+        {/* --- TOP LEFT BRANCH: ADMIN OPS --- */}
+        <Node x={-250} y={-350} label="Admin Operations" glowColor="#eab308" subLabel="Global Settings">
+          <div className="w-16 h-16 bg-yellow-500/5 border border-yellow-500/40 rounded-full flex items-center justify-center backdrop-blur-md">
+            <Settings size={24} className="text-yellow-500" />
+          </div>
+        </Node>
+        <Node x={-320} y={-400} label="API Spending" glowColor="#eab308">
+           <div className="w-4 h-4 bg-yellow-500 border border-yellow-300 rounded-full shadow-[0_0_10px_#eab308]" />
+        </Node>
+        <Node x={-200} y={-430} label="Auth Context" glowColor="#eab308">
+           <div className="w-4 h-4 bg-yellow-500 border border-yellow-300 rounded-full shadow-[0_0_10px_#eab308]" />
         </Node>
         
       </div>
