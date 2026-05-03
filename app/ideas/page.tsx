@@ -51,7 +51,7 @@ export default function IdeasPage() {
         <div style={{ fontSize: 13, color: 'var(--text-muted)', fontWeight: 500, marginBottom: 6 }}>
           أفكار مُولَّدة بالذكاء الاصطناعي · {account?.username || '@rasayel_podcast'}
         </div>
-        <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between' }}>
+        <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
           <h1 style={{ fontSize: 46, fontWeight: 900, color: 'var(--text-primary)', margin: 0, letterSpacing: '-0.045em', lineHeight: 1 }}>
             Video Ideas
           </h1>
@@ -77,7 +77,7 @@ export default function IdeasPage() {
       )}
 
       {loading ? (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 18 }}>
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 md:gap-[18px]">
           {[1,2,3].map(i => (
             <div key={i} style={{ ...card, padding: '22px', height: 300 }}>
               {[80,120,60,100,40].map((w,j) => (
@@ -105,7 +105,7 @@ export default function IdeasPage() {
           )}
         </div>
       ) : (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 18 }}>
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 md:gap-[18px]">
           {ideas.map((idea: any) => (
             <IdeaCard key={idea.id} idea={idea} />
           ))}

@@ -44,7 +44,7 @@ export default function CompetitorsPage() {
           Real-time analysis · Apify + Sarie AI
           {lastScraped && <span style={{ marginLeft: 12, opacity: 0.6, fontSize: 11 }}>Last synced: {new Date(lastScraped).toLocaleString()}</span>}
         </div>
-        <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between' }}>
+        <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
           <h1 style={{ fontSize: 46, fontWeight: 900, color: 'var(--text-primary)', margin: 0, letterSpacing: '-0.045em', lineHeight: 1 }}>
             Competitors
           </h1>
@@ -62,7 +62,7 @@ export default function CompetitorsPage() {
       {/* ── SARIE SPY INPUT ────────────────────── */}
       <div style={{ ...card, padding: '22px 24px', marginBottom: 24 }}>
         <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-secondary)', marginBottom: 14 }}>Ask Sarie about any account</div>
-        <div style={{ display: 'flex', gap: 12 }}>
+        <div className="flex flex-col md:flex-row gap-3">
           <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: 12, background: 'var(--glass-elevated)', border: '1px solid var(--glass-elevated-border)', borderRadius: 14, padding: '10px 16px' }}>
             <Search size={15} color="var(--text-muted)" style={{ flexShrink: 0 }} />
             <input
@@ -86,7 +86,7 @@ export default function CompetitorsPage() {
       <div style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', color: 'var(--text-muted)', marginBottom: 16 }}>
         Tracked Accounts ({competitors.length})
       </div>
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 18 }}>
+      <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 md:gap-[18px]">
         {competitors.map((c: any) => (
           <CompetitorCard key={c.handle} competitor={c} />
         ))}
