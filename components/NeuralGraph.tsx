@@ -43,8 +43,8 @@ export default function NeuralGraph() {
       {children}
       {label && (
         <div className="absolute top-[110%] w-max text-center pointer-events-none">
-          <div className="text-[11px] font-bold tracking-widest uppercase drop-shadow-[0_0_8px_rgba(0,0,0,0.9)]" style={{ color: glowColor }}>{label}</div>
-          {subLabel && <div className="text-[9px] text-white/50 tracking-wider mt-0.5 max-w-[120px] whitespace-pre-wrap">{subLabel}</div>}
+          <div className="text-[11px] font-bold tracking-widest uppercase drop-shadow-[0_0_8px_rgba(255,255,255,0.9)]" style={{ color: glowColor }}>{label}</div>
+          {subLabel && <div className="text-[9px] text-black/50 tracking-wider mt-0.5 max-w-[120px] whitespace-pre-wrap">{subLabel}</div>}
         </div>
       )}
     </div>
@@ -52,7 +52,7 @@ export default function NeuralGraph() {
 
   return (
     <div 
-      className="relative w-full h-[800px] bg-[#030303] rounded-3xl border border-white/5 shadow-[0_0_50px_rgba(0,0,0,0.5)] overflow-hidden mt-8 cursor-grab active:cursor-grabbing touch-none select-none"
+      className="relative w-full h-[800px] bg-white rounded-3xl border border-black/5 shadow-[0_0_50px_rgba(0,0,0,0.1)] overflow-hidden mt-8 cursor-grab active:cursor-grabbing touch-none select-none"
       onPointerDown={handlePointerDown}
       onPointerMove={handlePointerMove}
       onPointerUp={handlePointerUp}
@@ -63,12 +63,12 @@ export default function NeuralGraph() {
         className="absolute inset-0 pointer-events-none opacity-[0.03]"
         style={{
           backgroundPosition: `${position.x}px ${position.y}px`,
-          backgroundImage: `linear-gradient(to right, white 1px, transparent 1px), linear-gradient(to bottom, white 1px, transparent 1px)`,
+          backgroundImage: `linear-gradient(to right, black 1px, transparent 1px), linear-gradient(to bottom, black 1px, transparent 1px)`,
           backgroundSize: '60px 60px'
         }}
       />
       
-      <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,transparent_0%,#030303_100%)] pointer-events-none z-10" />
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,transparent_0%,white_100%)] pointer-events-none z-10" />
 
       {/* The Infinite Canvas Layer */}
       <div 
@@ -127,7 +127,7 @@ export default function NeuralGraph() {
               alt="Brain" 
               fill
               className="object-contain"
-              style={{ mixBlendMode: 'screen', filter: 'contrast(1.2) brightness(1.2)' }} 
+              style={{ mixBlendMode: 'multiply', filter: 'invert(1) contrast(1.2)' }} 
               priority
               draggable={false}
             />
@@ -201,14 +201,14 @@ export default function NeuralGraph() {
       
       {/* UI Overlay Controls (Non-draggable) */}
       <div className="absolute top-8 left-8 pointer-events-none z-20">
-        <h2 className="text-2xl font-black text-white drop-shadow-[0_2px_10px_rgba(0,0,0,1)] tracking-tight">Sarie Memory Graph</h2>
-        <p className="text-[13px] font-bold text-[#ef4444] mt-1 bg-black/50 px-3 py-1 rounded-full w-fit backdrop-blur-md border border-white/10 uppercase tracking-widest">Interactive Canvas</p>
+        <h2 className="text-2xl font-black text-black drop-shadow-[0_2px_10px_rgba(255,255,255,1)] tracking-tight">Sarie Memory Graph</h2>
+        <p className="text-[13px] font-bold text-[#ef4444] mt-1 bg-white/50 px-3 py-1 rounded-full w-fit backdrop-blur-md border border-black/10 uppercase tracking-widest">Interactive Canvas</p>
       </div>
       
       <div className="absolute bottom-8 right-8 pointer-events-auto z-20">
         <button 
           onClick={() => setPosition({ x: 0, y: 0 })}
-          className="px-6 py-3 bg-white/5 border border-white/20 rounded-full text-[13px] font-bold text-white hover:bg-white/10 hover:border-white/40 transition-all backdrop-blur-md shadow-[0_4px_20px_rgba(0,0,0,0.5)] active:scale-95"
+          className="px-6 py-3 bg-black/5 border border-black/20 rounded-full text-[13px] font-bold text-black hover:bg-black/10 hover:border-black/40 transition-all backdrop-blur-md shadow-[0_4px_20px_rgba(0,0,0,0.1)] active:scale-95"
         >
           Recenter Matrix
         </button>
