@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
 import Sidebar from "@/components/Sidebar";
@@ -18,13 +18,20 @@ export const metadata: Metadata = {
   description: "Mas Sarie — AI-powered TikTok content strategy, audit, competitor intelligence, and idea generation.",
 };
 
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 1,
+  userScalable: false,
+};
+
 export default function RootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
   return (
     <html lang="en" className={`${inter.variable} h-full`} suppressHydrationWarning>
       <head />
-      <body className="min-h-full flex antialiased overflow-x-hidden">
+      <body className="h-[100dvh] flex antialiased overflow-x-hidden">
         <ThemeProvider>
           <DataProvider>
             <PasswordGuard>
@@ -38,9 +45,9 @@ export default function RootLayout({
                 }}
               />
               <Sidebar />
-              <main className="flex-1 flex flex-col overflow-auto min-h-screen relative ml-0 md:ml-[72px] pb-[72px] md:pb-0 transition-all duration-300">
+              <main className="flex-1 flex flex-col overflow-auto h-full relative ml-0 md:ml-[72px] pb-[72px] md:pb-0 transition-all duration-300">
                 <TopBar />
-                <div className="flex-1 page-fade">{children}</div>
+                <div className="flex-1 flex flex-col min-h-0 page-fade">{children}</div>
               </main>
             </PasswordGuard>
           </DataProvider>

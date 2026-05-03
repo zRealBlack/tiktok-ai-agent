@@ -619,7 +619,7 @@ function ChatPageInner() {
 
   return (
     <>
-    <div className="flex flex-col md:flex-row gap-4 h-[calc(100dvh-160px)] md:h-[calc(100vh-56px)] overflow-hidden pb-4 pr-4 pl-4 md:pl-0 box-border">
+    <div className="flex flex-col md:flex-row gap-4 flex-1 min-h-0 overflow-hidden pb-4 pr-4 pl-4 md:pl-0 box-border">
 
       {/* ── LEFT: Conversation List ──────────────────────────────────────── */}
       <div className={`${showChatOnMobile ? 'hidden md:flex' : 'flex'} w-full md:w-[280px] shrink-0 flex-col overflow-hidden rounded-3xl border border-[var(--glass-border)] bg-[var(--glass-bg)] backdrop-blur-xl shadow-[var(--glass-shadow)]`}>
