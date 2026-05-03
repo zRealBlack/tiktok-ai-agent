@@ -34,6 +34,25 @@ export default function NeuralGraph() {
     e.currentTarget.releasePointerCapture(e.pointerId);
   };
 
+  // Smooth zoom with animation
+  const targetScale = useRef(1);
+  const animRef = useRef<number>(0);
+
+  const animateZoom = useCallback(() => {
+    setScale(prev => {
+      const diff = targetScale.current - prev;
+      if (Math.abs(diff) < 0.002) return targetScale.current;
+      animRef.current = requestAnimationFrame(animateZoom);
+      return prev + diff * 0.15;
+    });
+  }, []);
+
+  const zoom = useCallback((delta: number) => {
+    targetScale.current = Math.min(Math.max(0.15, targetScale.current + delta), 4);
+    cancelAnimationFrame(animRef.current);
+    animRef.current = requestAnimationFrame(animateZoom);
+  }, [animateZoom]);
+
   // Native wheel listener so we can preventDefault and stop the page from scrolling
   useEffect(() => {
     const el = containerRef.current;
@@ -41,12 +60,11 @@ export default function NeuralGraph() {
     const onWheel = (e: WheelEvent) => {
       e.preventDefault();
       e.stopPropagation();
-      const sensitivity = 0.001;
-      setScale(prev => Math.min(Math.max(0.15, prev - e.deltaY * sensitivity), 4));
+      zoom(-e.deltaY * 0.001);
     };
     el.addEventListener('wheel', onWheel, { passive: false });
     return () => el.removeEventListener('wheel', onWheel);
-  }, []);
+  }, [zoom]);
 
   // Organic Node Component
   const Node = ({ x, y, children, label, glowColor = "#ef4444", subLabel }: any) => (
@@ -393,13 +411,13 @@ export default function NeuralGraph() {
       </div>
 
       <div className="absolute top-8 right-8 z-30 flex flex-col gap-2" onPointerDown={e => e.stopPropagation()}>
-        <button onClick={() => setScale(s => Math.min(4, s + 0.2))} className="pointer-events-auto w-10 h-10 bg-white border border-black/10 rounded-full flex items-center justify-center text-black hover:bg-gray-50 shadow-sm transition-all active:scale-95"><Plus size={20} /></button>
-        <button onClick={() => setScale(s => Math.max(0.15, s - 0.2))} className="pointer-events-auto w-10 h-10 bg-white border border-black/10 rounded-full flex items-center justify-center text-black hover:bg-gray-50 shadow-sm transition-all active:scale-95"><Minus size={20} /></button>
+        <button onClick={() => zoom(0.15)} className="pointer-events-auto w-10 h-10 bg-white border border-black/10 rounded-full flex items-center justify-center text-black hover:bg-gray-50 shadow-sm transition-all active:scale-95"><Plus size={20} /></button>
+        <button onClick={() => zoom(-0.15)} className="pointer-events-auto w-10 h-10 bg-white border border-black/10 rounded-full flex items-center justify-center text-black hover:bg-gray-50 shadow-sm transition-all active:scale-95"><Minus size={20} /></button>
       </div>
       
       <div className="absolute bottom-8 right-8 z-30" onPointerDown={e => e.stopPropagation()}>
         <button 
-          onClick={() => { setPosition({ x: 0, y: 0 }); setScale(1); }}
+          onClick={() => { setPosition({ x: 0, y: 0 }); targetScale.current = 1; zoom(0); }}
           className="pointer-events-auto px-8 py-4 bg-white border border-black/20 rounded-full text-[15px] font-bold text-black hover:bg-gray-50 transition-all shadow-md active:scale-95"
         >
           Recenter Matrix
