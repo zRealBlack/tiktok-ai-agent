@@ -149,6 +149,25 @@ export default function NeuralGraph() {
           {/* Sub Roots for Admin Ops (-250, -350) */}
           <path d="M -250 -350 C -280 -370, -300 -390, -320 -400" stroke="rgba(234,179,8,0.3)" strokeWidth="1.5" fill="none" />
           <path d="M -250 -350 C -230 -390, -210 -410, -200 -430" stroke="rgba(234,179,8,0.3)" strokeWidth="1.5" fill="none" />
+
+          {/* --- TIER 3 NESTED ROOTS (ROOTS IN ROOTS) --- */}
+          
+          {/* Nested for AI Engine / Anthropic & Apify */}
+          <path d="M -70 -420 C -80 -450, -90 -460, -100 -480" stroke="rgba(249,115,22,0.2)" strokeWidth="1" fill="none" />
+          <path d="M -70 -420 C -60 -450, -50 -460, -40 -480" stroke="rgba(249,115,22,0.2)" strokeWidth="1" fill="none" />
+          <path d="M 70 -420 C 60 -450, 55 -460, 50 -480" stroke="rgba(249,115,22,0.2)" strokeWidth="1" fill="none" />
+          <path d="M 70 -420 C 90 -440, 100 -450, 120 -460" stroke="rgba(249,115,22,0.2)" strokeWidth="1" fill="none" />
+          
+          {/* Nested for Video Analytics / Visual Hooks & Audio */}
+          <path d="M 300 -420 C 310 -450, 315 -460, 320 -480" stroke="rgba(236,72,153,0.2)" strokeWidth="1" fill="none" />
+          <path d="M 300 -420 C 330 -430, 345 -440, 360 -450" stroke="rgba(236,72,153,0.2)" strokeWidth="1" fill="none" />
+          <path d="M 380 -350 C 400 -340, 415 -335, 430 -330" stroke="rgba(236,72,153,0.2)" strokeWidth="1" fill="none" />
+          <path d="M 380 -350 C 410 -360, 430 -370, 450 -380" stroke="rgba(236,72,153,0.2)" strokeWidth="1" fill="none" />
+
+          {/* Nested for Client / Content Strategy */}
+          <path d="M 600 -150 C 620 -180, 630 -190, 650 -200" stroke="rgba(168,85,247,0.2)" strokeWidth="1" fill="none" />
+          <path d="M 600 -150 C 630 -150, 650 -150, 680 -150" stroke="rgba(168,85,247,0.2)" strokeWidth="1" fill="none" />
+          <path d="M 600 -150 C 620 -120, 630 -110, 650 -100" stroke="rgba(168,85,247,0.2)" strokeWidth="1" fill="none" />
         </svg>
 
         {/* --- NODES --- */}
@@ -221,6 +240,18 @@ export default function NeuralGraph() {
         <Node x={600} y={-150} label="Content Strategy" subLabel="15 Active hooks aligned" glowColor="#a855f7">
            <div className="w-8 h-8 bg-purple-500/20 border border-purple-500/40 rounded-full flex items-center justify-center shadow-[0_0_15px_#a855f7]" />
         </Node>
+        
+        {/* Client Tier 3 Nested Nodes */}
+        <Node x={650} y={-200} glowColor="#a855f7" label="Hook #1: Controversy">
+           <div className="w-2 h-2 bg-purple-500/50 border border-purple-300/50 rounded-full" />
+        </Node>
+        <Node x={680} y={-150} glowColor="#a855f7" label="Hook #2: Value Drop">
+           <div className="w-2 h-2 bg-purple-500/50 border border-purple-300/50 rounded-full" />
+        </Node>
+        <Node x={650} y={-100} glowColor="#a855f7" label="Hook #3: Storytime">
+           <div className="w-2 h-2 bg-purple-500/50 border border-purple-300/50 rounded-full" />
+        </Node>
+
         <Node x={550} y={-50} label="Recent Viral Data" subLabel="1.2M views analyzed" glowColor="#a855f7">
            <div className="w-6 h-6 bg-purple-500/20 border border-purple-500/40 rounded-full flex items-center justify-center shadow-[0_0_10px_#a855f7]" />
         </Node>
@@ -260,6 +291,20 @@ export default function NeuralGraph() {
         <Node x={70} y={-420} label="Apify Actor" glowColor="#f97316">
            <div className="w-4 h-4 bg-orange-500 border border-orange-300 rounded-full shadow-[0_0_10px_#f97316]" />
         </Node>
+        
+        {/* AI Engine Tier 3 Nested Nodes */}
+        <Node x={-100} y={-480} glowColor="#f97316" label="Claude 3.5 Sonnet">
+           <div className="w-2 h-2 bg-orange-500/50 border border-orange-300/50 rounded-full" />
+        </Node>
+        <Node x={-40} y={-480} glowColor="#f97316" label="GPT-4o Mini">
+           <div className="w-2 h-2 bg-orange-500/50 border border-orange-300/50 rounded-full" />
+        </Node>
+        <Node x={50} y={-480} glowColor="#f97316" label="Meta Graph API">
+           <div className="w-2 h-2 bg-orange-500/50 border border-orange-300/50 rounded-full" />
+        </Node>
+        <Node x={120} y={-460} glowColor="#f97316" label="TikTok Scraper">
+           <div className="w-2 h-2 bg-orange-500/50 border border-orange-300/50 rounded-full" />
+        </Node>
 
         {/* --- BOTTOM BRANCH: CONVERSATIONAL --- */}
         <Node x={0} y={350} label="Conversational Engine" glowColor="#06b6d4" subLabel="Voice & Messaging">
@@ -285,6 +330,20 @@ export default function NeuralGraph() {
         </Node>
         <Node x={380} y={-350} label="Audio Transcripts" glowColor="#ec4899">
            <div className="w-4 h-4 bg-pink-500 border border-pink-300 rounded-full shadow-[0_0_10px_#ec4899]" />
+        </Node>
+        
+        {/* Video Analytics Tier 3 Nested Nodes */}
+        <Node x={320} y={-480} glowColor="#ec4899" label="Object Recognition">
+           <div className="w-2 h-2 bg-pink-500/50 border border-pink-300/50 rounded-full" />
+        </Node>
+        <Node x={360} y={-450} glowColor="#ec4899" label="Facial Expressions">
+           <div className="w-2 h-2 bg-pink-500/50 border border-pink-300/50 rounded-full" />
+        </Node>
+        <Node x={430} y={-330} glowColor="#ec4899" label="Speech-to-Text">
+           <div className="w-2 h-2 bg-pink-500/50 border border-pink-300/50 rounded-full" />
+        </Node>
+        <Node x={450} y={-380} glowColor="#ec4899" label="Sentiment NLP">
+           <div className="w-2 h-2 bg-pink-500/50 border border-pink-300/50 rounded-full" />
         </Node>
 
         {/* --- TOP LEFT BRANCH: ADMIN OPS --- */}
