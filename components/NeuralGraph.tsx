@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import Image from "next/image";
 import BrainImage from "@/public/brain.png";
 import { Users, Building2, TrendingUp, Cpu, Database, MessageSquare, Video, Settings, Plus, Minus, Briefcase } from "lucide-react";
@@ -12,6 +12,7 @@ export default function NeuralGraph() {
   const [position, setPosition] = useState({ x: 0, y: 0 });
   const [scale, setScale] = useState(1);
   const lastMousePos = useRef({ x: 0, y: 0 });
+  const containerRef = useRef<HTMLDivElement>(null);
   const { competitors } = useData();
 
   const handlePointerDown = (e: React.PointerEvent) => {
@@ -33,10 +34,19 @@ export default function NeuralGraph() {
     e.currentTarget.releasePointerCapture(e.pointerId);
   };
 
-  const handleWheel = (e: React.WheelEvent) => {
-    const zoomSensitivity = 0.0015;
-    setScale(prev => Math.min(Math.max(0.1, prev - e.deltaY * zoomSensitivity), 4));
-  };
+  // Native wheel listener so we can preventDefault and stop the page from scrolling
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
+    const onWheel = (e: WheelEvent) => {
+      e.preventDefault();
+      e.stopPropagation();
+      const sensitivity = 0.001;
+      setScale(prev => Math.min(Math.max(0.15, prev - e.deltaY * sensitivity), 4));
+    };
+    el.addEventListener('wheel', onWheel, { passive: false });
+    return () => el.removeEventListener('wheel', onWheel);
+  }, []);
 
   // Organic Node Component
   const Node = ({ x, y, children, label, glowColor = "#ef4444", subLabel }: any) => (
@@ -60,12 +70,12 @@ export default function NeuralGraph() {
 
   return (
     <div 
+      ref={containerRef}
       className="relative w-full h-[800px] bg-white rounded-3xl border border-black/5 shadow-[0_0_50px_rgba(0,0,0,0.1)] overflow-hidden mt-8 cursor-grab active:cursor-grabbing touch-none select-none"
       onPointerDown={handlePointerDown}
       onPointerMove={handlePointerMove}
       onPointerUp={handlePointerUp}
       onPointerCancel={handlePointerUp}
-      onWheel={handleWheel}
     >
       {/* Background Grid */}
       <div 
@@ -131,25 +141,25 @@ export default function NeuralGraph() {
              );
           })}
 
-          {/* RIGHT: To Clients (600, 500) */}
-          <path d="M 0 400 C 200 400, 400 450, 600 500" stroke="rgba(168,85,247,0.3)" strokeWidth="2" fill="none" />
-          {/* Clients -> Rasayel (800, 650) */}
-          <path d="M 600 500 C 700 550, 800 600, 800 650" stroke="rgba(168,85,247,0.3)" strokeWidth="1.5" fill="none" />
+          {/* RIGHT: To Clients (700, 200) — expands rightward/upward, away from Team */}
+          <path d="M 0 400 C 300 350, 500 250, 700 200" stroke="rgba(168,85,247,0.3)" strokeWidth="2" fill="none" />
+          {/* Clients -> Rasayel (1000, 100) */}
+          <path d="M 700 200 C 800 150, 900 120, 1000 100" stroke="rgba(168,85,247,0.3)" strokeWidth="1.5" fill="none" />
           
-          <path d="M 800 650 C 900 650, 1000 500, 1100 500" stroke="rgba(168,85,247,0.3)" strokeWidth="1.5" fill="none" />
-          <path d="M 800 650 C 950 650, 1000 650, 1100 650" stroke="rgba(168,85,247,0.3)" strokeWidth="1.5" fill="none" />
-          <path d="M 800 650 C 900 650, 1000 800, 1100 800" stroke="rgba(168,85,247,0.3)" strokeWidth="1.5" fill="none" />
+          <path d="M 1000 100 C 1100 100, 1200 -50, 1300 -50" stroke="rgba(168,85,247,0.3)" strokeWidth="1.5" fill="none" />
+          <path d="M 1000 100 C 1150 100, 1200 100, 1300 100" stroke="rgba(168,85,247,0.3)" strokeWidth="1.5" fill="none" />
+          <path d="M 1000 100 C 1100 100, 1200 250, 1300 250" stroke="rgba(168,85,247,0.3)" strokeWidth="1.5" fill="none" />
           {/* Client Tier 3 */}
-          <path d="M 1100 650 C 1150 600, 1200 550, 1300 550" stroke="rgba(168,85,247,0.2)" strokeWidth="1" fill="none" />
-          <path d="M 1100 650 C 1200 650, 1250 650, 1350 650" stroke="rgba(168,85,247,0.2)" strokeWidth="1" fill="none" />
-          <path d="M 1100 650 C 1150 700, 1200 750, 1300 750" stroke="rgba(168,85,247,0.2)" strokeWidth="1" fill="none" />
+          <path d="M 1300 100 C 1350 50, 1400 0, 1500 0" stroke="rgba(168,85,247,0.2)" strokeWidth="1" fill="none" />
+          <path d="M 1300 100 C 1400 100, 1450 100, 1550 100" stroke="rgba(168,85,247,0.2)" strokeWidth="1" fill="none" />
+          <path d="M 1300 100 C 1350 150, 1400 200, 1500 200" stroke="rgba(168,85,247,0.2)" strokeWidth="1" fill="none" />
 
-          {/* LEFT: To Competitors (-600, 500) */}
-          <path d="M 0 400 C -200 400, -400 450, -600 500" stroke="rgba(168,85,247,0.3)" strokeWidth="2" fill="none" />
+          {/* LEFT: To Competitors (-700, 200) — expands leftward/upward, away from Team */}
+          <path d="M 0 400 C -300 350, -500 250, -700 200" stroke="rgba(168,85,247,0.3)" strokeWidth="2" fill="none" />
           {competitors?.map((c: any, i: number) => {
-             const yOffset = 700 + (i * 200);
+             const yOff = 200 - (i * 200);
              return (
-                 <path key={`path-comp-${c.handle}`} d={`M -600 500 C -700 600, -800 ${yOffset - 100}, -800 ${yOffset}`} stroke="rgba(168,85,247,0.3)" strokeWidth="1.5" fill="none" />
+                 <path key={`path-comp-${c.handle}`} d={`M -700 200 C -800 200, -900 ${yOff + 50}, -1000 ${yOff}`} stroke="rgba(168,85,247,0.3)" strokeWidth="1.5" fill="none" />
              );
           })}
 
@@ -234,30 +244,30 @@ export default function NeuralGraph() {
         </Node>
 
         {/* ======================= */}
-        {/* RIGHT: CLIENTS (600, 500) */}
+        {/* RIGHT: CLIENTS (700, 200) — expands right/upward */}
         {/* ======================= */}
-        <Node x={600} y={500} label="Clients" glowColor="#a855f7" subLabel="Managed Accounts">
+        <Node x={700} y={200} label="Clients" glowColor="#a855f7" subLabel="Managed Accounts">
           <div className="w-16 h-16 bg-purple-500/5 border border-purple-500/40 rounded-full flex items-center justify-center backdrop-blur-md">
             <Briefcase size={24} className="text-purple-500" />
           </div>
         </Node>
 
-        {/* Client -> Rasayel (800, 650) */}
-        <Node x={800} y={650} label="@rasayel_podcast" glowColor="#a855f7" subLabel="Active Target">
+        {/* Client -> Rasayel (1000, 100) */}
+        <Node x={1000} y={100} label="@rasayel_podcast" glowColor="#a855f7" subLabel="Active Target">
           <div className="w-16 h-16 bg-purple-500/5 border border-purple-500/40 rounded-full flex items-center justify-center backdrop-blur-md">
             <Building2 size={24} className="text-purple-500" />
           </div>
         </Node>
-        <Node x={1100} y={500} label="Follower Base" glowColor="#a855f7">
+        <Node x={1300} y={-50} label="Follower Base" glowColor="#a855f7">
            <div className="w-6 h-6 bg-purple-500/20 border border-purple-500/40 rounded-full" />
         </Node>
-        <Node x={1100} y={650} label="Content Strategy" glowColor="#a855f7">
+        <Node x={1300} y={100} label="Content Strategy" glowColor="#a855f7">
            <div className="w-8 h-8 bg-purple-500/20 border border-purple-500/40 rounded-full" />
         </Node>
-        <Node x={1300} y={550} glowColor="#a855f7" label="Hook #1: Controversy"><div className="w-3 h-3 bg-purple-500/50 border border-purple-300/50 rounded-full" /></Node>
-        <Node x={1350} y={650} glowColor="#a855f7" label="Hook #2: Value Drop"><div className="w-3 h-3 bg-purple-500/50 border border-purple-300/50 rounded-full" /></Node>
-        <Node x={1300} y={750} glowColor="#a855f7" label="Hook #3: Storytime"><div className="w-3 h-3 bg-purple-500/50 border border-purple-300/50 rounded-full" /></Node>
-        <Node x={1100} y={800} label="Recent Viral Data" glowColor="#a855f7">
+        <Node x={1500} y={0} glowColor="#a855f7" label="Hook #1: Controversy"><div className="w-3 h-3 bg-purple-500/50 border border-purple-300/50 rounded-full" /></Node>
+        <Node x={1550} y={100} glowColor="#a855f7" label="Hook #2: Value Drop"><div className="w-3 h-3 bg-purple-500/50 border border-purple-300/50 rounded-full" /></Node>
+        <Node x={1500} y={200} glowColor="#a855f7" label="Hook #3: Storytime"><div className="w-3 h-3 bg-purple-500/50 border border-purple-300/50 rounded-full" /></Node>
+        <Node x={1300} y={250} label="Recent Viral Data" glowColor="#a855f7">
            <div className="w-6 h-6 bg-purple-500/20 border border-purple-500/40 rounded-full" />
         </Node>
 
@@ -286,18 +296,18 @@ export default function NeuralGraph() {
         })}
 
         {/* ======================= */}
-        {/* LEFT: COMPETITORS (-600, 500) */}
+        {/* LEFT: COMPETITORS (-700, 200) — expands left/upward */}
         {/* ======================= */}
-        <Node x={-600} y={500} label="Competitor Matrix" glowColor="#a855f7" subLabel="Active Rivals">
+        <Node x={-700} y={200} label="Competitor Matrix" glowColor="#a855f7" subLabel="Active Rivals">
           <div className="w-16 h-16 bg-purple-500/5 border border-purple-500/40 rounded-full flex items-center justify-center backdrop-blur-md">
             <TrendingUp size={24} className="text-purple-500" />
           </div>
         </Node>
         {competitors?.map((c: any, i: number) => {
-           const yOffset = 700 + (i * 200);
+           const yOff = 200 - (i * 200);
            return (
              <div key={`node-comp-${c.handle}`}>
-               <Node x={-800} y={yOffset} label={c.handle} subLabel={`${(c.followers/1000).toFixed(1)}k Followers`} glowColor="#a855f7">
+               <Node x={-1000} y={yOff} label={c.handle} subLabel={`${(c.followers/1000).toFixed(1)}k Followers`} glowColor="#a855f7">
                  <div className="w-14 h-14 rounded-full overflow-hidden border border-purple-500/50 shadow-[0_0_15px_#a855f7]">
                    <Image src={c.avatar} alt={c.handle} width={56} height={56} className="object-cover" />
                  </div>
@@ -383,15 +393,15 @@ export default function NeuralGraph() {
         <p className="text-[14px] font-bold text-[#ef4444] mt-1 bg-white/50 px-4 py-1.5 rounded-full w-fit backdrop-blur-md border border-black/10 uppercase tracking-widest">Infinite Scale Canvas</p>
       </div>
 
-      <div className="absolute top-8 right-8 pointer-events-auto z-20 flex flex-col gap-2">
-        <button onClick={() => setScale(s => Math.min(4, s + 0.2))} className="w-10 h-10 bg-white border border-black/10 rounded-full flex items-center justify-center text-black hover:bg-gray-50 shadow-sm transition-all active:scale-95"><Plus size={20} /></button>
-        <button onClick={() => setScale(s => Math.max(0.1, s - 0.2))} className="w-10 h-10 bg-white border border-black/10 rounded-full flex items-center justify-center text-black hover:bg-gray-50 shadow-sm transition-all active:scale-95"><Minus size={20} /></button>
+      <div className="absolute top-8 right-8 z-30 flex flex-col gap-2" onPointerDown={e => e.stopPropagation()}>
+        <button onClick={() => setScale(s => Math.min(4, s + 0.2))} className="pointer-events-auto w-10 h-10 bg-white border border-black/10 rounded-full flex items-center justify-center text-black hover:bg-gray-50 shadow-sm transition-all active:scale-95"><Plus size={20} /></button>
+        <button onClick={() => setScale(s => Math.max(0.15, s - 0.2))} className="pointer-events-auto w-10 h-10 bg-white border border-black/10 rounded-full flex items-center justify-center text-black hover:bg-gray-50 shadow-sm transition-all active:scale-95"><Minus size={20} /></button>
       </div>
       
-      <div className="absolute bottom-8 right-8 pointer-events-auto z-20">
+      <div className="absolute bottom-8 right-8 z-30" onPointerDown={e => e.stopPropagation()}>
         <button 
           onClick={() => { setPosition({ x: 0, y: 0 }); setScale(1); }}
-          className="px-8 py-4 bg-white border border-black/20 rounded-full text-[15px] font-bold text-black hover:bg-gray-50 transition-all shadow-md active:scale-95"
+          className="pointer-events-auto px-8 py-4 bg-white border border-black/20 rounded-full text-[15px] font-bold text-black hover:bg-gray-50 transition-all shadow-md active:scale-95"
         >
           Recenter Matrix
         </button>
