@@ -109,11 +109,6 @@ export default function NeuralGraph() {
           {/* ----------------------------------------------------- */}
           {/* MEMORY SUB-ROOTS (-150, 0) */}
           {/* ----------------------------------------------------- */}
-          {/* To Persona (-250, -150) */}
-          <path d="M -150 0 C -200 -50, -250 -100, -250 -150" stroke="rgba(168,85,247,0.3)" strokeWidth="1.5" fill="none" />
-          <path d="M -250 -150 C -250 -200, -250 -250, -250 -300" stroke="rgba(168,85,247,0.2)" strokeWidth="1" fill="none" />
-          <path d="M -250 -150 C -300 -180, -350 -200, -400 -220" stroke="rgba(168,85,247,0.2)" strokeWidth="1" fill="none" />
-          <path d="M -250 -150 C -300 -120, -350 -100, -400 -80" stroke="rgba(168,85,247,0.2)" strokeWidth="1" fill="none" />
 
           {/* To Team (-350, 0) */}
           <path d="M -150 0 C -200 0, -250 0, -350 0" stroke="rgba(168,85,247,0.3)" strokeWidth="1.5" fill="none" />
@@ -222,20 +217,6 @@ export default function NeuralGraph() {
           <div className="w-20 h-20 bg-purple-500/5 border border-purple-500/40 rounded-full flex items-center justify-center backdrop-blur-md">
             <Database size={28} className="text-purple-500" />
           </div>
-        </Node>
-
-        {/* Persona */}
-        <Node x={-250} y={-150} label="Sarie Persona" glowColor="#a855f7">
-           <div className="w-8 h-8 bg-purple-500/10 border border-purple-500/30 rounded-full flex items-center justify-center font-bold text-purple-400 text-xs">P</div>
-        </Node>
-        <Node x={-250} y={-300} glowColor="#a855f7" label="Appearance: Male">
-           <div className="w-2 h-2 bg-purple-500/50 border border-purple-300/50 rounded-full" />
-        </Node>
-        <Node x={-400} y={-220} glowColor="#a855f7" label="Character: Friendly">
-           <div className="w-2 h-2 bg-purple-500/50 border border-purple-300/50 rounded-full" />
-        </Node>
-        <Node x={-400} y={-80} glowColor="#a855f7" label="Hopes: Scale Automation">
-           <div className="w-2 h-2 bg-purple-500/50 border border-purple-300/50 rounded-full" />
         </Node>
 
         {/* Upstash DB */}
