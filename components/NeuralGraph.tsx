@@ -1,112 +1,219 @@
 'use client';
 
+import { useState, useRef } from "react";
 import Image from "next/image";
 import BrainImage from "@/public/brain.png";
 import { Users, Building2, TrendingUp, Cpu, Database } from "lucide-react";
 import { TEAM_MEMBERS } from "@/lib/auth";
 
 export default function NeuralGraph() {
+  const [isDragging, setIsDragging] = useState(false);
+  const [position, setPosition] = useState({ x: 0, y: 0 });
+  const lastMousePos = useRef({ x: 0, y: 0 });
+
+  const handlePointerDown = (e: React.PointerEvent) => {
+    setIsDragging(true);
+    lastMousePos.current = { x: e.clientX, y: e.clientY };
+    e.currentTarget.setPointerCapture(e.pointerId);
+  };
+
+  const handlePointerMove = (e: React.PointerEvent) => {
+    if (!isDragging) return;
+    const dx = e.clientX - lastMousePos.current.x;
+    const dy = e.clientY - lastMousePos.current.y;
+    setPosition(prev => ({ x: prev.x + dx, y: prev.y + dy }));
+    lastMousePos.current = { x: e.clientX, y: e.clientY };
+  };
+
+  const handlePointerUp = (e: React.PointerEvent) => {
+    setIsDragging(false);
+    e.currentTarget.releasePointerCapture(e.pointerId);
+  };
+
+  // Organic Node Component
+  const Node = ({ x, y, children, label, glowColor = "#ef4444", subLabel }: any) => (
+    <div 
+      className="absolute flex flex-col items-center justify-center transform -translate-x-1/2 -translate-y-1/2 pointer-events-auto group hover:scale-110 transition-transform duration-300"
+      style={{ left: x, top: y }}
+    >
+      <div 
+        className="absolute inset-0 blur-[25px] rounded-full opacity-30 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none animate-pulse" 
+        style={{ backgroundColor: glowColor }} 
+      />
+      {children}
+      {label && (
+        <div className="absolute top-[110%] w-max text-center pointer-events-none">
+          <div className="text-[11px] font-bold tracking-widest uppercase drop-shadow-[0_0_8px_rgba(0,0,0,0.9)]" style={{ color: glowColor }}>{label}</div>
+          {subLabel && <div className="text-[9px] text-white/50 tracking-wider mt-0.5 max-w-[120px] whitespace-pre-wrap">{subLabel}</div>}
+        </div>
+      )}
+    </div>
+  );
+
   return (
-    <div className="relative w-full py-16 bg-[var(--glass-bg)] rounded-3xl border border-[var(--glass-border)] shadow-[var(--glass-shadow)] overflow-hidden flex flex-col items-center mt-8">
+    <div 
+      className="relative w-full h-[800px] bg-[#030303] rounded-3xl border border-white/5 shadow-[0_0_50px_rgba(0,0,0,0.5)] overflow-hidden mt-8 cursor-grab active:cursor-grabbing touch-none select-none"
+      onPointerDown={handlePointerDown}
+      onPointerMove={handlePointerMove}
+      onPointerUp={handlePointerUp}
+      onPointerCancel={handlePointerUp}
+    >
+      {/* Background Grid that moves with panning */}
+      <div 
+        className="absolute inset-0 pointer-events-none opacity-[0.03]"
+        style={{
+          backgroundPosition: `${position.x}px ${position.y}px`,
+          backgroundImage: `linear-gradient(to right, white 1px, transparent 1px), linear-gradient(to bottom, white 1px, transparent 1px)`,
+          backgroundSize: '60px 60px'
+        }}
+      />
       
-      {/* Background Decor */}
-      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(239,68,68,0.1)_0%,transparent_60%)] pointer-events-none" />
-      <div className="absolute top-0 left-0 w-full h-full bg-[linear-gradient(to_right,rgba(255,255,255,0.01)_1px,transparent_1px),linear-gradient(to_bottom,rgba(255,255,255,0.01)_1px,transparent_1px)] bg-[size:40px_40px] pointer-events-none" />
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,transparent_0%,#030303_100%)] pointer-events-none z-10" />
 
-      <div className="text-center mb-12 relative z-10">
-        <h2 className="text-2xl font-black tracking-tight text-[var(--text-primary)] flex items-center justify-center gap-2">
-          <Cpu className="text-[#ef4444]" /> Neural Knowledge Graph
-        </h2>
-        <p className="text-sm text-[var(--text-muted)] mt-1">Live visualization of Sarie's cached context and network</p>
-      </div>
-
-      <div className="flex flex-col lg:flex-row items-center justify-center gap-10 lg:gap-24 w-full relative z-10 px-6">
+      {/* The Infinite Canvas Layer */}
+      <div 
+        className="absolute top-1/2 left-1/2 w-0 h-0 pointer-events-none"
+        style={{ transform: `translate(${position.x}px, ${position.y}px)` }}
+      >
         
-        {/* SVG Connecting Lines (Desktop only for stability) */}
-        <div className="hidden lg:block absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full h-2 pointer-events-none z-0">
-           <div className="absolute top-0 left-[20%] right-[20%] h-0.5 bg-gradient-to-r from-red-500/10 via-red-500/40 to-purple-500/10" />
-        </div>
+        {/* SVG Root Lines connecting everything */}
+        <svg className="absolute overflow-visible pointer-events-none" style={{ left: 0, top: 0 }}>
+          <defs>
+            <linearGradient id="glowRed" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stopColor="#ef4444" stopOpacity="0.8" />
+              <stop offset="100%" stopColor="#ef4444" stopOpacity="0.1" />
+            </linearGradient>
+            <linearGradient id="glowPurple" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stopColor="#a855f7" stopOpacity="0.8" />
+              <stop offset="100%" stopColor="#ef4444" stopOpacity="0.1" />
+            </linearGradient>
+          </defs>
 
-        {/* Left Branch: Team Awareness */}
-        <div className="flex flex-col gap-5 z-10 w-full lg:w-auto items-center lg:items-end">
-          <div className="text-[10px] font-bold uppercase tracking-widest text-[#ef4444] mb-2 bg-[#ef4444]/10 px-3 py-1 rounded-full border border-[#ef4444]/20">
-            Team Synced
-          </div>
-          {TEAM_MEMBERS.slice(0, 4).map((user, i) => (
-             <div key={user.id} className={`p-3 bg-[var(--glass-elevated)] backdrop-blur-md rounded-xl border border-[var(--glass-border)] flex items-center gap-3 w-[260px] shadow-[0_4px_20px_rgba(0,0,0,0.2)] transition-all hover:scale-105 hover:border-red-500/50 cursor-default ${i % 2 === 0 ? 'lg:-translate-x-4' : 'lg:translate-x-0'}`}>
-               <div className="w-10 h-10 rounded-full bg-[var(--bg-base)] text-[var(--text-secondary)] flex items-center justify-center border border-[var(--glass-border)] shrink-0">
-                 <Users size={16}/>
-               </div>
-               <div className="flex-1 min-w-0">
-                 <div className="text-[13px] font-bold text-[var(--text-primary)] truncate">{user.name}</div>
-                 <div className="text-[10px] text-[var(--text-muted)] truncate">{user.role}</div>
-               </div>
-             </div>
-          ))}
-        </div>
+          {/* Main Branches */}
+          <path d="M 0 0 C -150 -50, -250 -100, -350 -100" stroke="url(#glowRed)" strokeWidth="3" fill="none" className="animate-[pulse_3s_ease-in-out_infinite]" />
+          <path d="M 0 0 C 150 -50, 250 -150, 400 -150" stroke="url(#glowPurple)" strokeWidth="3" fill="none" className="animate-[pulse_4s_ease-in-out_infinite]" />
+          <path d="M 0 0 C 100 150, 200 200, 300 250" stroke="rgba(59,130,246,0.5)" strokeWidth="2" fill="none" />
+          <path d="M 0 0 C -100 150, -200 250, -250 350" stroke="rgba(16,185,129,0.5)" strokeWidth="2" fill="none" />
 
-        {/* Center: The Core Brain */}
-        <div className="relative z-10 py-8 lg:py-0">
-          {/* Outer glow rings */}
-          <div className="absolute inset-0 bg-[#ef4444]/20 blur-[80px] rounded-full animate-pulse" />
-          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[240px] h-[240px] border border-red-500/20 rounded-full animate-[spin_10s_linear_infinite]" />
-          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[280px] h-[280px] border border-purple-500/10 rounded-full animate-[spin_15s_linear_infinite_reverse]" />
+          {/* Sub Roots for Team (-350, -100) */}
+          {TEAM_MEMBERS.map((user, i) => {
+             const angle = -Math.PI / 2 + (Math.PI / Math.max(1, TEAM_MEMBERS.length - 1)) * i;
+             const dist = 180;
+             const x = -350 + Math.cos(angle) * dist;
+             const y = -100 + Math.sin(angle) * dist;
+             return (
+               <path key={`line-${user.id}`} d={`M -350 -100 C ${-350 + (x+350)/2} -100, ${x} ${y - (y+100)/2}, ${x} ${y}`} stroke="rgba(239,68,68,0.2)" strokeWidth="1.5" fill="none" />
+             );
+          })}
           
-          <div className="relative group cursor-pointer">
+          {/* Sub Roots for Client (400, -150) */}
+          <path d="M 400 -150 C 450 -150, 500 -250, 550 -250" stroke="rgba(168,85,247,0.3)" strokeWidth="1.5" fill="none" />
+          <path d="M 400 -150 C 450 -150, 550 -150, 600 -150" stroke="rgba(168,85,247,0.3)" strokeWidth="1.5" fill="none" />
+          <path d="M 400 -150 C 450 -150, 500 -50, 550 -50" stroke="rgba(168,85,247,0.3)" strokeWidth="1.5" fill="none" />
+
+          {/* Sub Roots for Competitors (300, 250) */}
+          <path d="M 300 250 L 400 200" stroke="rgba(59,130,246,0.3)" strokeWidth="1.5" fill="none" />
+          <path d="M 300 250 L 450 280" stroke="rgba(59,130,246,0.3)" strokeWidth="1.5" fill="none" />
+          <path d="M 300 250 L 380 350" stroke="rgba(59,130,246,0.3)" strokeWidth="1.5" fill="none" />
+        </svg>
+
+        {/* --- NODES --- */}
+        
+        {/* Core Brain Node (mix-blend-mode: screen is critical here!) */}
+        <Node x={0} y={0} label="Sarie Central Intelligence" glowColor="#ef4444" subLabel="Core Memory Hub">
+          <div className="w-[300px] h-[300px] flex items-center justify-center pointer-events-auto relative">
             <Image 
               src={BrainImage} 
-              alt="Sarie Neural Core" 
-              width={200} 
-              height={200} 
-              className="relative z-10 drop-shadow-[0_0_30px_rgba(239,68,68,0.4)] transition-transform duration-700 group-hover:scale-110" 
+              alt="Brain" 
+              fill
+              className="object-contain"
+              style={{ mixBlendMode: 'screen', filter: 'contrast(1.2) brightness(1.2)' }} 
               priority
+              draggable={false}
             />
-            <div className="absolute -bottom-10 left-1/2 -translate-x-1/2 text-center w-full">
-               <div className="text-[12px] font-black tracking-[0.2em] text-[#ef4444] uppercase drop-shadow-[0_0_10px_rgba(239,68,68,0.8)]">Sarie Core</div>
-               <div className="text-[10px] text-[var(--text-muted)] mt-1 font-mono">v2.1.0 • Online</div>
-            </div>
           </div>
-        </div>
+        </Node>
 
-        {/* Right Branch: Client & Data Context */}
-        <div className="flex flex-col gap-5 z-10 w-full lg:w-auto items-center lg:items-start">
-          <div className="text-[10px] font-bold uppercase tracking-widest text-purple-400 mb-2 bg-purple-500/10 px-3 py-1 rounded-full border border-purple-500/20">
-            Active Context
+        {/* --- LEFT BRANCH: TEAM --- */}
+        <Node x={-350} y={-100} label="Team Context" glowColor="#ef4444" subLabel="Authorized Identities">
+          <div className="w-16 h-16 bg-red-500/5 border border-red-500/40 rounded-full flex items-center justify-center backdrop-blur-md">
+            <Users size={24} className="text-red-500" />
           </div>
-          
-           <div className="p-3 bg-[var(--glass-elevated)] backdrop-blur-md rounded-xl border border-[var(--glass-border)] flex items-center gap-3 w-[260px] shadow-[0_4px_20px_rgba(0,0,0,0.2)] transition-all hover:scale-105 hover:border-purple-500/50 lg:-translate-x-4 cursor-default">
-             <div className="w-10 h-10 rounded-full bg-purple-500/10 text-purple-400 flex items-center justify-center border border-purple-500/20 shrink-0">
-               <Building2 size={16}/>
-             </div>
-             <div className="flex-1 min-w-0">
-               <div className="text-[13px] font-bold text-[var(--text-primary)]">@rasayel_podcast</div>
-               <div className="text-[10px] text-[var(--text-muted)]">Core Client Profile loaded</div>
-             </div>
-           </div>
+        </Node>
+        
+        {/* Team Sub Nodes mapped organically */}
+        {TEAM_MEMBERS.map((user, i) => {
+             const angle = -Math.PI / 2 + (Math.PI / Math.max(1, TEAM_MEMBERS.length - 1)) * i;
+             const dist = 180;
+             const x = -350 + Math.cos(angle) * dist;
+             const y = -100 + Math.sin(angle) * dist;
+             return (
+               <Node key={user.id} x={x} y={y} label={user.name} subLabel={user.role} glowColor="#ef4444">
+                 <div className="w-10 h-10 bg-red-500/10 border border-red-500/30 rounded-full flex items-center justify-center text-red-400 font-bold text-xs backdrop-blur-sm">
+                   {user.name.charAt(0)}
+                 </div>
+               </Node>
+             );
+        })}
 
-           <div className="p-3 bg-[var(--glass-elevated)] backdrop-blur-md rounded-xl border border-[var(--glass-border)] flex items-center gap-3 w-[260px] shadow-[0_4px_20px_rgba(0,0,0,0.2)] transition-all hover:scale-105 hover:border-blue-500/50 cursor-default">
-             <div className="w-10 h-10 rounded-full bg-blue-500/10 text-blue-400 flex items-center justify-center border border-blue-500/20 shrink-0">
-               <TrendingUp size={16}/>
-             </div>
-             <div className="flex-1 min-w-0">
-               <div className="text-[13px] font-bold text-[var(--text-primary)]">Competitor Matrix</div>
-               <div className="text-[10px] text-[var(--text-muted)]">Tracking 6 key accounts</div>
-             </div>
-           </div>
-           
-           <div className="p-3 bg-[var(--glass-elevated)] backdrop-blur-md rounded-xl border border-[var(--glass-border)] flex items-center gap-3 w-[260px] shadow-[0_4px_20px_rgba(0,0,0,0.2)] transition-all hover:scale-105 hover:border-emerald-500/50 lg:-translate-x-4 cursor-default">
-             <div className="w-10 h-10 rounded-full bg-emerald-500/10 text-emerald-400 flex items-center justify-center border border-emerald-500/20 shrink-0">
-               <Database size={16}/>
-             </div>
-             <div className="flex-1 min-w-0">
-               <div className="text-[13px] font-bold text-[var(--text-primary)]">Upstash Memory</div>
-               <div className="text-[10px] text-[var(--text-muted)]">Vector & KV Sync Active</div>
-             </div>
-           </div>
+        {/* --- RIGHT BRANCH: CLIENT --- */}
+        <Node x={400} y={-150} label="@rasayel_podcast" glowColor="#a855f7" subLabel="Active Memory Target">
+          <div className="w-16 h-16 bg-purple-500/5 border border-purple-500/40 rounded-full flex items-center justify-center backdrop-blur-md">
+            <Building2 size={24} className="text-purple-500" />
+          </div>
+        </Node>
 
-        </div>
+        {/* Client Sub Nodes */}
+        <Node x={550} y={-250} label="Follower Base" subLabel="Deep demographics parsed" glowColor="#a855f7">
+           <div className="w-6 h-6 bg-purple-500/20 border border-purple-500/40 rounded-full flex items-center justify-center shadow-[0_0_10px_#a855f7]" />
+        </Node>
+        <Node x={600} y={-150} label="Content Strategy" subLabel="15 Active hooks aligned" glowColor="#a855f7">
+           <div className="w-8 h-8 bg-purple-500/20 border border-purple-500/40 rounded-full flex items-center justify-center shadow-[0_0_15px_#a855f7]" />
+        </Node>
+        <Node x={550} y={-50} label="Recent Viral Data" subLabel="1.2M views analyzed" glowColor="#a855f7">
+           <div className="w-6 h-6 bg-purple-500/20 border border-purple-500/40 rounded-full flex items-center justify-center shadow-[0_0_10px_#a855f7]" />
+        </Node>
 
+        {/* --- BOTTOM BRANCHES: COMPETITORS & DB --- */}
+        <Node x={300} y={250} label="Competitor Matrix" glowColor="#3b82f6" subLabel="Tracking 6 Rivals">
+          <div className="w-16 h-16 bg-blue-500/5 border border-blue-500/40 rounded-full flex items-center justify-center backdrop-blur-md">
+            <TrendingUp size={24} className="text-blue-500" />
+          </div>
+        </Node>
+
+        <Node x={400} y={200} label="Mahmoud Ismail" glowColor="#3b82f6">
+           <div className="w-4 h-4 bg-blue-500 border border-blue-300 rounded-full shadow-[0_0_10px_#3b82f6]" />
+        </Node>
+        <Node x={450} y={280} label="Nadya Alnoor" glowColor="#3b82f6">
+           <div className="w-4 h-4 bg-blue-500 border border-blue-300 rounded-full shadow-[0_0_10px_#3b82f6]" />
+        </Node>
+        <Node x={380} y={350} label="Other Competitors" glowColor="#3b82f6">
+           <div className="w-4 h-4 bg-blue-500 border border-blue-300 rounded-full shadow-[0_0_10px_#3b82f6]" />
+        </Node>
+
+        <Node x={-250} y={350} label="Upstash KV DB" glowColor="#10b981" subLabel="Live Vector Sync">
+          <div className="w-16 h-16 bg-emerald-500/5 border border-emerald-500/40 rounded-full flex items-center justify-center backdrop-blur-md">
+            <Database size={24} className="text-emerald-500" />
+          </div>
+        </Node>
+        
       </div>
+      
+      {/* UI Overlay Controls (Non-draggable) */}
+      <div className="absolute top-8 left-8 pointer-events-none z-20">
+        <h2 className="text-2xl font-black text-white drop-shadow-[0_2px_10px_rgba(0,0,0,1)] tracking-tight">Sarie Memory Graph</h2>
+        <p className="text-[13px] font-bold text-[#ef4444] mt-1 bg-black/50 px-3 py-1 rounded-full w-fit backdrop-blur-md border border-white/10 uppercase tracking-widest">Interactive Canvas</p>
+      </div>
+      
+      <div className="absolute bottom-8 right-8 pointer-events-auto z-20">
+        <button 
+          onClick={() => setPosition({ x: 0, y: 0 })}
+          className="px-6 py-3 bg-white/5 border border-white/20 rounded-full text-[13px] font-bold text-white hover:bg-white/10 hover:border-white/40 transition-all backdrop-blur-md shadow-[0_4px_20px_rgba(0,0,0,0.5)] active:scale-95"
+        >
+          Recenter Matrix
+        </button>
+      </div>
+
     </div>
   );
 }
