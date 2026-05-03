@@ -1,15 +1,16 @@
 'use client';
 
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import Image from "next/image";
 import BrainImage from "@/public/brain.png";
-import { Users, Building2, TrendingUp, Cpu, Database, MessageSquare, Video, Settings } from "lucide-react";
+import { Users, Building2, TrendingUp, Cpu, Database, MessageSquare, Video, Settings, Plus, Minus, Briefcase } from "lucide-react";
 import { TEAM_MEMBERS } from "@/lib/auth";
 import { useData } from "@/components/DataContext";
 
 export default function NeuralGraph() {
   const [isDragging, setIsDragging] = useState(false);
   const [position, setPosition] = useState({ x: 0, y: 0 });
+  const [scale, setScale] = useState(1);
   const lastMousePos = useRef({ x: 0, y: 0 });
   const { competitors } = useData();
 
@@ -30,6 +31,11 @@ export default function NeuralGraph() {
   const handlePointerUp = (e: React.PointerEvent) => {
     setIsDragging(false);
     e.currentTarget.releasePointerCapture(e.pointerId);
+  };
+
+  const handleWheel = (e: React.WheelEvent) => {
+    const zoomSensitivity = 0.0015;
+    setScale(prev => Math.min(Math.max(0.1, prev - e.deltaY * zoomSensitivity), 4));
   };
 
   // Organic Node Component
@@ -59,6 +65,7 @@ export default function NeuralGraph() {
       onPointerMove={handlePointerMove}
       onPointerUp={handlePointerUp}
       onPointerCancel={handlePointerUp}
+      onWheel={handleWheel}
     >
       {/* Background Grid */}
       <div 
@@ -66,7 +73,7 @@ export default function NeuralGraph() {
         style={{
           backgroundPosition: `${position.x}px ${position.y}px`,
           backgroundImage: `linear-gradient(to right, black 1px, transparent 1px), linear-gradient(to bottom, black 1px, transparent 1px)`,
-          backgroundSize: '100px 100px'
+          backgroundSize: `${100 * scale}px ${100 * scale}px`
         }}
       />
       
@@ -75,7 +82,7 @@ export default function NeuralGraph() {
       {/* The Infinite Canvas Layer */}
       <div 
         className="absolute top-1/2 left-1/2 w-0 h-0 pointer-events-none"
-        style={{ transform: `translate(${position.x}px, ${position.y}px)` }}
+        style={{ transform: `translate(${position.x}px, ${position.y}px) scale(${scale})`, transformOrigin: '0 0' }}
       >
         
         {/* SVG Root Lines */}
@@ -108,38 +115,40 @@ export default function NeuralGraph() {
           {/* PILLAR 1: MEMORY (0, 400) */}
           {/* ----------------------------------------------------- */}
           
-          {/* To Team (-600, 400) */}
-          <path d="M 0 400 C -200 400, -400 400, -600 400" stroke="rgba(168,85,247,0.3)" strokeWidth="2" fill="none" />
+          {/* CENTER: To Team (0, 600) */}
+          <path d="M 0 400 C 0 500, 0 550, 0 600" stroke="rgba(168,85,247,0.3)" strokeWidth="2" fill="none" />
           {TEAM_MEMBERS.map((user, i) => {
-             const yOffset = 400 + (i - (TEAM_MEMBERS.length - 1) / 2) * 300;
-             const x = -900;
-             const y = yOffset;
+             const x = (i === 0) ? -250 : 250;
+             const y = 850;
              return (
                <g key={`line-group-${user.id}`}>
-                 <path d={`M -600 400 C -750 400, -750 ${y}, ${x} ${y}`} stroke="rgba(168,85,247,0.2)" strokeWidth="1.5" fill="none" />
-                 <path d={`M ${x} ${y} C ${x - 50} ${y - 30}, ${x - 100} ${y - 80}, ${x - 200} ${y - 100}`} stroke="rgba(168,85,247,0.2)" strokeWidth="1" fill="none" />
-                 <path d={`M ${x} ${y} C ${x - 100} ${y}, ${x - 150} ${y}, ${x - 250} ${y}`} stroke="rgba(168,85,247,0.2)" strokeWidth="1" fill="none" />
-                 <path d={`M ${x} ${y} C ${x - 50} ${y + 30}, ${x - 100} ${y + 80}, ${x - 200} ${y + 100}`} stroke="rgba(168,85,247,0.2)" strokeWidth="1" fill="none" />
+                 <path d={`M 0 600 C ${x/2} 700, ${x} 750, ${x} ${y}`} stroke="rgba(168,85,247,0.2)" strokeWidth="1.5" fill="none" />
+                 <path d={`M ${x} ${y} C ${x - 100} ${y + 50}, ${x - 150} ${y + 100}, ${x - 100} ${y + 150}`} stroke="rgba(168,85,247,0.2)" strokeWidth="1" fill="none" />
+                 <path d={`M ${x} ${y} C ${x} ${y + 50}, ${x} ${y + 100}, ${x} ${y + 150}`} stroke="rgba(168,85,247,0.2)" strokeWidth="1" fill="none" />
+                 <path d={`M ${x} ${y} C ${x + 100} ${y + 50}, ${x + 150} ${y + 100}, ${x + 100} ${y + 150}`} stroke="rgba(168,85,247,0.2)" strokeWidth="1" fill="none" />
                </g>
              );
           })}
 
-          {/* To Client (600, 400) */}
-          <path d="M 0 400 C 200 400, 400 400, 600 400" stroke="rgba(168,85,247,0.3)" strokeWidth="2" fill="none" />
-          <path d="M 600 400 C 700 400, 800 250, 900 250" stroke="rgba(168,85,247,0.3)" strokeWidth="1.5" fill="none" />
-          <path d="M 600 400 C 750 400, 800 400, 900 400" stroke="rgba(168,85,247,0.3)" strokeWidth="1.5" fill="none" />
-          <path d="M 600 400 C 700 400, 800 550, 900 550" stroke="rgba(168,85,247,0.3)" strokeWidth="1.5" fill="none" />
+          {/* RIGHT: To Clients (600, 500) */}
+          <path d="M 0 400 C 200 400, 400 450, 600 500" stroke="rgba(168,85,247,0.3)" strokeWidth="2" fill="none" />
+          {/* Clients -> Rasayel (800, 650) */}
+          <path d="M 600 500 C 700 550, 800 600, 800 650" stroke="rgba(168,85,247,0.3)" strokeWidth="1.5" fill="none" />
+          
+          <path d="M 800 650 C 900 650, 1000 500, 1100 500" stroke="rgba(168,85,247,0.3)" strokeWidth="1.5" fill="none" />
+          <path d="M 800 650 C 950 650, 1000 650, 1100 650" stroke="rgba(168,85,247,0.3)" strokeWidth="1.5" fill="none" />
+          <path d="M 800 650 C 900 650, 1000 800, 1100 800" stroke="rgba(168,85,247,0.3)" strokeWidth="1.5" fill="none" />
           {/* Client Tier 3 */}
-          <path d="M 900 400 C 950 350, 1000 300, 1100 300" stroke="rgba(168,85,247,0.2)" strokeWidth="1" fill="none" />
-          <path d="M 900 400 C 1000 400, 1050 400, 1150 400" stroke="rgba(168,85,247,0.2)" strokeWidth="1" fill="none" />
-          <path d="M 900 400 C 950 450, 1000 500, 1100 500" stroke="rgba(168,85,247,0.2)" strokeWidth="1" fill="none" />
+          <path d="M 1100 650 C 1150 600, 1200 550, 1300 550" stroke="rgba(168,85,247,0.2)" strokeWidth="1" fill="none" />
+          <path d="M 1100 650 C 1200 650, 1250 650, 1350 650" stroke="rgba(168,85,247,0.2)" strokeWidth="1" fill="none" />
+          <path d="M 1100 650 C 1150 700, 1200 750, 1300 750" stroke="rgba(168,85,247,0.2)" strokeWidth="1" fill="none" />
 
-          {/* To Competitors (0, 650) */}
-          <path d="M 0 400 C 0 500, 0 550, 0 650" stroke="rgba(168,85,247,0.3)" strokeWidth="2" fill="none" />
+          {/* LEFT: To Competitors (-600, 500) */}
+          <path d="M 0 400 C -200 400, -400 450, -600 500" stroke="rgba(168,85,247,0.3)" strokeWidth="2" fill="none" />
           {competitors?.map((c: any, i: number) => {
-             const yOffset = 850 + (i * 180);
+             const yOffset = 700 + (i * 200);
              return (
-                 <path key={`path-comp-${c.handle}`} d={`M 0 650 C 0 750, 0 ${yOffset - 50}, 0 ${yOffset}`} stroke="rgba(168,85,247,0.3)" strokeWidth="1.5" fill="none" />
+                 <path key={`path-comp-${c.handle}`} d={`M -600 500 C -700 600, -800 ${yOffset - 100}, -800 ${yOffset}`} stroke="rgba(168,85,247,0.3)" strokeWidth="1.5" fill="none" />
              );
           })}
 
@@ -223,58 +232,70 @@ export default function NeuralGraph() {
           </div>
         </Node>
 
-        {/* Client (600, 400) */}
-        <Node x={600} y={400} label="@rasayel_podcast" glowColor="#a855f7" subLabel="Active Target">
+        {/* ======================= */}
+        {/* RIGHT: CLIENTS (600, 500) */}
+        {/* ======================= */}
+        <Node x={600} y={500} label="Clients" glowColor="#a855f7" subLabel="Managed Accounts">
+          <div className="w-16 h-16 bg-purple-500/5 border border-purple-500/40 rounded-full flex items-center justify-center backdrop-blur-md">
+            <Briefcase size={24} className="text-purple-500" />
+          </div>
+        </Node>
+
+        {/* Client -> Rasayel (800, 650) */}
+        <Node x={800} y={650} label="@rasayel_podcast" glowColor="#a855f7" subLabel="Active Target">
           <div className="w-16 h-16 bg-purple-500/5 border border-purple-500/40 rounded-full flex items-center justify-center backdrop-blur-md">
             <Building2 size={24} className="text-purple-500" />
           </div>
         </Node>
-        <Node x={900} y={250} label="Follower Base" glowColor="#a855f7">
+        <Node x={1100} y={500} label="Follower Base" glowColor="#a855f7">
            <div className="w-6 h-6 bg-purple-500/20 border border-purple-500/40 rounded-full" />
         </Node>
-        <Node x={900} y={400} label="Content Strategy" glowColor="#a855f7">
+        <Node x={1100} y={650} label="Content Strategy" glowColor="#a855f7">
            <div className="w-8 h-8 bg-purple-500/20 border border-purple-500/40 rounded-full" />
         </Node>
-        <Node x={1100} y={300} glowColor="#a855f7" label="Hook #1: Controversy"><div className="w-3 h-3 bg-purple-500/50 border border-purple-300/50 rounded-full" /></Node>
-        <Node x={1150} y={400} glowColor="#a855f7" label="Hook #2: Value Drop"><div className="w-3 h-3 bg-purple-500/50 border border-purple-300/50 rounded-full" /></Node>
-        <Node x={1100} y={500} glowColor="#a855f7" label="Hook #3: Storytime"><div className="w-3 h-3 bg-purple-500/50 border border-purple-300/50 rounded-full" /></Node>
-        <Node x={900} y={550} label="Recent Viral Data" glowColor="#a855f7">
+        <Node x={1300} y={550} glowColor="#a855f7" label="Hook #1: Controversy"><div className="w-3 h-3 bg-purple-500/50 border border-purple-300/50 rounded-full" /></Node>
+        <Node x={1350} y={650} glowColor="#a855f7" label="Hook #2: Value Drop"><div className="w-3 h-3 bg-purple-500/50 border border-purple-300/50 rounded-full" /></Node>
+        <Node x={1300} y={750} glowColor="#a855f7" label="Hook #3: Storytime"><div className="w-3 h-3 bg-purple-500/50 border border-purple-300/50 rounded-full" /></Node>
+        <Node x={1100} y={800} label="Recent Viral Data" glowColor="#a855f7">
            <div className="w-6 h-6 bg-purple-500/20 border border-purple-500/40 rounded-full" />
         </Node>
 
-        {/* Team (-600, 400) */}
-        <Node x={-600} y={400} label="Team Context" glowColor="#a855f7" subLabel="Identities">
+        {/* ======================= */}
+        {/* CENTER: TEAM (0, 600) */}
+        {/* ======================= */}
+        <Node x={0} y={600} label="Team Context" glowColor="#a855f7" subLabel="Identities">
           <div className="w-16 h-16 bg-purple-500/5 border border-purple-500/40 rounded-full flex items-center justify-center backdrop-blur-md">
             <Users size={24} className="text-purple-500" />
           </div>
         </Node>
         {TEAM_MEMBERS.map((user, i) => {
-             const yOffset = 400 + (i - (TEAM_MEMBERS.length - 1) / 2) * 300;
-             const x = -900;
-             const y = yOffset;
+             const x = (i === 0) ? -250 : 250;
+             const y = 850;
              return (
                <div key={`node-group-${user.id}`}>
                  <Node x={x} y={y} label={user.name} subLabel={user.role} glowColor="#a855f7">
                    <div className="w-14 h-14 bg-purple-500/10 border border-purple-500/30 rounded-full flex items-center justify-center text-purple-400 font-bold text-lg backdrop-blur-sm">{user.name.charAt(0)}</div>
                  </Node>
-                 <Node x={x - 200} y={y - 100} glowColor="#a855f7" label="Session Context"><div className="w-3 h-3 bg-purple-500/50 border border-purple-300/50 rounded-full" /></Node>
-                 <Node x={x - 250} y={y} glowColor="#a855f7" label={user.id === 'yassin' ? 'Admin Privileges' : 'Query History'}><div className="w-3 h-3 bg-purple-500/50 border border-purple-300/50 rounded-full" /></Node>
-                 <Node x={x - 200} y={y + 100} glowColor="#a855f7" label="API Quota Logs"><div className="w-3 h-3 bg-purple-500/50 border border-purple-300/50 rounded-full" /></Node>
+                 <Node x={x - 100} y={y + 150} glowColor="#a855f7" label="Session Context"><div className="w-3 h-3 bg-purple-500/50 border border-purple-300/50 rounded-full" /></Node>
+                 <Node x={x} y={y + 150} glowColor="#a855f7" label={user.id === 'yassin' ? 'Admin Privileges' : 'Query History'}><div className="w-3 h-3 bg-purple-500/50 border border-purple-300/50 rounded-full" /></Node>
+                 <Node x={x + 100} y={y + 150} glowColor="#a855f7" label="API Quota Logs"><div className="w-3 h-3 bg-purple-500/50 border border-purple-300/50 rounded-full" /></Node>
                </div>
              );
         })}
 
-        {/* Competitor Matrix (0, 650) -> Real Data */}
-        <Node x={0} y={650} label="Competitor Matrix" glowColor="#a855f7" subLabel="Active Rivals">
+        {/* ======================= */}
+        {/* LEFT: COMPETITORS (-600, 500) */}
+        {/* ======================= */}
+        <Node x={-600} y={500} label="Competitor Matrix" glowColor="#a855f7" subLabel="Active Rivals">
           <div className="w-16 h-16 bg-purple-500/5 border border-purple-500/40 rounded-full flex items-center justify-center backdrop-blur-md">
             <TrendingUp size={24} className="text-purple-500" />
           </div>
         </Node>
         {competitors?.map((c: any, i: number) => {
-           const yOffset = 850 + (i * 180);
+           const yOffset = 700 + (i * 200);
            return (
              <div key={`node-comp-${c.handle}`}>
-               <Node x={0} y={yOffset} label={c.handle} subLabel={`${(c.followers/1000).toFixed(1)}k Followers`} glowColor="#a855f7">
+               <Node x={-800} y={yOffset} label={c.handle} subLabel={`${(c.followers/1000).toFixed(1)}k Followers`} glowColor="#a855f7">
                  <div className="w-14 h-14 rounded-full overflow-hidden border border-purple-500/50 shadow-[0_0_15px_#a855f7]">
                    <Image src={c.avatar} alt={c.handle} width={56} height={56} className="object-cover" />
                  </div>
@@ -359,11 +380,16 @@ export default function NeuralGraph() {
         <h2 className="text-3xl font-black text-black drop-shadow-[0_2px_10px_rgba(255,255,255,1)] tracking-tight">Sarie Memory Graph</h2>
         <p className="text-[14px] font-bold text-[#ef4444] mt-1 bg-white/50 px-4 py-1.5 rounded-full w-fit backdrop-blur-md border border-black/10 uppercase tracking-widest">Infinite Scale Canvas</p>
       </div>
+
+      <div className="absolute top-8 right-8 pointer-events-auto z-20 flex flex-col gap-2">
+        <button onClick={() => setScale(s => Math.min(4, s + 0.2))} className="w-10 h-10 bg-white border border-black/10 rounded-full flex items-center justify-center text-black hover:bg-gray-50 shadow-sm transition-all active:scale-95"><Plus size={20} /></button>
+        <button onClick={() => setScale(s => Math.max(0.1, s - 0.2))} className="w-10 h-10 bg-white border border-black/10 rounded-full flex items-center justify-center text-black hover:bg-gray-50 shadow-sm transition-all active:scale-95"><Minus size={20} /></button>
+      </div>
       
       <div className="absolute bottom-8 right-8 pointer-events-auto z-20">
         <button 
-          onClick={() => setPosition({ x: 0, y: 0 })}
-          className="px-8 py-4 bg-black/5 border border-black/20 rounded-full text-[15px] font-bold text-black hover:bg-black/10 hover:border-black/40 transition-all backdrop-blur-md shadow-[0_4px_20px_rgba(0,0,0,0.1)] active:scale-95"
+          onClick={() => { setPosition({ x: 0, y: 0 }); setScale(1); }}
+          className="px-8 py-4 bg-white border border-black/20 rounded-full text-[15px] font-bold text-black hover:bg-gray-50 transition-all shadow-md active:scale-95"
         >
           Recenter Matrix
         </button>
