@@ -45,8 +45,8 @@ export const TEAM_MEMBERS: TeamMember[] = [
     email: "sara@mas.ai",
     password: "Sara@1234",
     name: "Sara Hatem",
-    role: "Marketing & Operation Management",
-    bio: "Handles marketing and operations."
+    role: "Marketing Manager & Creative Lead",
+    bio: "Leads creative direction, content strategy, and production across all clients. Manages the full content cycle from planning to script development. Supervises content and moderation teams, and handles new client onboarding and marketing strategies."
   },
   {
     id: "shahdm",
