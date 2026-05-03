@@ -112,16 +112,43 @@ export async function POST(req: Request) {
 
     const encoder = new TextEncoder();
     let chunkCount = 0;
+    let inputTokens = 0;
+    let outputTokens = 0;
+    
+    const currentUserId = contextData?.currentUser?.id || "unknown";
+
     const readable = new ReadableStream({
       async start(controller) {
         try {
           for await (const event of stream) {
+            // Track tokens
+            if (event.type === 'message_start' && event.message?.usage) {
+              inputTokens = event.message.usage.input_tokens || 0;
+            }
+            if (event.type === 'message_delta' && event.usage) {
+              outputTokens += event.usage.output_tokens || 0;
+            }
+
             if (event.type === 'content_block_delta' && event.delta.type === 'text_delta') {
               chunkCount++;
               controller.enqueue(encoder.encode(event.delta.text));
             }
           }
-          console.log(`[AI] Stream complete. Total chunks: ${chunkCount}`);
+          console.log(`[AI] Stream complete. Total chunks: ${chunkCount}, Input: ${inputTokens}, Output: ${outputTokens}`);
+          
+          // Calculate cost (Haiku approx pricing)
+          const cost = (inputTokens / 1000000) * 0.25 + (outputTokens / 1000000) * 1.25;
+          
+          if (cost > 0 && currentUserId !== "unknown") {
+            try {
+              const currentSpendStr = await redis.get(`spend:${currentUserId}`);
+              const currentSpend = parseFloat((currentSpendStr as string) || "0");
+              await redis.set(`spend:${currentUserId}`, (currentSpend + cost).toString());
+            } catch (err) {
+              console.error("[AI] Failed to log usage:", err);
+            }
+          }
+
         } catch (streamErr) {
           console.error("[AI] Stream error:", streamErr);
           controller.error(streamErr);

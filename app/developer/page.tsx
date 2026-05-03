@@ -4,12 +4,13 @@ import { useEffect, useState } from "react";
 import { useData } from "@/components/DataContext";
 import { useRouter } from "next/navigation";
 import { TEAM_MEMBERS } from "@/lib/auth";
-import { ShieldAlert, Terminal, Database, Server, Cpu, Trash2, KeyRound, Activity, AlertTriangle } from "lucide-react";
+import { ShieldAlert, Terminal, Database, Server, Cpu, Trash2, KeyRound, Activity, AlertTriangle, Coins } from "lucide-react";
 
 export default function DeveloperAdminPage() {
   const { currentUser } = useData();
   const router = useRouter();
   const [mounted, setMounted] = useState(false);
+  const [usageData, setUsageData] = useState<Record<string, number>>({});
 
   useEffect(() => {
     // Only Yassin Gaml has clearance
@@ -17,6 +18,18 @@ export default function DeveloperAdminPage() {
       router.push("/");
     }
     setMounted(true);
+    
+    // Fetch usage data
+    if (currentUser?.id === 'yassin') {
+      fetch('/api/admin/usage')
+        .then(res => res.json())
+        .then(data => {
+          if (data.usage) {
+            setUsageData(data.usage);
+          }
+        })
+        .catch(console.error);
+    }
   }, [currentUser, router]);
 
   if (!mounted || !currentUser || currentUser.id !== 'yassin') {
@@ -86,19 +99,26 @@ export default function DeveloperAdminPage() {
                 </div>
 
                 {/* AI Providers Status */}
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-2 lg:grid-cols-3 gap-3">
                   <div className="p-3 rounded-2xl bg-[var(--glass-elevated)] border border-[var(--glass-border)]">
-                    <span className="block text-[11px] text-[var(--text-muted)] mb-1 uppercase tracking-wider">Anthropic</span>
+                    <span className="block text-[10px] text-[var(--text-muted)] mb-1 uppercase tracking-wider">Anthropic</span>
                     <div className="flex items-center gap-2">
                       <div className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
-                      <span className="text-[13px] font-bold text-[var(--text-primary)]">Online</span>
+                      <span className="text-[12px] font-bold text-[var(--text-primary)]">Online</span>
                     </div>
                   </div>
                   <div className="p-3 rounded-2xl bg-[var(--glass-elevated)] border border-[var(--glass-border)]">
-                    <span className="block text-[11px] text-[var(--text-muted)] mb-1 uppercase tracking-wider">OpenAI</span>
+                    <span className="block text-[10px] text-[var(--text-muted)] mb-1 uppercase tracking-wider">OpenAI</span>
                     <div className="flex items-center gap-2">
                       <div className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
-                      <span className="text-[13px] font-bold text-[var(--text-primary)]">Online</span>
+                      <span className="text-[12px] font-bold text-[var(--text-primary)]">Online</span>
+                    </div>
+                  </div>
+                  <div className="p-3 rounded-2xl bg-[var(--glass-elevated)] border border-[var(--glass-border)]">
+                    <span className="block text-[10px] text-[var(--text-muted)] mb-1 uppercase tracking-wider">Gemini</span>
+                    <div className="flex items-center gap-2">
+                      <div className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                      <span className="text-[12px] font-bold text-[var(--text-primary)]">Online</span>
                     </div>
                   </div>
                 </div>
@@ -156,7 +176,7 @@ export default function DeveloperAdminPage() {
                   <KeyRound size={18} className="text-[#ef4444]" />
                   <div>
                     <h3 className="text-lg font-bold text-[var(--text-primary)]">Team Credentials</h3>
-                    <p className="text-[12px] text-[var(--text-muted)]">Highly classified system login pairs.</p>
+                    <p className="text-[12px] text-[var(--text-muted)]">Highly classified system login pairs & API tracking.</p>
                   </div>
                 </div>
                 <div className="flex items-center gap-2 bg-yellow-500/10 text-yellow-500 border border-yellow-500/20 px-3 py-1.5 rounded-lg text-[11px] font-bold uppercase tracking-wider w-fit">
@@ -165,13 +185,14 @@ export default function DeveloperAdminPage() {
               </div>
 
               <div className="overflow-x-auto">
-                <table className="w-full text-left border-collapse min-w-[600px]">
+                <table className="w-full text-left border-collapse min-w-[700px]">
                   <thead>
                     <tr className="border-b border-[var(--glass-border)]">
                       <th className="pb-3 text-[11px] font-bold uppercase tracking-wider text-[var(--text-muted)] pl-4">Name</th>
                       <th className="pb-3 text-[11px] font-bold uppercase tracking-wider text-[var(--text-muted)]">Email</th>
                       <th className="pb-3 text-[11px] font-bold uppercase tracking-wider text-[var(--text-muted)]">Password</th>
                       <th className="pb-3 text-[11px] font-bold uppercase tracking-wider text-[var(--text-muted)]">Role</th>
+                      <th className="pb-3 text-[11px] font-bold uppercase tracking-wider text-[var(--text-muted)] text-right pr-4">API Spend</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -195,6 +216,14 @@ export default function DeveloperAdminPage() {
                         </td>
                         <td className="py-4 pr-4">
                           <span className="text-[11px] text-[var(--text-muted)] font-medium bg-[var(--glass-border)] px-2 py-1 rounded-full whitespace-nowrap">{member.role}</span>
+                        </td>
+                        <td className="py-4 pr-4 text-right">
+                          <div className="flex items-center justify-end gap-1.5">
+                            <Coins size={14} className="text-emerald-500 opacity-80" />
+                            <span className="text-[13px] font-bold text-[var(--text-primary)] font-mono">
+                              ${(usageData[member.id] || 0).toFixed(4)}
+                            </span>
+                          </div>
                         </td>
                       </tr>
                     ))}
