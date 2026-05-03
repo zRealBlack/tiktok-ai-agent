@@ -5,6 +5,7 @@ import { useData } from "@/components/DataContext";
 import { useRouter } from "next/navigation";
 import { TEAM_MEMBERS } from "@/lib/auth";
 import { ShieldAlert, Terminal, Database, Server, Cpu, Trash2, KeyRound, Activity, AlertTriangle, Coins } from "lucide-react";
+import NeuralGraph from "@/components/NeuralGraph";
 
 export default function DeveloperAdminPage() {
   const { currentUser } = useData();
@@ -232,8 +233,12 @@ export default function DeveloperAdminPage() {
               </div>
             </div>
           </div>
-
         </div>
+        
+        
+        {/* Sarie Core Intelligence Neural Graph */}
+        <NeuralGraph />
+
       </div>
     </div>
   );
