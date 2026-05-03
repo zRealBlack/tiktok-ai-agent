@@ -43,7 +43,11 @@ export default function NeuralGraph() {
       const diff = targetScale.current - prev;
       if (Math.abs(diff) < 0.002) return targetScale.current;
       animRef.current = requestAnimationFrame(animateZoom);
-      return prev + diff * 0.15;
+      const next = prev + diff * 0.15;
+      // Adjust position so the viewport center stays fixed
+      const ratio = next / prev;
+      setPosition(p => ({ x: p.x * ratio, y: p.y * ratio }));
+      return next;
     });
   }, []);
 
