@@ -141,25 +141,24 @@ export default function NeuralGraph() {
              );
           })}
 
-          {/* RIGHT: To Clients (700, 200) — expands rightward/upward, away from Team */}
-          <path d="M 0 400 C 300 350, 500 250, 700 200" stroke="rgba(168,85,247,0.3)" strokeWidth="2" fill="none" />
-          {/* Clients -> Rasayel (1000, 100) */}
-          <path d="M 700 200 C 800 150, 900 120, 1000 100" stroke="rgba(168,85,247,0.3)" strokeWidth="1.5" fill="none" />
-          
-          <path d="M 1000 100 C 1100 100, 1200 -50, 1300 -50" stroke="rgba(168,85,247,0.3)" strokeWidth="1.5" fill="none" />
-          <path d="M 1000 100 C 1150 100, 1200 100, 1300 100" stroke="rgba(168,85,247,0.3)" strokeWidth="1.5" fill="none" />
-          <path d="M 1000 100 C 1100 100, 1200 250, 1300 250" stroke="rgba(168,85,247,0.3)" strokeWidth="1.5" fill="none" />
+          {/* RIGHT: To Clients (700, 550) — expands down-right, away from brain */}
+          <path d="M 0 400 C 300 420, 500 480, 700 550" stroke="rgba(168,85,247,0.3)" strokeWidth="2" fill="none" />
+          {/* Clients -> Rasayel (1050, 700) */}
+          <path d="M 700 550 C 850 600, 950 650, 1050 700" stroke="rgba(168,85,247,0.3)" strokeWidth="1.5" fill="none" />
+          <path d="M 1050 700 C 1150 650, 1250 600, 1350 600" stroke="rgba(168,85,247,0.3)" strokeWidth="1.5" fill="none" />
+          <path d="M 1050 700 C 1200 700, 1250 700, 1350 700" stroke="rgba(168,85,247,0.3)" strokeWidth="1.5" fill="none" />
+          <path d="M 1050 700 C 1150 750, 1250 800, 1350 800" stroke="rgba(168,85,247,0.3)" strokeWidth="1.5" fill="none" />
           {/* Client Tier 3 */}
-          <path d="M 1300 100 C 1350 50, 1400 0, 1500 0" stroke="rgba(168,85,247,0.2)" strokeWidth="1" fill="none" />
-          <path d="M 1300 100 C 1400 100, 1450 100, 1550 100" stroke="rgba(168,85,247,0.2)" strokeWidth="1" fill="none" />
-          <path d="M 1300 100 C 1350 150, 1400 200, 1500 200" stroke="rgba(168,85,247,0.2)" strokeWidth="1" fill="none" />
+          <path d="M 1350 700 C 1400 650, 1450 600, 1550 600" stroke="rgba(168,85,247,0.2)" strokeWidth="1" fill="none" />
+          <path d="M 1350 700 C 1450 700, 1500 700, 1600 700" stroke="rgba(168,85,247,0.2)" strokeWidth="1" fill="none" />
+          <path d="M 1350 700 C 1400 750, 1450 800, 1550 800" stroke="rgba(168,85,247,0.2)" strokeWidth="1" fill="none" />
 
-          {/* LEFT: To Competitors (-700, 200) — expands leftward/upward, away from Team */}
-          <path d="M 0 400 C -300 350, -500 250, -700 200" stroke="rgba(168,85,247,0.3)" strokeWidth="2" fill="none" />
+          {/* LEFT: To Competitors (-700, 550) — expands down-left */}
+          <path d="M 0 400 C -300 420, -500 480, -700 550" stroke="rgba(168,85,247,0.3)" strokeWidth="2" fill="none" />
           {competitors?.map((c: any, i: number) => {
-             const yOff = 200 - (i * 200);
+             const yOff = 700 + (i * 200);
              return (
-                 <path key={`path-comp-${c.handle}`} d={`M -700 200 C -800 200, -900 ${yOff + 50}, -1000 ${yOff}`} stroke="rgba(168,85,247,0.3)" strokeWidth="1.5" fill="none" />
+                 <path key={`path-comp-${c.handle}`} d={`M -700 550 C -800 600, -900 ${yOff - 50}, -1000 ${yOff}`} stroke="rgba(168,85,247,0.3)" strokeWidth="1.5" fill="none" />
              );
           })}
 
@@ -196,10 +195,10 @@ export default function NeuralGraph() {
           <path d="M -500 -600 C -550 -650, -600 -700, -650 -750" stroke="rgba(249,115,22,0.3)" strokeWidth="1.5" fill="none" />
           <path d="M -500 -600 C -450 -650, -400 -700, -350 -750" stroke="rgba(249,115,22,0.3)" strokeWidth="1.5" fill="none" />
 
-          {/* To Admin Ops (-800, -150) */}
-          <path d="M -500 -300 C -600 -250, -700 -200, -800 -150" stroke="rgba(249,115,22,0.3)" strokeWidth="2" fill="none" />
-          <path d="M -800 -150 C -850 -150, -900 -150, -1000 -150" stroke="rgba(249,115,22,0.3)" strokeWidth="1.5" fill="none" />
-          <path d="M -800 -150 C -850 -100, -900 -50, -1000 -50" stroke="rgba(249,115,22,0.3)" strokeWidth="1.5" fill="none" />
+          {/* To Admin Ops (-300, -600) */}
+          <path d="M -500 -300 C -400 -400, -350 -500, -300 -600" stroke="rgba(249,115,22,0.3)" strokeWidth="2" fill="none" />
+          <path d="M -300 -600 C -350 -650, -400 -700, -450 -750" stroke="rgba(249,115,22,0.3)" strokeWidth="1.5" fill="none" />
+          <path d="M -300 -600 C -250 -650, -200 -700, -150 -750" stroke="rgba(249,115,22,0.3)" strokeWidth="1.5" fill="none" />
 
           {/* To Upstash DB (-200, -500) */}
           <path d="M -500 -300 C -400 -350, -300 -400, -200 -500" stroke="rgba(249,115,22,0.3)" strokeWidth="2" fill="none" />
@@ -244,30 +243,30 @@ export default function NeuralGraph() {
         </Node>
 
         {/* ======================= */}
-        {/* RIGHT: CLIENTS (700, 200) — expands right/upward */}
+        {/* RIGHT: CLIENTS (700, 550) — expands down-right */}
         {/* ======================= */}
-        <Node x={700} y={200} label="Clients" glowColor="#a855f7" subLabel="Managed Accounts">
+        <Node x={700} y={550} label="Clients" glowColor="#a855f7" subLabel="Managed Accounts">
           <div className="w-16 h-16 bg-purple-500/5 border border-purple-500/40 rounded-full flex items-center justify-center backdrop-blur-md">
             <Briefcase size={24} className="text-purple-500" />
           </div>
         </Node>
 
-        {/* Client -> Rasayel (1000, 100) */}
-        <Node x={1000} y={100} label="@rasayel_podcast" glowColor="#a855f7" subLabel="Active Target">
+        {/* Client -> Rasayel (1050, 700) */}
+        <Node x={1050} y={700} label="@rasayel_podcast" glowColor="#a855f7" subLabel="Active Target">
           <div className="w-16 h-16 bg-purple-500/5 border border-purple-500/40 rounded-full flex items-center justify-center backdrop-blur-md">
             <Building2 size={24} className="text-purple-500" />
           </div>
         </Node>
-        <Node x={1300} y={-50} label="Follower Base" glowColor="#a855f7">
+        <Node x={1350} y={600} label="Follower Base" glowColor="#a855f7">
            <div className="w-6 h-6 bg-purple-500/20 border border-purple-500/40 rounded-full" />
         </Node>
-        <Node x={1300} y={100} label="Content Strategy" glowColor="#a855f7">
+        <Node x={1350} y={700} label="Content Strategy" glowColor="#a855f7">
            <div className="w-8 h-8 bg-purple-500/20 border border-purple-500/40 rounded-full" />
         </Node>
-        <Node x={1500} y={0} glowColor="#a855f7" label="Hook #1: Controversy"><div className="w-3 h-3 bg-purple-500/50 border border-purple-300/50 rounded-full" /></Node>
-        <Node x={1550} y={100} glowColor="#a855f7" label="Hook #2: Value Drop"><div className="w-3 h-3 bg-purple-500/50 border border-purple-300/50 rounded-full" /></Node>
-        <Node x={1500} y={200} glowColor="#a855f7" label="Hook #3: Storytime"><div className="w-3 h-3 bg-purple-500/50 border border-purple-300/50 rounded-full" /></Node>
-        <Node x={1300} y={250} label="Recent Viral Data" glowColor="#a855f7">
+        <Node x={1550} y={600} glowColor="#a855f7" label="Hook #1: Controversy"><div className="w-3 h-3 bg-purple-500/50 border border-purple-300/50 rounded-full" /></Node>
+        <Node x={1600} y={700} glowColor="#a855f7" label="Hook #2: Value Drop"><div className="w-3 h-3 bg-purple-500/50 border border-purple-300/50 rounded-full" /></Node>
+        <Node x={1550} y={800} glowColor="#a855f7" label="Hook #3: Storytime"><div className="w-3 h-3 bg-purple-500/50 border border-purple-300/50 rounded-full" /></Node>
+        <Node x={1350} y={800} label="Recent Viral Data" glowColor="#a855f7">
            <div className="w-6 h-6 bg-purple-500/20 border border-purple-500/40 rounded-full" />
         </Node>
 
@@ -296,15 +295,15 @@ export default function NeuralGraph() {
         })}
 
         {/* ======================= */}
-        {/* LEFT: COMPETITORS (-700, 200) — expands left/upward */}
+        {/* LEFT: COMPETITORS (-700, 550) — expands down-left */}
         {/* ======================= */}
-        <Node x={-700} y={200} label="Competitor Matrix" glowColor="#a855f7" subLabel="Active Rivals">
+        <Node x={-700} y={550} label="Competitor Matrix" glowColor="#a855f7" subLabel="Active Rivals">
           <div className="w-16 h-16 bg-purple-500/5 border border-purple-500/40 rounded-full flex items-center justify-center backdrop-blur-md">
             <TrendingUp size={24} className="text-purple-500" />
           </div>
         </Node>
         {competitors?.map((c: any, i: number) => {
-           const yOff = 200 - (i * 200);
+           const yOff = 700 + (i * 200);
            return (
              <div key={`node-comp-${c.handle}`}>
                <Node x={-1000} y={yOff} label={c.handle} subLabel={`${(c.followers/1000).toFixed(1)}k Followers`} glowColor="#a855f7">
@@ -370,13 +369,13 @@ export default function NeuralGraph() {
         <Node x={-350} y={-750} label="Voice TTS" glowColor="#f97316"><div className="w-6 h-6 bg-orange-500 border border-orange-300 rounded-full" /></Node>
 
         {/* Admin Ops (-800, -150) */}
-        <Node x={-800} y={-150} label="Admin Operations" glowColor="#f97316">
+        <Node x={-300} y={-600} label="Admin Operations" glowColor="#f97316">
           <div className="w-16 h-16 bg-orange-500/5 border border-orange-500/40 rounded-full flex items-center justify-center backdrop-blur-md">
             <Settings size={24} className="text-orange-500" />
           </div>
         </Node>
-        <Node x={-1000} y={-150} label="API Spending" glowColor="#f97316"><div className="w-6 h-6 bg-orange-500 border border-orange-300 rounded-full" /></Node>
-        <Node x={-1000} y={-50} label="Auth Context" glowColor="#f97316"><div className="w-6 h-6 bg-orange-500 border border-orange-300 rounded-full" /></Node>
+        <Node x={-450} y={-750} label="API Spending" glowColor="#f97316"><div className="w-6 h-6 bg-orange-500 border border-orange-300 rounded-full" /></Node>
+        <Node x={-150} y={-750} label="Auth Context" glowColor="#f97316"><div className="w-6 h-6 bg-orange-500 border border-orange-300 rounded-full" /></Node>
 
         {/* Upstash DB (-200, -500) */}
         <Node x={-200} y={-500} label="Upstash KV DB" glowColor="#f97316" subLabel="Live Vector Sync">
