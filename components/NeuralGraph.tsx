@@ -3,24 +3,141 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import Image from "next/image";
 import BrainImage from "@/public/brain.png";
-import { Users, Building2, TrendingUp, Cpu, Database, MessageSquare, Video, Settings, Plus, Minus, Briefcase } from "lucide-react";
-import { TEAM_MEMBERS } from "@/lib/auth";
+import { Plus, Minus, X } from "lucide-react";
+import { SARIE_MEMORY, MemoryBranch, MemoryNode } from "@/lib/sarieMemory";
 import { useData } from "@/components/DataContext";
 
+// ── Layout: compute absolute positions for each branch ──
+interface PositionedNode {
+  id: string;
+  label: string;
+  detail: string;
+  x: number;
+  y: number;
+  parentX: number;
+  parentY: number;
+  color: string;
+  size: 'lg' | 'md' | 'sm' | 'xs';
+  children: PositionedNode[];
+}
+
+// Branch angles (degrees, 0=right, 90=down, 180=left, 270=up)
+const BRANCH_CONFIGS: Record<string, { angle: number; radius: number }> = {
+  'identity':       { angle: 250, radius: 500 },
+  'team':           { angle: 270, radius: 850 },
+  'client':         { angle: 310, radius: 600 },
+  'competitors':    { angle: 210, radius: 600 },
+  'video-analysis': { angle: 30,  radius: 550 },
+  'audio-analysis': { angle: 60,  radius: 650 },
+  'visual-rules':   { angle: 10,  radius: 850 },
+  'branding':       { angle: 150, radius: 550 },
+  'strategy':       { angle: 170, radius: 750 },
+  'infra':          { angle: 120, radius: 600 },
+};
+
+function degToRad(deg: number) { return (deg * Math.PI) / 180; }
+
+function layoutChildren(
+  children: MemoryNode[],
+  parentX: number,
+  parentY: number,
+  baseAngle: number,
+  spreadDeg: number,
+  radius: number,
+  color: string,
+  depth: number
+): PositionedNode[] {
+  const n = children.length;
+  if (n === 0) return [];
+  const startAngle = baseAngle - (spreadDeg * (n - 1)) / 2;
+  return children.map((child, i) => {
+    const angle = startAngle + i * spreadDeg;
+    const x = parentX + Math.cos(degToRad(angle)) * radius;
+    const y = parentY + Math.sin(degToRad(angle)) * radius;
+    const childSpread = Math.max(8, spreadDeg * 0.7);
+    const childRadius = Math.max(120, radius * 0.65);
+    return {
+      id: child.id,
+      label: child.label,
+      detail: child.detail,
+      x, y,
+      parentX: parentX,
+      parentY: parentY,
+      color,
+      size: depth === 0 ? 'md' : depth === 1 ? 'sm' : 'xs',
+      children: child.children
+        ? layoutChildren(child.children, x, y, angle, childSpread, childRadius, color, depth + 1)
+        : [],
+    };
+  });
+}
+
+function layoutBranch(branch: MemoryBranch): PositionedNode {
+  const cfg = BRANCH_CONFIGS[branch.id] || { angle: 0, radius: 500 };
+  const bx = Math.cos(degToRad(cfg.angle)) * cfg.radius;
+  const by = Math.sin(degToRad(cfg.angle)) * cfg.radius;
+  const childSpread = branch.children.length > 5 ? 12 : 18;
+  const childRadius = 250;
+  return {
+    id: branch.id,
+    label: branch.label,
+    detail: branch.detail,
+    x: bx, y: by,
+    parentX: 0, parentY: 0,
+    color: branch.color,
+    size: 'lg',
+    children: layoutChildren(branch.children, bx, by, cfg.angle, childSpread, childRadius, branch.color, 0),
+  };
+}
+
+// ── Flatten tree to array for rendering ──
+function flattenTree(node: PositionedNode): PositionedNode[] {
+  return [node, ...node.children.flatMap(flattenTree)];
+}
+
+// ── Component ──
 export default function NeuralGraph() {
   const [isDragging, setIsDragging] = useState(false);
   const [position, setPosition] = useState({ x: 0, y: 0 });
   const [scale, setScale] = useState(1);
+  const [selectedNode, setSelectedNode] = useState<PositionedNode | null>(null);
   const lastMousePos = useRef({ x: 0, y: 0 });
   const containerRef = useRef<HTMLDivElement>(null);
   const { competitors } = useData();
 
+  // Compute layout
+  const branches = SARIE_MEMORY.map(layoutBranch);
+  const allNodes = branches.flatMap(flattenTree);
+
+  // Build dynamic competitor nodes
+  const compBranch = branches.find(b => b.id === 'competitors');
+  const dynamicCompNodes: PositionedNode[] = (competitors || []).map((c: any, i: number) => {
+    const baseAngle = 210;
+    const angle = baseAngle - 15 + i * -10;
+    const px = compBranch?.x || 0;
+    const py = compBranch?.y || 0;
+    const x = px + Math.cos(degToRad(angle)) * 300;
+    const y = py + Math.sin(degToRad(angle)) * 300;
+    return {
+      id: `comp-live-${c.handle}`,
+      label: c.handle,
+      detail: `${c.handle}${c.name ? ` (${c.name})` : ''}\nFollowers: ${(c.followers || 0).toLocaleString()} | Status: ${c.status}\nPosts/week: ${c.postsThisWeek} | Avg Views: ${(c.avgViews || 0).toLocaleString()}\nThreat Level: ${c.threatLevel || '—'}\nTop Video: "${c.topVideoTitle || '—'}" (${(c.topVideoViews || 0).toLocaleString()} views)\nStrengths: ${(c.pros || []).join('; ') || '—'}\nWeaknesses: ${(c.cons || []).join('; ') || '—'}\nOpportunity: ${c.opportunity || '—'}`,
+      x, y,
+      parentX: px,
+      parentY: py,
+      color: '#a855f7',
+      size: 'sm' as const,
+      children: [],
+    };
+  });
+
+  // Pan & Zoom handlers
   const handlePointerDown = (e: React.PointerEvent) => {
+    if (selectedNode) return;
     setIsDragging(true);
     lastMousePos.current = { x: e.clientX, y: e.clientY };
     e.currentTarget.setPointerCapture(e.pointerId);
   };
-
   const handlePointerMove = (e: React.PointerEvent) => {
     if (!isDragging) return;
     const dx = e.clientX - lastMousePos.current.x;
@@ -28,70 +145,103 @@ export default function NeuralGraph() {
     setPosition(prev => ({ x: prev.x + dx, y: prev.y + dy }));
     lastMousePos.current = { x: e.clientX, y: e.clientY };
   };
-
   const handlePointerUp = (e: React.PointerEvent) => {
     setIsDragging(false);
     e.currentTarget.releasePointerCapture(e.pointerId);
   };
 
-  // Smooth zoom with animation
   const targetScale = useRef(1);
   const animRef = useRef<number>(0);
-
   const animateZoom = useCallback(() => {
     setScale(prev => {
       const diff = targetScale.current - prev;
       if (Math.abs(diff) < 0.002) return targetScale.current;
       animRef.current = requestAnimationFrame(animateZoom);
       const next = prev + diff * 0.15;
-      // Adjust position so the viewport center stays fixed
       const ratio = next / prev;
       setPosition(p => ({ x: p.x * ratio, y: p.y * ratio }));
       return next;
     });
   }, []);
-
   const zoom = useCallback((delta: number) => {
-    targetScale.current = Math.min(Math.max(0.15, targetScale.current + delta), 4);
+    targetScale.current = Math.min(Math.max(0.08, targetScale.current + delta), 4);
     cancelAnimationFrame(animRef.current);
     animRef.current = requestAnimationFrame(animateZoom);
   }, [animateZoom]);
 
-  // Native wheel listener so we can preventDefault and stop the page from scrolling
   useEffect(() => {
     const el = containerRef.current;
     if (!el) return;
-    const onWheel = (e: WheelEvent) => {
-      e.preventDefault();
-      e.stopPropagation();
-      zoom(-e.deltaY * 0.001);
-    };
+    const onWheel = (e: WheelEvent) => { e.preventDefault(); e.stopPropagation(); zoom(-e.deltaY * 0.001); };
     el.addEventListener('wheel', onWheel, { passive: false });
     return () => el.removeEventListener('wheel', onWheel);
   }, [zoom]);
 
-  // Organic Node Component
-  const Node = ({ x, y, children, label, glowColor = "#ef4444", subLabel }: any) => (
-    <div 
-      className="absolute flex flex-col items-center justify-center transform -translate-x-1/2 -translate-y-1/2 pointer-events-auto group hover:scale-110 transition-transform duration-300"
-      style={{ left: x, top: y }}
-    >
-      <div 
-        className="absolute inset-0 blur-[25px] rounded-full opacity-30 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none animate-pulse" 
-        style={{ backgroundColor: glowColor }} 
+  // ── Render helpers ──
+  const sizeMap = { lg: 'w-20 h-20', md: 'w-14 h-14', sm: 'w-10 h-10', xs: 'w-6 h-6' };
+  const dotSizeMap = { lg: 28, md: 20, sm: 14, xs: 8 };
+
+  function renderPath(from: {x:number,y:number}, to: {x:number,y:number}, color: string, width: number, isMain?: boolean) {
+    const mx = (from.x + to.x) / 2;
+    const my = (from.y + to.y) / 2;
+    const cx1 = from.x + (mx - from.x) * 0.5;
+    const cy1 = from.y + (my - from.y) * 1.2;
+    const cx2 = to.x - (to.x - mx) * 0.5;
+    const cy2 = to.y - (to.y - my) * 1.2;
+    return (
+      <path
+        key={`path-${from.x}-${from.y}-${to.x}-${to.y}`}
+        d={`M ${from.x} ${from.y} C ${cx1} ${cy1}, ${cx2} ${cy2}, ${to.x} ${to.y}`}
+        stroke={color}
+        strokeWidth={width}
+        fill="none"
+        strokeOpacity={isMain ? 0.6 : 0.25}
+        className={isMain ? "animate-[pulse_4s_ease-in-out_infinite]" : ""}
       />
-      {children}
-      {label && (
-        <div className="absolute top-[110%] w-max text-center pointer-events-none z-50">
-          <div className="text-[11px] font-bold tracking-widest uppercase drop-shadow-[0_0_8px_rgba(255,255,255,0.9)]" style={{ color: glowColor }}>{label}</div>
-          {subLabel && <div className="text-[9px] text-black/50 tracking-wider mt-0.5 max-w-[120px] whitespace-pre-wrap">{subLabel}</div>}
+    );
+  }
+
+  function renderNode(node: PositionedNode) {
+    const dotSize = dotSizeMap[node.size];
+    return (
+      <div
+        key={node.id}
+        className="absolute flex flex-col items-center justify-center transform -translate-x-1/2 -translate-y-1/2 pointer-events-auto group cursor-pointer hover:scale-110 transition-transform duration-300"
+        style={{ left: node.x, top: node.y }}
+        onClick={(e) => { e.stopPropagation(); setSelectedNode(node); }}
+      >
+        <div
+          className="absolute inset-0 blur-[20px] rounded-full opacity-20 group-hover:opacity-60 transition-opacity duration-500 pointer-events-none animate-pulse"
+          style={{ backgroundColor: node.color }}
+        />
+        <div
+          className="rounded-full border flex items-center justify-center backdrop-blur-md transition-all duration-300 group-hover:shadow-[0_0_20px_var(--glow)]"
+          style={{
+            width: dotSize, height: dotSize,
+            backgroundColor: `${node.color}10`,
+            borderColor: `${node.color}66`,
+            '--glow': node.color,
+          } as any}
+        />
+        <div className="absolute top-[110%] w-max text-center pointer-events-none z-50 max-w-[140px]">
+          <div className="text-[10px] font-bold tracking-wider uppercase" style={{ color: node.color }}>{node.label}</div>
         </div>
-      )}
-    </div>
-  );
+      </div>
+    );
+  }
+
+  function renderTreePaths(node: PositionedNode): React.ReactElement[] {
+    const paths: React.ReactElement[] = [];
+    for (const child of node.children) {
+      const w = child.size === 'md' ? 2 : child.size === 'sm' ? 1.5 : 1;
+      paths.push(renderPath({ x: node.x, y: node.y }, { x: child.x, y: child.y }, child.color, w));
+      paths.push(...renderTreePaths(child));
+    }
+    return paths;
+  }
 
   return (
-    <div 
+    <div
       ref={containerRef}
       className="relative w-full h-[800px] bg-white rounded-3xl border border-black/5 shadow-[0_0_50px_rgba(0,0,0,0.1)] overflow-hidden mt-8 cursor-grab active:cursor-grabbing touch-none select-none"
       onPointerDown={handlePointerDown}
@@ -100,7 +250,7 @@ export default function NeuralGraph() {
       onPointerCancel={handlePointerUp}
     >
       {/* Background Grid */}
-      <div 
+      <div
         className="absolute inset-0 pointer-events-none opacity-[0.03]"
         style={{
           backgroundPosition: `${position.x}px ${position.y}px`,
@@ -108,277 +258,47 @@ export default function NeuralGraph() {
           backgroundSize: `${100 * scale}px ${100 * scale}px`
         }}
       />
-      
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,transparent_0%,white_100%)] pointer-events-none z-10" />
 
-      {/* The Infinite Canvas Layer */}
-      <div 
+      {/* The Infinite Canvas */}
+      <div
         className="absolute top-1/2 left-1/2 w-0 h-0 pointer-events-none"
         style={{ transform: `translate(${position.x}px, ${position.y}px) scale(${scale})`, transformOrigin: '0 0' }}
       >
-        
-        {/* SVG Root Lines */}
+        {/* SVG Paths */}
         <svg className="absolute overflow-visible pointer-events-none" style={{ left: 0, top: 0 }}>
-          <defs>
-            <linearGradient id="glowRed" x1="0%" y1="0%" x2="100%" y2="100%">
-              <stop offset="0%" stopColor="#ef4444" stopOpacity="0.8" />
-              <stop offset="100%" stopColor="#ef4444" stopOpacity="0.1" />
-            </linearGradient>
-            <linearGradient id="glowPurple" x1="0%" y1="0%" x2="100%" y2="100%">
-              <stop offset="0%" stopColor="#a855f7" stopOpacity="0.8" />
-              <stop offset="100%" stopColor="#a855f7" stopOpacity="0.1" />
-            </linearGradient>
-            <linearGradient id="glowOrange" x1="0%" y1="0%" x2="100%" y2="100%">
-              <stop offset="0%" stopColor="#f97316" stopOpacity="0.8" />
-              <stop offset="100%" stopColor="#f97316" stopOpacity="0.1" />
-            </linearGradient>
-            <linearGradient id="glowCyan" x1="0%" y1="0%" x2="100%" y2="100%">
-              <stop offset="0%" stopColor="#06b6d4" stopOpacity="0.8" />
-              <stop offset="100%" stopColor="#06b6d4" stopOpacity="0.1" />
-            </linearGradient>
-          </defs>
-
-          {/* ── MEMORY branches: directly from brain ── */}
-
-          {/* Brain → Team (0, 700) */}
-          <path d="M 0 0 C 0 250, 0 500, 0 700" stroke="url(#glowPurple)" strokeWidth="3" fill="none" className="animate-[pulse_4s_ease-in-out_infinite]" />
-          {TEAM_MEMBERS.map((user, i) => {
-             const mid = (TEAM_MEMBERS.length - 1) / 2;
-             const x = Math.round((i - mid) * 450);
-             const y = 1000;
-             return (
-               <g key={`line-group-${user.id}`}>
-                 <path d={`M 0 700 C ${x * 0.3} 800, ${x * 0.7} 900, ${x} ${y}`} stroke="rgba(168,85,247,0.2)" strokeWidth="1.5" fill="none" />
-                 <path d={`M ${x} ${y} C ${x - 80} ${y + 80}, ${x - 120} ${y + 140}, ${x - 150} ${y + 200}`} stroke="rgba(168,85,247,0.15)" strokeWidth="1" fill="none" />
-                 <path d={`M ${x} ${y} C ${x} ${y + 80}, ${x} ${y + 140}, ${x} ${y + 200}`} stroke="rgba(168,85,247,0.15)" strokeWidth="1" fill="none" />
-                 <path d={`M ${x} ${y} C ${x + 80} ${y + 80}, ${x + 120} ${y + 140}, ${x + 150} ${y + 200}`} stroke="rgba(168,85,247,0.15)" strokeWidth="1" fill="none" />
-               </g>
-             );
-          })}
-
-          {/* Brain → Clients (700, 550) */}
-          <path d="M 0 0 C 250 150, 500 350, 700 550" stroke="url(#glowPurple)" strokeWidth="3" fill="none" className="animate-[pulse_4s_ease-in-out_infinite]" />
-          <path d="M 700 550 C 850 600, 950 650, 1050 700" stroke="rgba(168,85,247,0.3)" strokeWidth="1.5" fill="none" />
-          <path d="M 1050 700 C 1150 650, 1250 600, 1350 600" stroke="rgba(168,85,247,0.3)" strokeWidth="1.5" fill="none" />
-          <path d="M 1050 700 C 1200 700, 1250 700, 1350 700" stroke="rgba(168,85,247,0.3)" strokeWidth="1.5" fill="none" />
-          <path d="M 1050 700 C 1150 750, 1250 800, 1350 800" stroke="rgba(168,85,247,0.3)" strokeWidth="1.5" fill="none" />
-          <path d="M 1350 700 C 1400 650, 1450 600, 1550 600" stroke="rgba(168,85,247,0.2)" strokeWidth="1" fill="none" />
-          <path d="M 1350 700 C 1450 700, 1500 700, 1600 700" stroke="rgba(168,85,247,0.2)" strokeWidth="1" fill="none" />
-          <path d="M 1350 700 C 1400 750, 1450 800, 1550 800" stroke="rgba(168,85,247,0.2)" strokeWidth="1" fill="none" />
-
-          {/* Brain → Competitors (-700, 550) */}
-          <path d="M 0 0 C -250 150, -500 350, -700 550" stroke="url(#glowPurple)" strokeWidth="3" fill="none" className="animate-[pulse_4s_ease-in-out_infinite]" />
-          {competitors?.map((c: any, i: number) => {
-             const yOff = 700 + (i * 200);
-             return (
-                 <path key={`path-comp-${c.handle}`} d={`M -700 550 C -800 600, -900 ${yOff - 50}, -1000 ${yOff}`} stroke="rgba(168,85,247,0.3)" strokeWidth="1.5" fill="none" />
-             );
-          })}
-
-          {/* ── ANALYSIS branches: directly from brain ── */}
-
-          {/* Brain → Video Analytics (800, -400) */}
-          <path d="M 0 0 C 300 -150, 600 -250, 800 -400" stroke="url(#glowCyan)" strokeWidth="3" fill="none" className="animate-[pulse_3s_ease-in-out_infinite]" />
-          <path d="M 800 -400 C 850 -450, 900 -550, 1000 -550" stroke="rgba(6,182,212,0.3)" strokeWidth="1.5" fill="none" />
-          <path d="M 800 -400 C 850 -350, 900 -250, 1000 -250" stroke="rgba(6,182,212,0.3)" strokeWidth="1.5" fill="none" />
-          <path d="M 1000 -550 C 1050 -600, 1100 -600, 1200 -600" stroke="rgba(6,182,212,0.2)" strokeWidth="1" fill="none" />
-          <path d="M 1000 -550 C 1050 -500, 1100 -500, 1200 -500" stroke="rgba(6,182,212,0.2)" strokeWidth="1" fill="none" />
-          <path d="M 1000 -250 C 1050 -300, 1100 -300, 1200 -300" stroke="rgba(6,182,212,0.2)" strokeWidth="1" fill="none" />
-          <path d="M 1000 -250 C 1050 -200, 1100 -200, 1200 -200" stroke="rgba(6,182,212,0.2)" strokeWidth="1" fill="none" />
-
-          {/* ── COGNITION branches: directly from brain ── */}
-
-          {/* Brain → AI Engine (-800, -450) */}
-          <path d="M 0 0 C -300 -150, -600 -300, -800 -450" stroke="url(#glowOrange)" strokeWidth="3" fill="none" className="animate-[pulse_3.5s_ease-in-out_infinite]" />
-          <path d="M -800 -450 C -850 -500, -900 -550, -1000 -550" stroke="rgba(249,115,22,0.3)" strokeWidth="1.5" fill="none" />
-          <path d="M -800 -450 C -850 -400, -900 -350, -1000 -350" stroke="rgba(249,115,22,0.3)" strokeWidth="1.5" fill="none" />
-          <path d="M -1000 -550 C -1050 -600, -1100 -600, -1200 -600" stroke="rgba(249,115,22,0.2)" strokeWidth="1" fill="none" />
-          <path d="M -1000 -550 C -1050 -500, -1100 -500, -1200 -500" stroke="rgba(249,115,22,0.2)" strokeWidth="1" fill="none" />
-          <path d="M -1000 -350 C -1050 -400, -1100 -400, -1200 -400" stroke="rgba(249,115,22,0.2)" strokeWidth="1" fill="none" />
-          <path d="M -1000 -350 C -1050 -300, -1100 -300, -1200 -300" stroke="rgba(249,115,22,0.2)" strokeWidth="1" fill="none" />
-
-          {/* Brain → Conversational Engine (-500, -600) */}
-          <path d="M 0 0 C -150 -200, -350 -400, -500 -600" stroke="url(#glowOrange)" strokeWidth="3" fill="none" className="animate-[pulse_3.5s_ease-in-out_infinite]" />
-          <path d="M -500 -600 C -550 -650, -600 -700, -650 -750" stroke="rgba(249,115,22,0.3)" strokeWidth="1.5" fill="none" />
-          <path d="M -500 -600 C -450 -650, -400 -700, -350 -750" stroke="rgba(249,115,22,0.3)" strokeWidth="1.5" fill="none" />
-
-          {/* Brain → Admin Ops (-300, -600) */}
-          <path d="M 0 0 C -100 -200, -200 -400, -300 -600" stroke="url(#glowOrange)" strokeWidth="3" fill="none" className="animate-[pulse_3.5s_ease-in-out_infinite]" />
-          <path d="M -300 -600 C -350 -650, -400 -700, -450 -750" stroke="rgba(249,115,22,0.3)" strokeWidth="1.5" fill="none" />
-          <path d="M -300 -600 C -250 -650, -200 -700, -150 -750" stroke="rgba(249,115,22,0.3)" strokeWidth="1.5" fill="none" />
-
-          {/* Brain → Upstash DB (-200, -500) */}
-          <path d="M 0 0 C -50 -150, -120 -350, -200 -500" stroke="url(#glowOrange)" strokeWidth="3" fill="none" className="animate-[pulse_3.5s_ease-in-out_infinite]" />
-
+          {/* Main branch paths from brain to each root */}
+          {branches.map(b => renderPath({ x: 0, y: 0 }, { x: b.x, y: b.y }, b.color, 3, true))}
+          {/* Sub-paths */}
+          {branches.flatMap(b => renderTreePaths(b))}
+          {/* Dynamic competitor paths */}
+          {dynamicCompNodes.map(n => renderPath({ x: n.parentX, y: n.parentY }, { x: n.x, y: n.y }, n.color, 1.5))}
         </svg>
 
-        {/* --- NODES --- */}
-        
         {/* Core Brain Node */}
-        <Node x={0} y={0} label="Sarie Central Intelligence" glowColor="#ef4444" subLabel="Core Memory Hub">
-          <div className="w-[300px] h-[300px] flex items-center justify-center pointer-events-auto relative" style={{ mixBlendMode: 'multiply' }}>
-            <Image 
-              src={BrainImage} 
-              alt="Brain" 
-              fill
-              className="object-contain"
-              style={{ filter: 'invert(1) grayscale(1) contrast(5)' }} 
-              priority
-              draggable={false}
-            />
-            <div 
-              className="absolute inset-0 pointer-events-none"
-              style={{
-                mixBlendMode: 'screen',
-                background: `
-                  radial-gradient(circle at 50% 90%, #a855f7 0%, transparent 60%),
-                  radial-gradient(circle at 90% 10%, #06b6d4 0%, transparent 60%),
-                  radial-gradient(circle at 10% 10%, #f97316 0%, transparent 60%)
-                `
-              }}
-            />
+        <div className="absolute flex flex-col items-center justify-center transform -translate-x-1/2 -translate-y-1/2 pointer-events-auto" style={{ left: 0, top: 0 }}>
+          <div className="w-[300px] h-[300px] flex items-center justify-center relative" style={{ mixBlendMode: 'multiply' }}>
+            <Image src={BrainImage} alt="Brain" fill className="object-contain" style={{ filter: 'invert(1) grayscale(1) contrast(5)' }} priority draggable={false} />
+            <div className="absolute inset-0 pointer-events-none" style={{
+              mixBlendMode: 'screen',
+              background: `radial-gradient(circle at 50% 90%, #a855f7 0%, transparent 60%),
+                            radial-gradient(circle at 90% 10%, #06b6d4 0%, transparent 60%),
+                            radial-gradient(circle at 10% 10%, #f97316 0%, transparent 60%)`
+            }} />
           </div>
-        </Node>
-
-        {/* ======================================= */}
-        {/* MEMORY BRANCHES (direct from brain) */}
-        {/* ======================================= */}
-
-        {/* ======================= */}
-        {/* RIGHT: CLIENTS (700, 550) — expands down-right */}
-        {/* ======================= */}
-        <Node x={700} y={550} label="Clients" glowColor="#a855f7" subLabel="Managed Accounts">
-          <div className="w-16 h-16 bg-purple-500/5 border border-purple-500/40 rounded-full flex items-center justify-center backdrop-blur-md">
-            <Briefcase size={24} className="text-purple-500" />
+          <div className="absolute top-[110%] w-max text-center pointer-events-none z-50">
+            <div className="text-[11px] font-bold tracking-widest uppercase drop-shadow-[0_0_8px_rgba(255,255,255,0.9)]" style={{ color: '#ef4444' }}>Sarie Central Intelligence</div>
+            <div className="text-[9px] text-black/50 tracking-wider mt-0.5">Core Memory Hub</div>
           </div>
-        </Node>
+        </div>
 
-        {/* Client -> Rasayel (1050, 700) */}
-        <Node x={1050} y={700} label="@rasayel_podcast" glowColor="#a855f7" subLabel="Active Target">
-          <div className="w-16 h-16 bg-purple-500/5 border border-purple-500/40 rounded-full flex items-center justify-center backdrop-blur-md">
-            <Building2 size={24} className="text-purple-500" />
-          </div>
-        </Node>
-        <Node x={1350} y={600} label="Follower Base" glowColor="#a855f7">
-           <div className="w-6 h-6 bg-purple-500/20 border border-purple-500/40 rounded-full" />
-        </Node>
-        <Node x={1350} y={700} label="Content Strategy" glowColor="#a855f7">
-           <div className="w-8 h-8 bg-purple-500/20 border border-purple-500/40 rounded-full" />
-        </Node>
-        <Node x={1550} y={600} glowColor="#a855f7" label="Hook #1: Controversy"><div className="w-3 h-3 bg-purple-500/50 border border-purple-300/50 rounded-full" /></Node>
-        <Node x={1600} y={700} glowColor="#a855f7" label="Hook #2: Value Drop"><div className="w-3 h-3 bg-purple-500/50 border border-purple-300/50 rounded-full" /></Node>
-        <Node x={1550} y={800} glowColor="#a855f7" label="Hook #3: Storytime"><div className="w-3 h-3 bg-purple-500/50 border border-purple-300/50 rounded-full" /></Node>
-        <Node x={1350} y={800} label="Recent Viral Data" glowColor="#a855f7">
-           <div className="w-6 h-6 bg-purple-500/20 border border-purple-500/40 rounded-full" />
-        </Node>
-
-        {/* ======================= */}
-        {/* CENTER: TEAM (0, 700) */}
-        {/* ======================= */}
-        <Node x={0} y={700} label="Team Context" glowColor="#a855f7" subLabel="7 Members">
-          <div className="w-16 h-16 bg-purple-500/5 border border-purple-500/40 rounded-full flex items-center justify-center backdrop-blur-md">
-            <Users size={24} className="text-purple-500" />
-          </div>
-        </Node>
-        {TEAM_MEMBERS.map((user, i) => {
-             const mid = (TEAM_MEMBERS.length - 1) / 2;
-             const x = Math.round((i - mid) * 450);
-             const y = 1000;
-             return (
-               <div key={`node-group-${user.id}`}>
-                 <Node x={x} y={y} label={user.name} subLabel={user.role} glowColor="#a855f7">
-                   <div className="w-14 h-14 bg-purple-500/10 border border-purple-500/30 rounded-full flex items-center justify-center text-purple-400 font-bold text-lg backdrop-blur-sm">{user.name.charAt(0)}</div>
-                 </Node>
-                 <Node x={x - 150} y={y + 200} glowColor="#a855f7" label="Session Context"><div className="w-3 h-3 bg-purple-500/50 border border-purple-300/50 rounded-full" /></Node>
-                 <Node x={x} y={y + 200} glowColor="#a855f7" label={user.id === 'yassin' ? 'Admin Privileges' : 'Query History'}><div className="w-3 h-3 bg-purple-500/50 border border-purple-300/50 rounded-full" /></Node>
-                 <Node x={x + 150} y={y + 200} glowColor="#a855f7" label="API Quota Logs"><div className="w-3 h-3 bg-purple-500/50 border border-purple-300/50 rounded-full" /></Node>
-               </div>
-             );
-        })}
-
-        {/* ======================= */}
-        {/* LEFT: COMPETITORS (-700, 550) — expands down-left */}
-        {/* ======================= */}
-        <Node x={-700} y={550} label="Competitor Matrix" glowColor="#a855f7" subLabel="Active Rivals">
-          <div className="w-16 h-16 bg-purple-500/5 border border-purple-500/40 rounded-full flex items-center justify-center backdrop-blur-md">
-            <TrendingUp size={24} className="text-purple-500" />
-          </div>
-        </Node>
-        {competitors?.map((c: any, i: number) => {
-           const yOff = 700 + (i * 200);
-           return (
-             <div key={`node-comp-${c.handle}`}>
-               <Node x={-1000} y={yOff} label={c.handle} subLabel={`${(c.followers/1000).toFixed(1)}k Followers`} glowColor="#a855f7">
-                 <div className="w-14 h-14 rounded-full overflow-hidden border border-purple-500/50 shadow-[0_0_15px_#a855f7]">
-                   <Image src={c.avatar} alt={c.handle} width={56} height={56} className="object-cover" />
-                 </div>
-               </Node>
-             </div>
-           );
-        })}
-
-        {/* ======================================= */}
-        {/* ANALYSIS BRANCHES (direct from brain) */}
-        {/* ======================================= */}
-
-        {/* Video Analytics (800, -400) */}
-        <Node x={800} y={-400} label="Video Analytics" glowColor="#06b6d4">
-          <div className="w-16 h-16 bg-cyan-500/5 border border-cyan-500/40 rounded-full flex items-center justify-center backdrop-blur-md">
-            <Video size={24} className="text-cyan-500" />
-          </div>
-        </Node>
-        <Node x={1000} y={-550} label="Visual Hooks" glowColor="#06b6d4"><div className="w-6 h-6 bg-cyan-500 border border-cyan-300 rounded-full" /></Node>
-        <Node x={1000} y={-250} label="Audio Transcripts" glowColor="#06b6d4"><div className="w-6 h-6 bg-cyan-500 border border-cyan-300 rounded-full" /></Node>
-        <Node x={1200} y={-600} glowColor="#06b6d4" label="Object Recognition"><div className="w-3 h-3 bg-cyan-500/50 border border-cyan-300/50 rounded-full" /></Node>
-        <Node x={1200} y={-500} glowColor="#06b6d4" label="Facial Expressions"><div className="w-3 h-3 bg-cyan-500/50 border border-cyan-300/50 rounded-full" /></Node>
-        <Node x={1200} y={-300} glowColor="#06b6d4" label="Speech-to-Text"><div className="w-3 h-3 bg-cyan-500/50 border border-cyan-300/50 rounded-full" /></Node>
-        <Node x={1200} y={-200} glowColor="#06b6d4" label="Sentiment NLP"><div className="w-3 h-3 bg-cyan-500/50 border border-cyan-300/50 rounded-full" /></Node>
-
-        {/* ======================================= */}
-        {/* COGNITION BRANCHES (direct from brain) */}
-        {/* ======================================= */}
-
-        {/* AI Engine (-800, -450) */}
-        <Node x={-800} y={-450} label="AI Models Engine" glowColor="#f97316">
-          <div className="w-16 h-16 bg-orange-500/5 border border-orange-500/40 rounded-full flex items-center justify-center backdrop-blur-md">
-            <Cpu size={24} className="text-orange-500" />
-          </div>
-        </Node>
-        <Node x={-1000} y={-550} label="Anthropic / OpenAI" glowColor="#f97316"><div className="w-6 h-6 bg-orange-500 border border-orange-300 rounded-full" /></Node>
-        <Node x={-1000} y={-350} label="Apify Actor" glowColor="#f97316"><div className="w-6 h-6 bg-orange-500 border border-orange-300 rounded-full" /></Node>
-        <Node x={-1200} y={-600} glowColor="#f97316" label="Claude 3.5 Sonnet"><div className="w-3 h-3 bg-orange-500/50 border border-orange-300/50 rounded-full" /></Node>
-        <Node x={-1200} y={-500} glowColor="#f97316" label="GPT-4o Mini"><div className="w-3 h-3 bg-orange-500/50 border border-orange-300/50 rounded-full" /></Node>
-        <Node x={-1200} y={-400} glowColor="#f97316" label="Meta Graph API"><div className="w-3 h-3 bg-orange-500/50 border border-orange-300/50 rounded-full" /></Node>
-        <Node x={-1200} y={-300} glowColor="#f97316" label="TikTok Scraper"><div className="w-3 h-3 bg-orange-500/50 border border-orange-300/50 rounded-full" /></Node>
-
-        {/* Conversational Engine (-500, -600) */}
-        <Node x={-500} y={-600} label="Conversational Engine" glowColor="#f97316">
-          <div className="w-16 h-16 bg-orange-500/5 border border-orange-500/40 rounded-full flex items-center justify-center backdrop-blur-md">
-            <MessageSquare size={24} className="text-orange-500" />
-          </div>
-        </Node>
-        <Node x={-650} y={-750} label="WhatsApp Webview" glowColor="#f97316"><div className="w-6 h-6 bg-orange-500 border border-orange-300 rounded-full" /></Node>
-        <Node x={-350} y={-750} label="Voice TTS" glowColor="#f97316"><div className="w-6 h-6 bg-orange-500 border border-orange-300 rounded-full" /></Node>
-
-        {/* Admin Ops (-800, -150) */}
-        <Node x={-300} y={-600} label="Admin Operations" glowColor="#f97316">
-          <div className="w-16 h-16 bg-orange-500/5 border border-orange-500/40 rounded-full flex items-center justify-center backdrop-blur-md">
-            <Settings size={24} className="text-orange-500" />
-          </div>
-        </Node>
-        <Node x={-450} y={-750} label="API Spending" glowColor="#f97316"><div className="w-6 h-6 bg-orange-500 border border-orange-300 rounded-full" /></Node>
-        <Node x={-150} y={-750} label="Auth Context" glowColor="#f97316"><div className="w-6 h-6 bg-orange-500 border border-orange-300 rounded-full" /></Node>
-
-        {/* Upstash DB (-200, -500) */}
-        <Node x={-200} y={-500} label="Upstash KV DB" glowColor="#f97316" subLabel="Live Vector Sync">
-          <div className="w-16 h-16 bg-orange-500/5 border border-orange-500/40 rounded-full flex items-center justify-center backdrop-blur-md">
-            <Database size={24} className="text-orange-500" />
-          </div>
-        </Node>
-
+        {/* All memory nodes */}
+        {allNodes.map(renderNode)}
+        {/* Dynamic competitor nodes */}
+        {dynamicCompNodes.map(renderNode)}
       </div>
-      
-      {/* UI Overlay Controls (Non-draggable) */}
+
+      {/* UI Overlay Controls */}
       <div className="absolute top-8 left-8 pointer-events-none z-20">
         <h2 className="text-3xl font-black text-black drop-shadow-[0_2px_10px_rgba(255,255,255,1)] tracking-tight">Sarie Memory Graph</h2>
         <p className="text-[14px] font-bold text-[#ef4444] mt-1 bg-white/50 px-4 py-1.5 rounded-full w-fit backdrop-blur-md border border-black/10 uppercase tracking-widest">Infinite Scale Canvas</p>
@@ -388,16 +308,67 @@ export default function NeuralGraph() {
         <button onClick={() => zoom(0.15)} className="pointer-events-auto w-10 h-10 bg-white border border-black/10 rounded-full flex items-center justify-center text-black hover:bg-gray-50 shadow-sm transition-all active:scale-95"><Plus size={20} /></button>
         <button onClick={() => zoom(-0.15)} className="pointer-events-auto w-10 h-10 bg-white border border-black/10 rounded-full flex items-center justify-center text-black hover:bg-gray-50 shadow-sm transition-all active:scale-95"><Minus size={20} /></button>
       </div>
-      
+
       <div className="absolute bottom-8 right-8 z-30" onPointerDown={e => e.stopPropagation()}>
-        <button 
+        <button
           onClick={() => { setPosition({ x: 0, y: 0 }); targetScale.current = 1; zoom(0); }}
           className="pointer-events-auto px-8 py-4 bg-white border border-black/20 rounded-full text-[15px] font-bold text-black hover:bg-gray-50 transition-all shadow-md active:scale-95"
-        >
-          Recenter Matrix
-        </button>
+        >Recenter Matrix</button>
       </div>
 
+      {/* ── Detail Panel ── */}
+      {selectedNode && (
+        <div className="absolute inset-0 z-40 pointer-events-auto" onClick={() => setSelectedNode(null)}>
+          <div
+            className="absolute top-0 right-0 h-full w-[420px] max-w-[90vw] bg-white/95 backdrop-blur-xl border-l border-black/10 shadow-[-10px_0_40px_rgba(0,0,0,0.1)] flex flex-col animate-[slideIn_0.3s_ease-out]"
+            onClick={e => e.stopPropagation()}
+          >
+            {/* Header */}
+            <div className="flex items-center justify-between p-6 border-b border-black/5">
+              <div className="flex items-center gap-3">
+                <div className="w-4 h-4 rounded-full" style={{ backgroundColor: selectedNode.color }} />
+                <h3 className="text-lg font-black text-black tracking-tight">{selectedNode.label}</h3>
+              </div>
+              <button onClick={() => setSelectedNode(null)} className="w-8 h-8 rounded-full bg-black/5 flex items-center justify-center hover:bg-black/10 transition-colors">
+                <X size={16} />
+              </button>
+            </div>
+            {/* Category */}
+            <div className="px-6 py-3 bg-black/[0.02]">
+              <span className="text-[11px] font-bold uppercase tracking-widest" style={{ color: selectedNode.color }}>Memory Node</span>
+            </div>
+            {/* Content */}
+            <div className="flex-1 overflow-y-auto p-6">
+              <div className="text-[15px] text-black/80 leading-relaxed whitespace-pre-wrap" dir="auto">
+                {selectedNode.detail}
+              </div>
+              {/* Show children summaries */}
+              {selectedNode.children.length > 0 && (
+                <div className="mt-6 space-y-3">
+                  <div className="text-[11px] font-bold uppercase tracking-widest text-black/40">Sub-Memories ({selectedNode.children.length})</div>
+                  {selectedNode.children.map(child => (
+                    <button
+                      key={child.id}
+                      className="w-full text-left p-3 rounded-xl bg-black/[0.02] hover:bg-black/[0.05] border border-black/5 transition-colors"
+                      onClick={() => setSelectedNode(child)}
+                    >
+                      <div className="text-[12px] font-bold" style={{ color: child.color }}>{child.label}</div>
+                      <div className="text-[11px] text-black/50 mt-1 line-clamp-2" dir="auto">{child.detail}</div>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      <style jsx>{`
+        @keyframes slideIn {
+          from { transform: translateX(100%); opacity: 0; }
+          to { transform: translateX(0); opacity: 1; }
+        }
+      `}</style>
     </div>
   );
 }
