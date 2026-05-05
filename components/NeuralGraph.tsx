@@ -193,8 +193,7 @@ export default function NeuralGraph() {
         stroke={color}
         strokeWidth={width}
         fill="none"
-        strokeOpacity={isMain ? 0.6 : 0.25}
-        className={isMain ? "animate-[pulse_4s_ease-in-out_infinite]" : ""}
+        strokeOpacity={isMain ? 0.6 : 0.2}
       />
     );
   }
@@ -240,7 +239,7 @@ export default function NeuralGraph() {
       <div
         ref={canvasRef}
         className="absolute top-1/2 left-1/2 w-0 h-0 pointer-events-none"
-        style={{ transform: 'translate(0px, 0px) scale(1)', transformOrigin: '0 0' }}
+        style={{ transform: 'translate(0px, 0px) scale(1)', transformOrigin: '0 0', willChange: 'transform' }}
       >
         {/* SVG Paths */}
         <svg className="absolute overflow-visible pointer-events-none" style={{ left: 0, top: 0 }}>
@@ -272,20 +271,16 @@ export default function NeuralGraph() {
           return (
             <div
               key={node.id}
-              className="absolute flex flex-col items-center justify-center transform -translate-x-1/2 -translate-y-1/2 pointer-events-auto group cursor-pointer hover:scale-110 transition-transform duration-200"
+              className="absolute flex flex-col items-center justify-center -translate-x-1/2 -translate-y-1/2 pointer-events-auto cursor-pointer"
               style={{ left: node.x, top: node.y }}
               onPointerDown={e => e.stopPropagation()}
               onClick={e => handleNodeClick(node, e)}
             >
               <div
-                className="absolute inset-0 blur-[20px] rounded-full opacity-20 group-hover:opacity-60 transition-opacity duration-500 pointer-events-none"
-                style={{ backgroundColor: node.color }}
+                className="rounded-full border"
+                style={{ width: dotSize, height: dotSize, backgroundColor: `${node.color}20`, borderColor: `${node.color}55`, boxShadow: `0 0 8px ${node.color}33` }}
               />
-              <div
-                className="rounded-full border flex items-center justify-center backdrop-blur-md"
-                style={{ width: dotSize, height: dotSize, backgroundColor: `${node.color}10`, borderColor: `${node.color}66` }}
-              />
-              <div className="absolute top-[110%] w-max text-center pointer-events-none z-50 max-w-[140px]">
+              <div className="absolute top-[110%] w-max text-center pointer-events-none max-w-[140px]">
                 <div className="text-[10px] font-bold tracking-wider uppercase" style={{ color: node.color }}>{node.label}</div>
               </div>
             </div>
@@ -298,14 +293,13 @@ export default function NeuralGraph() {
           return (
             <div
               key={node.id}
-              className="absolute flex flex-col items-center justify-center transform -translate-x-1/2 -translate-y-1/2 pointer-events-auto group cursor-pointer hover:scale-110 transition-transform duration-200"
+              className="absolute flex flex-col items-center justify-center -translate-x-1/2 -translate-y-1/2 pointer-events-auto cursor-pointer"
               style={{ left: node.x, top: node.y }}
               onPointerDown={e => e.stopPropagation()}
               onClick={e => handleNodeClick(node, e)}
             >
-              <div className="absolute inset-0 blur-[20px] rounded-full opacity-20 group-hover:opacity-60 transition-opacity duration-500 pointer-events-none" style={{ backgroundColor: node.color }} />
-              <div className="rounded-full border flex items-center justify-center backdrop-blur-md" style={{ width: dotSize, height: dotSize, backgroundColor: `${node.color}10`, borderColor: `${node.color}66` }} />
-              <div className="absolute top-[110%] w-max text-center pointer-events-none z-50 max-w-[140px]">
+              <div className="rounded-full border" style={{ width: dotSize, height: dotSize, backgroundColor: `${node.color}20`, borderColor: `${node.color}55`, boxShadow: `0 0 8px ${node.color}33` }} />
+              <div className="absolute top-[110%] w-max text-center pointer-events-none max-w-[140px]">
                 <div className="text-[10px] font-bold tracking-wider uppercase" style={{ color: node.color }}>{node.label}</div>
               </div>
             </div>
