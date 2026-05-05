@@ -138,17 +138,10 @@ export default function NeuralGraph() {
             </linearGradient>
           </defs>
 
-          {/* Main Branches (3 Pillars) */}
-          <path d="M 0 0 C 0 150, 0 250, 0 400" stroke="url(#glowPurple)" strokeWidth="4" fill="none" className="animate-[pulse_4s_ease-in-out_infinite]" />
-          <path d="M 0 0 C 200 -100, 350 -150, 500 -300" stroke="url(#glowCyan)" strokeWidth="4" fill="none" className="animate-[pulse_3s_ease-in-out_infinite]" />
-          <path d="M 0 0 C -200 -100, -350 -150, -500 -300" stroke="url(#glowOrange)" strokeWidth="4" fill="none" className="animate-[pulse_3.5s_ease-in-out_infinite]" />
+          {/* ── MEMORY branches: directly from brain ── */}
 
-          {/* ----------------------------------------------------- */}
-          {/* PILLAR 1: MEMORY (0, 400) */}
-          {/* ----------------------------------------------------- */}
-          
-          {/* CENTER: To Team (0, 700) */}
-          <path d="M 0 400 C 0 500, 0 600, 0 700" stroke="rgba(168,85,247,0.3)" strokeWidth="2" fill="none" />
+          {/* Brain → Team (0, 700) */}
+          <path d="M 0 0 C 0 250, 0 500, 0 700" stroke="url(#glowPurple)" strokeWidth="3" fill="none" className="animate-[pulse_4s_ease-in-out_infinite]" />
           {TEAM_MEMBERS.map((user, i) => {
              const mid = (TEAM_MEMBERS.length - 1) / 2;
              const x = Math.round((i - mid) * 450);
@@ -163,20 +156,18 @@ export default function NeuralGraph() {
              );
           })}
 
-          {/* RIGHT: To Clients (700, 550) — expands down-right, away from brain */}
-          <path d="M 0 400 C 300 420, 500 480, 700 550" stroke="rgba(168,85,247,0.3)" strokeWidth="2" fill="none" />
-          {/* Clients -> Rasayel (1050, 700) */}
+          {/* Brain → Clients (700, 550) */}
+          <path d="M 0 0 C 250 150, 500 350, 700 550" stroke="url(#glowPurple)" strokeWidth="3" fill="none" className="animate-[pulse_4s_ease-in-out_infinite]" />
           <path d="M 700 550 C 850 600, 950 650, 1050 700" stroke="rgba(168,85,247,0.3)" strokeWidth="1.5" fill="none" />
           <path d="M 1050 700 C 1150 650, 1250 600, 1350 600" stroke="rgba(168,85,247,0.3)" strokeWidth="1.5" fill="none" />
           <path d="M 1050 700 C 1200 700, 1250 700, 1350 700" stroke="rgba(168,85,247,0.3)" strokeWidth="1.5" fill="none" />
           <path d="M 1050 700 C 1150 750, 1250 800, 1350 800" stroke="rgba(168,85,247,0.3)" strokeWidth="1.5" fill="none" />
-          {/* Client Tier 3 */}
           <path d="M 1350 700 C 1400 650, 1450 600, 1550 600" stroke="rgba(168,85,247,0.2)" strokeWidth="1" fill="none" />
           <path d="M 1350 700 C 1450 700, 1500 700, 1600 700" stroke="rgba(168,85,247,0.2)" strokeWidth="1" fill="none" />
           <path d="M 1350 700 C 1400 750, 1450 800, 1550 800" stroke="rgba(168,85,247,0.2)" strokeWidth="1" fill="none" />
 
-          {/* LEFT: To Competitors (-700, 550) — expands down-left */}
-          <path d="M 0 400 C -300 420, -500 480, -700 550" stroke="rgba(168,85,247,0.3)" strokeWidth="2" fill="none" />
+          {/* Brain → Competitors (-700, 550) */}
+          <path d="M 0 0 C -250 150, -500 350, -700 550" stroke="url(#glowPurple)" strokeWidth="3" fill="none" className="animate-[pulse_4s_ease-in-out_infinite]" />
           {competitors?.map((c: any, i: number) => {
              const yOff = 700 + (i * 200);
              return (
@@ -184,46 +175,40 @@ export default function NeuralGraph() {
              );
           })}
 
-          {/* ----------------------------------------------------- */}
-          {/* PILLAR 2: ANALYSIS (500, -300) */}
-          {/* ----------------------------------------------------- */}
-          
-          {/* To Video Analytics (800, -400) */}
-          <path d="M 500 -300 C 600 -350, 700 -400, 800 -400" stroke="rgba(6,182,212,0.3)" strokeWidth="2" fill="none" />
+          {/* ── ANALYSIS branches: directly from brain ── */}
+
+          {/* Brain → Video Analytics (800, -400) */}
+          <path d="M 0 0 C 300 -150, 600 -250, 800 -400" stroke="url(#glowCyan)" strokeWidth="3" fill="none" className="animate-[pulse_3s_ease-in-out_infinite]" />
           <path d="M 800 -400 C 850 -450, 900 -550, 1000 -550" stroke="rgba(6,182,212,0.3)" strokeWidth="1.5" fill="none" />
           <path d="M 800 -400 C 850 -350, 900 -250, 1000 -250" stroke="rgba(6,182,212,0.3)" strokeWidth="1.5" fill="none" />
-          {/* Video Analytics Tier 3 */}
           <path d="M 1000 -550 C 1050 -600, 1100 -600, 1200 -600" stroke="rgba(6,182,212,0.2)" strokeWidth="1" fill="none" />
           <path d="M 1000 -550 C 1050 -500, 1100 -500, 1200 -500" stroke="rgba(6,182,212,0.2)" strokeWidth="1" fill="none" />
           <path d="M 1000 -250 C 1050 -300, 1100 -300, 1200 -300" stroke="rgba(6,182,212,0.2)" strokeWidth="1" fill="none" />
           <path d="M 1000 -250 C 1050 -200, 1100 -200, 1200 -200" stroke="rgba(6,182,212,0.2)" strokeWidth="1" fill="none" />
 
-          {/* ----------------------------------------------------- */}
-          {/* PILLAR 3: COGNITION (-500, -300) */}
-          {/* ----------------------------------------------------- */}
-          
-          {/* To AI Engine (-800, -450) */}
-          <path d="M -500 -300 C -600 -350, -700 -400, -800 -450" stroke="rgba(249,115,22,0.3)" strokeWidth="2" fill="none" />
+          {/* ── COGNITION branches: directly from brain ── */}
+
+          {/* Brain → AI Engine (-800, -450) */}
+          <path d="M 0 0 C -300 -150, -600 -300, -800 -450" stroke="url(#glowOrange)" strokeWidth="3" fill="none" className="animate-[pulse_3.5s_ease-in-out_infinite]" />
           <path d="M -800 -450 C -850 -500, -900 -550, -1000 -550" stroke="rgba(249,115,22,0.3)" strokeWidth="1.5" fill="none" />
           <path d="M -800 -450 C -850 -400, -900 -350, -1000 -350" stroke="rgba(249,115,22,0.3)" strokeWidth="1.5" fill="none" />
-          {/* AI Engine Tier 3 */}
           <path d="M -1000 -550 C -1050 -600, -1100 -600, -1200 -600" stroke="rgba(249,115,22,0.2)" strokeWidth="1" fill="none" />
           <path d="M -1000 -550 C -1050 -500, -1100 -500, -1200 -500" stroke="rgba(249,115,22,0.2)" strokeWidth="1" fill="none" />
           <path d="M -1000 -350 C -1050 -400, -1100 -400, -1200 -400" stroke="rgba(249,115,22,0.2)" strokeWidth="1" fill="none" />
           <path d="M -1000 -350 C -1050 -300, -1100 -300, -1200 -300" stroke="rgba(249,115,22,0.2)" strokeWidth="1" fill="none" />
 
-          {/* To Conversational Engine (-500, -600) */}
-          <path d="M -500 -300 C -500 -400, -500 -500, -500 -600" stroke="rgba(249,115,22,0.3)" strokeWidth="2" fill="none" />
+          {/* Brain → Conversational Engine (-500, -600) */}
+          <path d="M 0 0 C -150 -200, -350 -400, -500 -600" stroke="url(#glowOrange)" strokeWidth="3" fill="none" className="animate-[pulse_3.5s_ease-in-out_infinite]" />
           <path d="M -500 -600 C -550 -650, -600 -700, -650 -750" stroke="rgba(249,115,22,0.3)" strokeWidth="1.5" fill="none" />
           <path d="M -500 -600 C -450 -650, -400 -700, -350 -750" stroke="rgba(249,115,22,0.3)" strokeWidth="1.5" fill="none" />
 
-          {/* To Admin Ops (-300, -600) */}
-          <path d="M -500 -300 C -400 -400, -350 -500, -300 -600" stroke="rgba(249,115,22,0.3)" strokeWidth="2" fill="none" />
+          {/* Brain → Admin Ops (-300, -600) */}
+          <path d="M 0 0 C -100 -200, -200 -400, -300 -600" stroke="url(#glowOrange)" strokeWidth="3" fill="none" className="animate-[pulse_3.5s_ease-in-out_infinite]" />
           <path d="M -300 -600 C -350 -650, -400 -700, -450 -750" stroke="rgba(249,115,22,0.3)" strokeWidth="1.5" fill="none" />
           <path d="M -300 -600 C -250 -650, -200 -700, -150 -750" stroke="rgba(249,115,22,0.3)" strokeWidth="1.5" fill="none" />
 
-          {/* To Upstash DB (-200, -500) */}
-          <path d="M -500 -300 C -400 -350, -300 -400, -200 -500" stroke="rgba(249,115,22,0.3)" strokeWidth="2" fill="none" />
+          {/* Brain → Upstash DB (-200, -500) */}
+          <path d="M 0 0 C -50 -150, -120 -350, -200 -500" stroke="url(#glowOrange)" strokeWidth="3" fill="none" className="animate-[pulse_3.5s_ease-in-out_infinite]" />
 
         </svg>
 
@@ -256,13 +241,8 @@ export default function NeuralGraph() {
         </Node>
 
         {/* ======================================= */}
-        {/* PILLAR 1: MEMORY (BOTTOM) */}
+        {/* MEMORY BRANCHES (direct from brain) */}
         {/* ======================================= */}
-        <Node x={0} y={400} label="Memory Vault" glowColor="#a855f7" subLabel="Persistent Data">
-          <div className="w-24 h-24 bg-purple-500/5 border border-purple-500/40 rounded-full flex items-center justify-center backdrop-blur-md">
-            <Database size={36} className="text-purple-500" />
-          </div>
-        </Node>
 
         {/* ======================= */}
         {/* RIGHT: CLIENTS (700, 550) — expands down-right */}
@@ -338,13 +318,8 @@ export default function NeuralGraph() {
         })}
 
         {/* ======================================= */}
-        {/* PILLAR 2: ANALYSIS (TOP RIGHT) */}
+        {/* ANALYSIS BRANCHES (direct from brain) */}
         {/* ======================================= */}
-        <Node x={500} y={-300} label="Analysis Engine" glowColor="#06b6d4" subLabel="Content Audits">
-          <div className="w-24 h-24 bg-cyan-500/5 border border-cyan-500/40 rounded-full flex items-center justify-center backdrop-blur-md">
-            <TrendingUp size={36} className="text-cyan-500" />
-          </div>
-        </Node>
 
         {/* Video Analytics (800, -400) */}
         <Node x={800} y={-400} label="Video Analytics" glowColor="#06b6d4">
@@ -360,13 +335,8 @@ export default function NeuralGraph() {
         <Node x={1200} y={-200} glowColor="#06b6d4" label="Sentiment NLP"><div className="w-3 h-3 bg-cyan-500/50 border border-cyan-300/50 rounded-full" /></Node>
 
         {/* ======================================= */}
-        {/* PILLAR 3: COGNITION (TOP LEFT) */}
+        {/* COGNITION BRANCHES (direct from brain) */}
         {/* ======================================= */}
-        <Node x={-500} y={-300} label="Cognition Core" glowColor="#f97316" subLabel="AI & Infrastructure">
-          <div className="w-24 h-24 bg-orange-500/5 border border-orange-500/40 rounded-full flex items-center justify-center backdrop-blur-md">
-            <Cpu size={36} className="text-orange-500" />
-          </div>
-        </Node>
 
         {/* AI Engine (-800, -450) */}
         <Node x={-800} y={-450} label="AI Models Engine" glowColor="#f97316">
