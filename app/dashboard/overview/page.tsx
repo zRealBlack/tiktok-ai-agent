@@ -198,7 +198,7 @@ export default function OverviewPage() {
               const scClr = sc>=70?'#22c55e':sc>=50?'#f59e0b':'#ef4444';
               const scBg  = sc>=70?'rgba(34,197,94,0.1)':sc>=50?'rgba(245,158,11,0.1)':'rgba(239,68,68,0.1)';
               return (
-                <Link key={v.id} href={`/audit/${v.id}`} style={{ padding: '16px', background: 'transparent', borderRadius: 16, border: '1px solid var(--glass-border)', cursor: 'pointer', textDecoration: 'none', display: 'flex', flexDirection: 'column', gap: 12 }}>
+                <Link key={v.id} href={`/dashboard/audit/${v.id}`} style={{ padding: '16px', background: 'transparent', borderRadius: 16, border: '1px solid var(--glass-border)', cursor: 'pointer', textDecoration: 'none', display: 'flex', flexDirection: 'column', gap: 12 }}>
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                     <div style={{ padding: '4px 10px', borderRadius: 10, background: scBg, color: scClr, fontSize: 12, fontWeight: 800 }}>{sc}</div>
                     <div style={{ width: 22, height: 22, borderRadius: '50%', border: '1px solid var(--glass-elevated-border)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>

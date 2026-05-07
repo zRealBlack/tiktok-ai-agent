@@ -1,7 +1,51 @@
 'use client';
-import React from 'react';
+import React, { useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+
+function AccountDropdown() {
+  const [isOpen, setIsOpen] = useState(false);
+  const accounts = [
+    { name: "Rasayel Podcast", icon: "fa-solid fa-podcast", color: "text-purple-500" },
+    { name: "TikTok", icon: "fa-brands fa-tiktok", color: "text-black" },
+    { name: "YouTube", icon: "fa-brands fa-youtube", color: "text-red-500" },
+    { name: "Instagram", icon: "fa-brands fa-instagram", color: "text-pink-500" },
+    { name: "Facebook", icon: "fa-brands fa-facebook", color: "text-blue-500" },
+  ];
+  const [selected, setSelected] = useState(accounts[0]);
+
+  return (
+    <div className="relative">
+      <button 
+        onClick={() => setIsOpen(!isOpen)}
+        className="w-full bg-white border border-gray-200 text-gray-700 text-xs flex items-center justify-between p-2.5 shadow-sm rounded-full px-4 hover:border-gray-300 transition-colors"
+      >
+        <div className="flex items-center gap-2.5">
+          <i className={`${selected.icon} ${selected.color} w-3 text-center`}></i>
+          <span className="font-semibold truncate">{selected.name}</span>
+        </div>
+        <i className={`fa-solid fa-chevron-down text-[10px] text-gray-400 transition-transform ${isOpen ? 'rotate-180' : ''}`}></i>
+      </button>
+      {isOpen && (
+        <>
+          <div className="fixed inset-0 z-40" onClick={() => setIsOpen(false)}></div>
+          <div className="absolute top-full left-0 w-full mt-1.5 bg-white border border-gray-100 rounded-xl shadow-lg z-50 overflow-hidden py-1">
+            {accounts.map(acc => (
+              <button 
+                key={acc.name}
+                onClick={() => { setSelected(acc); setIsOpen(false); }}
+                className={`w-full text-left px-4 py-2.5 text-[13px] flex items-center gap-3 hover:bg-gray-50 transition-colors ${selected.name === acc.name ? 'bg-gray-50 text-gray-900 font-bold' : 'text-gray-600 font-medium'}`}
+              >
+                <i className={`${acc.icon} ${acc.color} w-4 text-center text-[14px]`}></i>
+                {acc.name}
+              </button>
+            ))}
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
 
 function SubNav() {
   const pathname = usePathname();
@@ -49,16 +93,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               {/*  Account Dropdown  */}
               <div>
                 <h4 className="text-xs font-semibold text-gray-800 mb-3 uppercase tracking-wider">Account</h4>
-                <div className="relative">
-                  <select className="w-full bg-white border border-gray-200 text-gray-700 text-xs focus:ring-[#ef4444] focus:border-[#ef4444] block p-2.5 appearance-none cursor-pointer shadow-sm rounded-full px-4">
-                    <option>Example Account</option>
-                    <option>Personal Account</option>
-                    <option>Business Account</option>
-                  </select>
-                  <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-500">
-                    <i className="fa-solid fa-chevron-down text-[10px]"></i>
-                  </div>
-                </div>
+                <AccountDropdown />
               </div>
               
               {/*  Platforms  */}
