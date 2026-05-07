@@ -735,12 +735,12 @@ body {
 .status-away { background-color: #eab308; }
 .status-busy { background-color: #ef4444; }
 `}} />
-      <div className="flex items-center justify-center h-screen w-full bg-[#fbfbfb]" style={{
+      <div className="flex items-center justify-center h-screen w-full bg-white p-8" style={{
          fontFamily: "'Inter', sans-serif"
       }}>
         
 {/*  BEGIN: MainContainer  */}
-<div className="bg-[#f2f2f2] w-full h-full flex overflow-hidden relative text-[#2b2b2b] text-[14px]">
+<div className="bg-[#f2f2f2] w-full max-w-[1600px] h-full rounded-[32px] overflow-hidden shadow-2xl flex relative text-[#2b2b2b] text-[14px]">
 {/*  BEGIN: LeftSidebar  */}
 <aside className="w-[200px] flex flex-col justify-between p-6 pl-8">
 <div className="space-y-4 pt-4 flex-1 flex flex-col h-full overflow-hidden">

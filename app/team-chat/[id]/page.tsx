@@ -52,9 +52,12 @@ function AvatarCircle({ name, src, size = 40, online }: { name: string; src?: st
   );
 }
 
-export default function TeamChatPage({ params }: { params: { id: string } }) {
+import { use } from "react";
+
+export default function TeamChatPage({ params }: { params: Promise<{ id: string }> }) {
+  const unwrappedParams = use(params);
   const { currentUser } = useData();
-  const activeId = params.id;
+  const activeId = unwrappedParams.id;
   const activeConvo = INITIAL_CONVERSATIONS.find(c => c.id === activeId) || INITIAL_CONVERSATIONS[1];
 
   const [input, setInput] = useState("");
@@ -293,10 +296,10 @@ export default function TeamChatPage({ params }: { params: { id: string } }) {
   };
 
   return (
-    <div className="h-screen w-full bg-[#fbfbfb] flex items-center justify-center" style={{
+    <div className="h-screen w-full bg-white flex items-center justify-center p-8" style={{
       fontFamily: "'Inter', sans-serif"
     }}>
-      <div className="w-full h-full bg-[#fbfbfb] flex relative text-[#2b2b2b] text-[14px]">
+      <div className="w-full max-w-[1600px] h-full bg-[#fbfbfb] rounded-[32px] overflow-hidden shadow-2xl flex relative text-[#2b2b2b] text-[14px]">
         {/* LeftSidebar (User Info) */}
         <aside className="w-[240px] flex flex-col justify-between p-6 pl-8 border-r border-gray-100 bg-[#fbfbfb]">
           <div className="space-y-4 pt-4 flex-1 flex flex-col h-full overflow-hidden">
