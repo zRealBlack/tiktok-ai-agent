@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { useState, useRef, useEffect, useCallback, Suspense } from "react";
 import Image from "next/image";
-import { Send, Loader2, Square, Search, Phone, Video, MoreVertical, Smile, Paperclip, Check, CheckCheck, X, FileText, Film, Copy, Trash2, Pencil, Forward, MoreHorizontal, ArrowLeft } from "lucide-react";
+import { Send, Plus, Loader2, Square, Search, Phone, Video, MoreVertical, Smile, Paperclip, Check, CheckCheck, X, FileText, Film, Copy, Trash2, Pencil, Forward, MoreHorizontal, ArrowLeft } from "lucide-react";
 import { useData } from "@/components/DataContext";
 import MarkdownMessage from "@/components/MarkdownMessage";
 
@@ -299,9 +299,9 @@ export default function TeamChatPage({ params }: { params: Promise<{ id: string 
     <div className="h-screen w-full bg-white flex items-center justify-center p-8" style={{
       fontFamily: "'Inter', sans-serif"
     }}>
-      <div className="w-full max-w-[1600px] h-full bg-[#fbfbfb] rounded-[32px] overflow-hidden shadow-2xl flex relative text-[#2b2b2b] text-[14px]">
+      <div className="w-full max-w-[1600px] h-full bg-[#f2f2f2] rounded-[32px] overflow-hidden shadow-2xl flex relative text-[#2b2b2b] text-[14px]">
         {/* LeftSidebar (User Info) */}
-        <aside className="w-[240px] flex flex-col justify-between p-6 pl-8 border-r border-gray-100 bg-[#fbfbfb]">
+        <aside className="w-[240px] flex flex-col justify-between p-6 pl-8">
           <div className="space-y-4 pt-4 flex-1 flex flex-col h-full overflow-hidden">
             <Link href="/" className="w-fit bg-white border border-gray-100 text-gray-800 rounded-full py-2 px-4 flex items-center justify-center gap-2 text-sm font-medium hover:bg-gray-50 transition-colors shadow-sm">
               <i className="fa-solid fa-arrow-left text-xs"></i> Back
@@ -334,8 +334,8 @@ export default function TeamChatPage({ params }: { params: Promise<{ id: string 
         </aside>
 
         {/* MainChatArea */}
-        <main className="flex-1 bg-white flex flex-col relative overflow-hidden">
-          <div className="absolute top-0 w-full flex justify-between items-center px-8 py-4 bg-white/90 backdrop-blur-md z-10 border-b border-gray-100">
+        <main className="flex-1 bg-[#fbfbfb] my-4 rounded-[24px] shadow-sm flex flex-col relative overflow-hidden">
+          <div className="absolute top-0 w-full flex justify-between items-center px-8 py-4 bg-gradient-to-b from-[#fbfbfb] to-transparent z-10 border-none">
             <div className="flex items-center gap-3">
               <AvatarCircle name={activeConvo.name} size={32} online={activeConvo.online} />
               <div>
@@ -367,7 +367,7 @@ export default function TeamChatPage({ params }: { params: Promise<{ id: string 
                     style={{ flexDirection: isUser ? "row-reverse" : "row", maxWidth: "100%" }}
                   >
                     {!isUser && <AvatarCircle name={activeConvo.name} size={24} />}
-                    <div className={`${isUser ? 'bg-[#ef4444] text-white rounded-t-2xl rounded-bl-2xl rounded-br-md border-none' : 'bg-[#fbfbfb] text-gray-800 rounded-t-2xl rounded-br-2xl rounded-bl-md border border-gray-100'} px-5 py-3 max-w-xl shadow-sm relative`}>
+                    <div className={`${isUser ? 'bg-[#2b2b2b] text-white rounded-[28px] rounded-br-none shadow-sm' : 'bg-white rounded-[28px] rounded-bl-none shadow-[0_2px_10px_-4px_rgba(0,0,0,0.05)] text-gray-800'} px-6 py-3.5 max-w-xl relative`}>
                       {m.attachment && m.attachment.type === "image" && <img src={m.attachment.url} alt="" className="w-full max-w-[240px] rounded-xl block mb-2" />}
                       {m.attachment && m.attachment.type === "video" && <video src={m.attachment.url} controls className="w-full max-w-[240px] rounded-xl block mb-2" />}
                       {m.attachment && m.attachment.type === "file" && (
@@ -415,8 +415,8 @@ export default function TeamChatPage({ params }: { params: Promise<{ id: string 
             <div ref={bottomRef} />
           </div>
 
-          <div className="absolute bottom-6 left-0 right-0 px-10">
-            <div className="flex flex-col gap-2 relative">
+          <div className="absolute bottom-6 left-0 right-0 px-10 flex flex-col items-center">
+            <div className="w-full max-w-2xl flex flex-col gap-2 relative">
               {pendingAttachment && (
                 <div className="bg-white rounded-2xl flex items-center gap-3 p-3 shadow-md border border-gray-100 max-w-sm self-end">
                   {pendingAttachment.type === "image" && <img src={pendingAttachment.url} alt="" className="w-10 h-10 object-cover rounded-lg" />}
@@ -448,19 +448,41 @@ export default function TeamChatPage({ params }: { params: Promise<{ id: string 
                   <button className="w-full bg-red-500 text-white rounded-xl py-2 text-sm font-bold disabled:opacity-50" disabled={selectedForwards.length === 0} onClick={() => confirmForward(selectedForwards)}>Send</button>
                 </div>
               )}
-              <div className="bg-[#fbfbfb] rounded-full flex items-center px-4 py-2 shadow-sm border border-gray-100">
-                <button onClick={() => fileInputRef.current?.click()} className="text-gray-400 hover:text-gray-600 p-2"><Paperclip size={18} /></button>
+              <div className="bg-[#f5f5f5] rounded-[32px] flex items-end px-4 py-2 relative">
+                <button onClick={() => fileInputRef.current?.click()} className="text-gray-500 hover:text-gray-800 p-2 mb-1">
+                  <Plus size={20} />
+                </button>
                 <input ref={fileInputRef} type="file" accept="image/*,video/*,.pdf,.doc,.docx,.txt" className="hidden" onChange={handleFile} />
-                <button onClick={() => setShowEmoji(!showEmoji)} className={`p-2 ${showEmoji ? 'text-red-500' : 'text-gray-400 hover:text-gray-600'}`}><Smile size={18} /></button>
-                <input className="flex-1 border-none focus:ring-0 bg-transparent text-sm text-gray-700 placeholder-gray-400 mx-4" placeholder="Type a message..." type="text" value={input} onChange={e => setInput(e.target.value)} onKeyDown={e => { if(e.key === 'Enter') handleSend(); }} />
-                <button className="bg-[#ef4444] text-white rounded-full w-8 h-8 flex items-center justify-center hover:bg-red-600 transition-colors shrink-0" onClick={handleSend}><Send size={14} /></button>
+                <button onClick={() => setShowEmoji(!showEmoji)} className={`p-2 mb-1 ${showEmoji ? 'text-red-500' : 'text-gray-500 hover:text-gray-800'}`}><Smile size={20} /></button>
+                
+                <textarea 
+                  className="flex-1 border-none focus:outline-none outline-none focus:ring-0 bg-transparent text-[15px] text-gray-700 placeholder-gray-500 mx-4 resize-none py-2.5 max-h-[120px]" 
+                  placeholder="Type a message..." 
+                  value={input}
+                  onChange={e => {
+                    setInput(e.target.value);
+                    e.target.style.height = 'auto';
+                    e.target.style.height = e.target.scrollHeight + 'px';
+                  }}
+                  onKeyDown={e => {
+                    if (e.key === "Enter" && !e.shiftKey) {
+                      e.preventDefault();
+                      handleSend();
+                    }
+                  }}
+                  rows={1}
+                  style={{ minHeight: '40px' }}
+                />
+                <button onClick={handleSend} disabled={!input.trim() && !pendingAttachment} className="bg-[#2b2b2b] text-white rounded-full w-9 h-9 flex items-center justify-center hover:bg-black transition-colors disabled:opacity-50 mb-1 shrink-0">
+                  <Send size={16} className="-ml-0.5" />
+                </button>
               </div>
             </div>
           </div>
         </main>
 
         {/* RightSidebar (Team Chat List) */}
-        <aside className="w-[280px] p-6 pr-8 flex flex-col gap-6 overflow-y-auto bg-white border-l border-gray-100">
+        <aside className="w-[280px] p-6 pr-8 flex flex-col gap-6 overflow-y-auto">
           <div className="flex justify-between items-center pt-2">
             <h3 className="font-bold text-gray-800 text-sm flex items-center gap-2">
               Team Chat
