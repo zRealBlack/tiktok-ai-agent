@@ -964,7 +964,7 @@ body {
 {/*  END: RightSidebar  */}
 {/*  Logo Floating Widget  */}
 <div className="absolute bottom-8 right-8 flex items-end z-20">
-  <img alt="Masaa Logo" className="w-20 object-contain drop-shadow-xl" src="/masaa.png" />
+  <img alt="Masaa Logo" className="w-20 object-contain drop-shadow-xl" src="/masmas.png" />
 </div>
 </div>
 {/*  END: MainContainer  */}
