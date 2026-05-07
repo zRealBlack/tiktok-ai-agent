@@ -1,329 +1,971 @@
 'use client';
+import Link from 'next/link';
 
-import VideoScoreCard from "@/components/VideoScoreCard";
-import TrendRow from "@/components/TrendRow";
-import CompetitorCard from "@/components/CompetitorCard";
-import GenerationBars from "@/components/GenerationBar";
+import { useState, useRef, useEffect, useCallback, Suspense } from "react";
+import { useSearchParams } from "next/navigation";
+import Image from "next/image";
+import { Send, Loader2, Square, Search, Phone, Video, MoreVertical, Smile, Paperclip, Check, CheckCheck, X, FileText, Film, Copy, Trash2, Pencil, Forward, MoreHorizontal, ArrowLeft } from "lucide-react";
 import { useData } from "@/components/DataContext";
-import { Eye, Users, TrendingUp, AlertTriangle, ArrowUpRight, Zap, Heart, MessageCircle, Plus, ChevronDown } from "lucide-react";
-import Link from "next/link";
-import { useState } from "react";
+import MarkdownMessage from "@/components/MarkdownMessage";
+import SarieAvatar from "@/public/sarie_generated.png";
 
-const fmt = (n: number) => n >= 1_000_000 ? (n/1_000_000).toFixed(1)+'M' : n >= 1000 ? (n/1000).toFixed(1)+'K' : String(n);
+// ─── Types ──────────────────────────────────────────────────────────────────
 
-const card: React.CSSProperties = {
-  background: 'var(--glass-bg)',
-  borderRadius: 24,
-  border: '1px solid var(--glass-border)',
-  boxShadow: 'var(--glass-shadow)',
-  overflow: 'hidden',
+const EMOJIS = ["😂","❤️","🔥","👏","😮","😢","🤔","💯","🚀","✅","👍","🎉","💪","😍","🙏","⚡","🎯","💡","🤣","😎"];
+
+interface Attachment { name: string; url: string; type: "image" | "video" | "file"; }
+
+interface ChatMessage {
+  id?: string;
+  role: "user" | "assistant";
+  content: string;
+  streaming?: boolean;
+  ts?: string;
+  attachment?: Attachment;
+  reactions?: string[];
+  isForwarded?: boolean;
+  status?: "sent" | "delivered" | "seen";
+}
+
+interface Conversation {
+  id: string;
+  name: string;
+  avatar: string | null;
+  isAI: boolean;
+  lastMessage: string;
+  time: string;
+  unread: number;
+  online: boolean;
+  role?: string;
+}
+
+// ─── Helpers ─────────────────────────────────────────────────────────────────
+
+const now = () =>
+  new Date().toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" });
+
+// ─── Avatar ──────────────────────────────────────────────────────────────────
+
+function AvatarCircle({
+  name,
+  src,
+  size = 40,
+  online,
+}: {
+  name: string;
+  src?: string | null;
+  size?: number;
+  online?: boolean;
+}) {
+  const initial = (name || "?")[0].toUpperCase();
+  const colors = ["#ef4444", "#8b5cf6", "#3b82f6", "#22c55e", "#f59e0b", "#ec4899"];
+  const color = colors[name.charCodeAt(0) % colors.length];
+
+  return (
+    <div style={{ position: "relative", flexShrink: 0 }}>
+      <div
+        style={{
+          width: size, height: size, borderRadius: "50%",
+          background: color, display: "flex", alignItems: "center",
+          justifyContent: "center", fontSize: size * 0.36,
+          fontWeight: 800, color: "#fff", overflow: "hidden",
+        }}
+      >
+        {src ? (
+          <Image src={src} alt={name} width={size} height={size} style={{ objectFit: "cover" }} />
+        ) : initial}
+      </div>
+      {online && (
+        <span style={{
+          position: "absolute", bottom: 1, right: 1,
+          width: 9, height: 9, borderRadius: "50%",
+          background: "#22c55e", border: "1.5px solid var(--bg-base)",
+        }} />
+      )}
+    </div>
+  );
+}
+
+// ─── Static mock conversations ────────────────────────────────────────────────
+
+const INITIAL_CONVERSATIONS: Conversation[] = [
+  {
+    id: "sarie",
+    name: "Sarie",
+    avatar: null, // will use imported image
+    isAI: true,
+    lastMessage: "الأيجنت شغال! إيه اللي تحتاجه؟",
+    time: "Now",
+    unread: 0,
+    online: true,
+    role: "AI Content Strategist",
+  },
+  {
+    id: "dina",
+    name: "Dina Amer",
+    avatar: null,
+    isAI: false,
+    lastMessage: "",
+    time: "",
+    unread: 0,
+    online: true,
+    role: "CEO & Podcaster",
+  },
+  {
+    id: "yassin",
+    name: "Yassin Gaml",
+    avatar: null,
+    isAI: false,
+    lastMessage: "",
+    time: "",
+    unread: 0,
+    online: true,
+    role: "Developer / AI Specialist",
+  },
+  {
+    id: "haitham",
+    name: "Haitham Abdel-aziz",
+    avatar: null,
+    isAI: false,
+    lastMessage: "",
+    time: "",
+    unread: 0,
+    online: true,
+    role: "Director & Head of Production",
+  },
+  {
+    id: "shahd",
+    name: "Shahd Sayed",
+    avatar: null,
+    isAI: false,
+    lastMessage: "",
+    time: "",
+    unread: 0,
+    online: true,
+    role: "Ugc Creator",
+  },
+  {
+    id: "sara",
+    name: "Sara Hatem",
+    avatar: null,
+    isAI: false,
+    lastMessage: "",
+    time: "",
+    unread: 0,
+    online: true,
+    role: "Marketing & Operation Management",
+  },
+  {
+    id: "shahdm",
+    name: "Shahd Mahmoud",
+    avatar: null,
+    isAI: false,
+    lastMessage: "",
+    time: "",
+    unread: 0,
+    online: true,
+    role: "Community Manager",
+  },
+  {
+    id: "yousef",
+    name: "Yousef Hatem",
+    avatar: null,
+    isAI: false,
+    lastMessage: "",
+    time: "",
+    unread: 0,
+    online: true,
+    role: "Ai Artist",
+  },
+];
+
+const INITIAL_TEAM_MESSAGES: Record<string, ChatMessage[]> = {
+  dina: [], yassin: [], hesham: [], shahd: [], sara: [], haitham: [], shahdm: [], yousef: []
 };
 
-// Donut chart SVG
-function DonutChart({ high, med, low }: { high: number; med: number; low: number }) {
-  const total = high + med + low || 1;
-  const cx = 64, cy = 64, r = 48, sw = 16;
-  const circ = 2 * Math.PI * r;
-  const gap = 3;
-  const segs = [
-    { v: high, color: '#22c55e' },
-    { v: med,  color: '#f59e0b' },
-    { v: low,  color: '#ef4444' },
-  ];
-  let off = 0;
+// ─── Sarie AI hook ────────────────────────────────────────────────────────────
+
+function useSarieChat() {
+  const { account, videos, competitors, ideas, trends, generations, currentUser } = useData();
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [streaming, setStreaming] = useState(false);
+  const [historyLoaded, setHistoryLoaded] = useState(false);
+  const abortRef = useRef<AbortController | null>(null);
+
+  // Load chat history from KV on mount (cloud-backed, no localStorage)
+  useEffect(() => {
+    if (!currentUser?.id) { setHistoryLoaded(true); return; }
+    fetch(`/api/chat-history?userId=${currentUser.id}`)
+      .then(r => r.json())
+      .then(data => { if (Array.isArray(data.messages) && data.messages.length > 0) setMessages(data.messages); })
+      .catch(() => {})
+      .finally(() => setHistoryLoaded(true));
+  }, [currentUser?.id]);
+
+  // Show welcome message only after history load confirms no existing chat
+  useEffect(() => {
+    if (!historyLoaded) return;
+    if (messages.length === 0 && account?.username) {
+      setMessages([{
+        role: "assistant",
+        content: `الأيجنت شغال! عندي كل البيانات بتاعة ${account.username} (${(account.followers || 0).toLocaleString()} متابع). إيه اللي تحتاجه؟`,
+        ts: now(),
+      }]);
+    }
+  }, [account?.username, historyLoaded]);
+
+  const send = useCallback(async (text: string) => {
+    if (!text.trim() || streaming) return;
+    const userMsg: ChatMessage = { role: "user", content: text, ts: now() };
+    const next = [...messages, userMsg];
+    setMessages(next);
+    setStreaming(true);
+    setMessages(p => [...p, { role: "assistant", content: "", streaming: true, ts: now() }]);
+    const ctrl = new AbortController();
+    abortRef.current = ctrl;
+    try {
+      const res = await fetch("/api/ai", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          messages: next.map(m => ({ role: m.role, content: m.content })),
+          contextData: { account, videos, competitors, ideas, trends, generations, currentUser },
+        }),
+        signal: ctrl.signal,
+      });
+      if (!res.ok) throw new Error("AI error");
+      const reader = res.body!.getReader();
+      const dec = new TextDecoder();
+      let acc = "";
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        acc += dec.decode(value, { stream: true });
+        setMessages(p => {
+          const u = [...p];
+          u[u.length - 1] = { role: "assistant", content: acc, streaming: true };
+          return u;
+        });
+      }
+      setMessages(p => {
+        const u = [...p];
+        u[u.length - 1] = { role: "assistant", content: acc, ts: now() };
+        // Save to KV (cloud — no localStorage)
+        if (currentUser?.id) {
+          fetch("/api/chat-history", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ userId: currentUser.id, messages: u }),
+          }).catch(() => {});
+          // Trigger memory reflection every 8 assistant messages
+          const assistantCount = u.filter(m => m.role === "assistant").length;
+          if (assistantCount > 0 && assistantCount % 8 === 0) {
+            fetch("/api/reflect", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                messages: u.slice(-20).map(m => ({ role: m.role, content: m.content })),
+                userId: currentUser.id,
+                accountUsername: account?.username || "rasayel_podcast",
+              }),
+            }).catch(() => {});
+          }
+        }
+        return u;
+      });
+    } catch (e: any) {
+      if (e?.name === "AbortError") return;
+      setMessages(p => {
+        const u = p.filter(m => !m.streaming);
+        return [...u, { role: "assistant", content: "⚠️ Sorry, the AI model is experiencing extremely high demand right now. Please try again in a few seconds.", ts: now() }];
+      });
+    } finally {
+      setStreaming(false);
+    }
+  }, [messages, streaming, account, videos, competitors, ideas, trends, generations, currentUser]);
+
+  const stop = () => {
+    abortRef.current?.abort();
+    setStreaming(false);
+    setMessages(p => {
+      const u = [...p];
+      if (u[u.length - 1]?.streaming) u[u.length - 1] = { ...u[u.length - 1], streaming: false };
+      return u;
+    });
+  };
+
+  return { messages, setMessages, streaming, send, stop };
+}
+
+// ─── Main Page ────────────────────────────────────────────────────────────────
+
+export default function ChatPage() {
   return (
-    <div style={{ position: 'relative', width: 128, height: 128 }}>
-      <svg width="128" height="128" viewBox="0 0 128 128" style={{ transform: 'rotate(-90deg)' }}>
-        <circle cx={cx} cy={cy} r={r} fill="none" stroke="var(--glass-elevated)" strokeWidth={sw} />
-        {segs.map(({ v, color }, i) => {
-          const len = (v / total) * (circ - segs.length * gap);
-          const el = (
-            <circle key={i} cx={cx} cy={cy} r={r} fill="none" stroke={color} strokeWidth={sw}
-              strokeDasharray={`${len} ${circ}`} strokeDashoffset={-off} strokeLinecap="round" />
-          );
-          off += len + gap;
-          return el;
-        })}
-      </svg>
-      <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
-        <div style={{ fontSize: 22, fontWeight: 900, color: 'var(--text-primary)', letterSpacing: '-0.04em' }}>{total}</div>
-        <div style={{ fontSize: 9, color: 'var(--text-muted)', fontWeight: 600 }}>videos</div>
-      </div>
-    </div>
+    <Suspense>
+      <ChatPageInner />
+    </Suspense>
   );
 }
 
-// Line chart SVG
-function LineChart({ videos }: { videos: any[] }) {
-  const pts = videos.slice(-8);
-  const W = 260, H = 100, P = 12;
-  const maxV = Math.max(...pts.map(v => v.views||0), 1);
-  const maxL = Math.max(...pts.map(v => v.likes||0), 1);
-  const step = (W - P*2) / Math.max(pts.length-1, 1);
+function ChatPageInner() {
+  const [conversations, setConversations] = useState<Conversation[]>(INITIAL_CONVERSATIONS);
+  const [activeId, setActiveId] = useState("sarie");
+  const [input, setInput] = useState("");
+  const [showEmoji, setShowEmoji] = useState(false);
+  const [pendingAttachment, setPendingAttachment] = useState<Attachment | null>(null);
+  const [teamMessages, setTeamMessages] = useState<Record<string, ChatMessage[]>>({});
+  const [hoverMsg, setHoverMsg] = useState<number | null>(null);
+  const [activeMenu, setActiveMenu] = useState<number | null>(null);
+  const [forwardingMsg, setForwardingMsg] = useState<string | null>(null);
+  const [selectedForwards, setSelectedForwards] = useState<string[]>([]);
+  const [contextMenu, setContextMenu] = useState<{ msgIdx: number } | null>(null);
+  const [showChatOnMobile, setShowChatOnMobile] = useState(false);
+  const [readReceipts, setReadReceipts] = useState<Record<string, number>>({});
+  const bottomRef = useRef<HTMLDivElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const sarie = useSarieChat();
+  const { currentUser } = useData();
+  const searchParams = useSearchParams();
+  const promptHandled = useRef(false);
+  const sarieSendRef = useRef(sarie.send);
+  sarieSendRef.current = sarie.send;
 
-  const vPts = pts.map((v,i) => `${P+i*step},${H-P-((v.views||0)/maxV)*(H-P*2)}`).join(' ');
-  const lPts = pts.map((v,i) => `${P+i*step},${H-P-((v.likes||0)/maxL)*(H-P*2)}`).join(' ');
-  const vArea = `${P},${H-P} ${vPts} ${P+(pts.length-1)*step},${H-P}`;
-  const lArea = `${P},${H-P} ${lPts} ${P+(pts.length-1)*step},${H-P}`;
 
-  return (
-    <svg width={W} height={H} viewBox={`0 0 ${W} ${H}`}>
-      <defs>
-        <linearGradient id="gv2" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor="#ef4444" stopOpacity="0.2"/>
-          <stop offset="100%" stopColor="#ef4444" stopOpacity="0"/>
-        </linearGradient>
-        <linearGradient id="gl2" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor="#8b5cf6" stopOpacity="0.15"/>
-          <stop offset="100%" stopColor="#8b5cf6" stopOpacity="0"/>
-        </linearGradient>
-      </defs>
-      <polygon points={vArea} fill="url(#gv2)" />
-      <polygon points={lArea} fill="url(#gl2)" />
-      <polyline points={vPts} fill="none" stroke="#ef4444" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-      <polyline points={lPts} fill="none" stroke="#8b5cf6" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-    </svg>
-  );
-}
-
-export default function OverviewPage() {
-  const { account, videos, generations, trends, competitors } = useData();
-  const [sortBy, setSortBy] = useState<'score' | 'views'>('score');
-
-  const displayVideos = [...videos].sort((a,b) => {
-    if (sortBy === 'score') return (b.score||0)-(a.score||0);
-    return (b.views||0)-(a.views||0);
-  });
-  const chartVids  = [...videos].sort((a,b) => (a.posted||'').localeCompare(b.posted||''));
-  const high       = videos.filter(v => (v.score||0) >= 70).length;
-  const med        = videos.filter(v => (v.score||0) >= 50 && (v.score||0) < 70).length;
-  const low        = videos.filter(v => (v.score||0) < 50).length;
-  const totalViews = videos.reduce((s,v) => s+(v.views||0), 0);
-
-  return (
-    <div className="p-4 md:p-8 max-w-[1400px] mx-auto">
-
-      {/* ── PAGE TITLE ─────────────────────────── */}
-      <div style={{ marginBottom: 28 }}>
-        <div style={{ fontSize: 13, color: 'var(--text-muted)', fontWeight: 500, marginBottom: 6 }}>
-          مراقبة أداء القناة
-        </div>
-        <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between' }}>
-          <h1 style={{ fontSize: 46, fontWeight: 900, color: 'var(--text-primary)', margin: 0, letterSpacing: '-0.045em', lineHeight: 1 }}>
-            Content Dashboard
-          </h1>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            {(account?.actionItems||0) > 0 && (
-              <div className="hidden md:flex" style={{ alignItems: 'center', gap: 6, padding: '8px 14px', borderRadius: 100, background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.2)', fontSize: 12, fontWeight: 700, color: '#ef4444' }}>
-                <AlertTriangle size={13}/> {account.actionItems} action items
-              </div>
-            )}
-            <div className="hidden md:flex" style={{ alignItems: 'center', gap: 8, padding: '8px 16px', borderRadius: 100, background: 'var(--glass-elevated)', border: '1px solid var(--glass-elevated-border)', fontSize: 13, color: 'var(--text-muted)' }}>
-              {account?.username || '@rasayel_podcast'}
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* ── 4 STAT PILLS ───────────────────────── */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
-        {[
-          { icon: Users,       label: 'Followers',       value: fmt(account?.followers||0),       sub: `+${fmt(account?.followersGrowth||0)} this week`, up: true },
-          { icon: Eye,         label: 'Weekly Views',    value: fmt(account?.weeklyViews||0),      sub: `${account?.weeklyViewsChange||0}% change`,       up: (account?.weeklyViewsChange||0)>=0 },
-          { icon: TrendingUp,  label: 'Avg Engagement',  value: `${account?.avgEngagement||0}%`,  sub: 'engagement rate',                                 up: true },
-          { icon: AlertTriangle,label:'Videos Audited', value: String(videos.length),             sub: 'analyzed by Sarie',                               up: true },
-        ].map(({ icon: Icon, label, value, sub, up }) => (
-          <div key={label} className="flex items-center gap-3 md:gap-4 p-3 md:p-4 rounded-2xl border border-white/10 bg-white/5 shadow-lg overflow-hidden min-w-0">
-            <div style={{ width: 40, height: 40, borderRadius: '50%', background: 'var(--glass-elevated)', border: '1px solid var(--glass-elevated-border)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-              <Icon size={16} color="var(--text-muted)" />
-            </div>
-            <div>
-              <div style={{ fontSize: 22, fontWeight: 900, color: 'var(--text-primary)', letterSpacing: '-0.03em' }}>{value}</div>
-              <div style={{ fontSize: 11, color: 'var(--text-faint)', marginTop: 2 }}>{label}</div>
-              <div style={{ fontSize: 10, color: up ? '#22c55e' : '#ef4444', marginTop: 2, fontWeight: 600 }}>
-                {up ? '↑' : '↓'} {sub}
-              </div>
-            </div>
-          </div>
-        ))}
-      </div>
-
-      {/* ── MAIN 3-COL GRID ────────────────────── */}
-      <div className="grid grid-cols-1 lg:grid-cols-[320px_1fr_1fr] gap-4 md:gap-5 items-start">
-
-        {/* COL 1 — Top Videos list */}
-        <div style={{ ...card, display: 'flex', flexDirection: 'column', maxHeight: 620 }}>
-          <div style={{ padding: '24px 20px 10px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
-              <span style={{ fontSize: 18, fontWeight: 800, color: 'var(--text-primary)' }}>Top Videos</span>
-              <button style={{ width: 32, height: 32, borderRadius: '50%', border: '1px solid var(--glass-elevated-border)', background: 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
-                <Plus size={16} color="var(--text-muted)"/>
-              </button>
-            </div>
+  // 1-second polling for global team messages
+  useEffect(() => {
+    let timeout: NodeJS.Timeout;
+    const fetchMsgs = async () => {
+      try {
+        const res = await fetch("/api/messages");
+        if (res.ok) {
+          const data = await res.json();
+          if (data.messages && currentUser) {
+            const reconstructed: Record<string, ChatMessage[]> = {
+              dina: [], yassin: [], hesham: [], shahd: [], sara: [], haitham: [], shahdm: [], yousef: []
+            };
             
-            {/* Sort Toggles */}
-            <div style={{ display: 'flex', gap: 8, marginBottom: 20 }}>
-              <button onClick={() => setSortBy('score')} style={{ background: sortBy === 'score' ? 'var(--text-primary)' : 'transparent', color: sortBy === 'score' ? 'var(--bg-base)' : 'var(--text-primary)', borderRadius: 100, padding: '6px 14px', fontSize: 12, fontWeight: 700, border: sortBy === 'score' ? 'none' : '1px solid var(--glass-elevated-border)', cursor: 'pointer', transition: 'all 0.2s' }}>By Score</button>
-              <button onClick={() => setSortBy('views')} style={{ background: sortBy === 'views' ? 'var(--text-primary)' : 'transparent', color: sortBy === 'views' ? 'var(--bg-base)' : 'var(--text-primary)', borderRadius: 100, padding: '6px 14px', fontSize: 12, fontWeight: 700, border: sortBy === 'views' ? 'none' : '1px solid var(--glass-elevated-border)', cursor: 'pointer', transition: 'all 0.2s' }}>By Views</button>
-            </div>
+            data.messages.forEach((rawMsg: any) => {
+              const msg = typeof rawMsg === 'string' ? JSON.parse(rawMsg) : rawMsg;
+              
+              if (msg.senderId === currentUser.id) {
+                // Sent by me
+                if (reconstructed[msg.receiverId]) {
+                  reconstructed[msg.receiverId].push({
+                    id: msg.id, role: "user", content: msg.content, ts: msg.ts, status: "delivered", attachment: msg.attachment, isForwarded: msg.isForwarded, reactions: msg.reactions
+                  });
+                }
+              } else if (msg.receiverId === currentUser.id) {
+                // Sent to me
+                if (reconstructed[msg.senderId]) {
+                  reconstructed[msg.senderId].push({
+                    id: msg.id, role: "assistant", content: msg.content, ts: msg.ts, status: "seen", attachment: msg.attachment, isForwarded: msg.isForwarded, reactions: msg.reactions
+                  });
+                }
+              }
+            });
+            setTeamMessages(reconstructed);
+          }
+        }
+      } catch (err) {}
+      timeout = setTimeout(fetchMsgs, 1000);
+    };
+    
+    fetchMsgs();
+    return () => clearTimeout(timeout);
+  }, [currentUser]);
+  // Auto-send prompt from URL (e.g. from "Fix with AI" button on audit page)
+  useEffect(() => {
+    setReadReceipts(prev => ({ ...prev, [activeId]: (teamMessages[activeId] || []).length }));
+  }, [activeId, teamMessages]);
 
-            {/* Count pill */}
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 14px', background: 'var(--glass-elevated)', border: '1px solid var(--glass-elevated-border)', borderRadius: 12, marginBottom: 14 }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                <div style={{ width: 24, height: 24, borderRadius: '50%', background: 'var(--text-primary)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 900, color: 'var(--bg-base)' }}>{videos.length}</div>
-                <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-primary)' }}>Videos Analyzed</span>
-              </div>
-              <ChevronDown size={14} color="var(--text-muted)" />
-            </div>
+  useEffect(() => {
+    if (contextMenu === null) return;
+    const clickHandler = () => setContextMenu(null);
+    window.addEventListener("click", clickHandler);
+    return () => window.removeEventListener("click", clickHandler);
+  }, [contextMenu]);
+
+  // Compute conversations dynamically
+  const computedConversations = conversations.map(c => {
+    if (c.isAI) return c;
+    const msgs = teamMessages[c.id] || [];
+    if (msgs.length === 0) return c;
+    const lastMsg = msgs[msgs.length - 1];
+    const readLen = readReceipts[c.id] || 0;
+    const unread = Math.max(0, msgs.length - readLen);
+    return {
+      ...c,
+      lastMessage: lastMsg.content || (lastMsg.attachment ? `[${lastMsg.attachment.type}]` : ""),
+      time: lastMsg.ts || c.time,
+      unread: c.id === activeId ? 0 : unread
+    };
+  });
+
+  useEffect(() => {
+    const prompt = searchParams.get("prompt");
+    if (prompt && !promptHandled.current && sarie.messages.length > 0) {
+      promptHandled.current = true;
+      setActiveId("sarie");
+      // Small delay to ensure Sarie chat is ready
+      setTimeout(() => sarieSendRef.current(prompt), 300);
+      // Clean the URL without triggering a re-render
+      window.history.replaceState({}, "", "/chat");
+    }
+  }, [searchParams, sarie.messages.length]);
+
+  const activeConvo = conversations.find(c => c.id === activeId)!;
+  const isAI = activeConvo.isAI;
+
+  const messages: ChatMessage[] = isAI
+    ? sarie.messages
+    : (teamMessages[activeId] || []);
+  const streaming = isAI ? sarie.streaming : false;
+
+  const messagesLength = messages.length;
+  useEffect(() => {
+    bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messagesLength, streaming]);
+
+  // Close menu on click outside
+  useEffect(() => {
+    if (activeMenu === null) return;
+    const clickHandler = () => setActiveMenu(null);
+    window.addEventListener("click", clickHandler);
+    return () => window.removeEventListener("click", clickHandler);
+  }, [activeMenu]);
+
+  const handleDelete = (index: number) => {
+    if (isAI) {
+      sarie.setMessages(prev => {
+        const u = prev.filter((_, i) => i !== index);
+        if (currentUser?.id) {
+          fetch("/api/chat-history", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ userId: currentUser.id, messages: u }),
+          }).catch(() => {});
+        }
+        return u;
+      });
+    } else {
+      const msgs = teamMessages[activeId] || [];
+      const msgToDelete = msgs[index];
+      
+      setTeamMessages(prev => {
+        const u = [...(prev[activeId] || [])];
+        u.splice(index, 1);
+        return { ...prev, [activeId]: u };
+      });
+
+      if (msgToDelete?.id || (msgToDelete?.content && msgToDelete?.ts)) {
+        fetch("/api/messages", {
+          method: "DELETE",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ 
+            id: msgToDelete.id,
+            content: msgToDelete.content,
+            ts: msgToDelete.ts 
+          })
+        }).catch(console.error);
+      }
+    }
+    setActiveMenu(null);
+  };
+
+  const handleCopy = (content: string) => {
+    navigator.clipboard.writeText(content);
+    setActiveMenu(null);
+  };
+
+  const handleEdit = (index: number, content: string) => {
+    setInput(content);
+    handleDelete(index); // simple edit flow: puts content in input and deletes old message
+    setActiveMenu(null);
+  };
+
+  const handleForward = (content: string) => {
+    setForwardingMsg(content);
+    setActiveMenu(null);
+  };
+
+  const confirmForward = (targetIds: string[]) => {
+    if (!forwardingMsg || !currentUser) return;
+    
+    targetIds.forEach(targetId => {
+      const msgId = Date.now().toString() + "-" + Math.random().toString(36).substr(2, 9);
+      const msg: ChatMessage = { id: msgId, role: "user", content: forwardingMsg, ts: now(), isForwarded: true, status: "sent" };
+      setTeamMessages(prev => ({ ...prev, [targetId]: [...(prev[targetId] || []), msg] }));
+      
+      fetch("/api/messages", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          id: msgId,
+          senderId: currentUser.id,
+          receiverId: targetId,
+          content: forwardingMsg,
+          ts: now(),
+          isForwarded: true
+        })
+      }).catch(console.error);
+    });
+
+    setForwardingMsg(null);
+    setSelectedForwards([]);
+  };
+
+  const handleSend = () => {
+    const text = input.trim();
+    if (!text && !pendingAttachment) return;
+    if (isAI) {
+      sarie.send(text || (pendingAttachment ? `[Sent: ${pendingAttachment.name}]` : ""));
+    } else {
+      const msgId = Date.now().toString() + "-" + Math.random().toString(36).substr(2, 9);
+      const msg: ChatMessage = { id: msgId, role: "user", content: text || "", ts: now(), status: "sent", ...(pendingAttachment ? { attachment: pendingAttachment } : {}) };
+      setTeamMessages(prev => ({ ...prev, [activeId]: [...(prev[activeId] || []), msg] }));
+      
+      if (currentUser) {
+        fetch("/api/messages", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            id: msgId,
+            senderId: currentUser.id,
+            receiverId: activeId,
+            content: text || "",
+            ts: now(),
+            attachment: pendingAttachment
+          })
+        }).catch(console.error);
+      }
+      
+      const targetId = activeId;
+      setTimeout(() => {
+        setTeamMessages(prev => {
+          const arr = [...(prev[targetId] || [])];
+          if (arr.length > 0) arr[arr.length - 1] = { ...arr[arr.length - 1], status: "delivered" };
+          return { ...prev, [targetId]: arr };
+        });
+      }, 600);
+      
+      setConversations(prev => {
+        const idx = prev.findIndex(c => c.id === activeId);
+        if (idx <= 1) return prev;
+        const next = [...prev];
+        const [item] = next.splice(idx, 1);
+        next.splice(1, 0, item);
+        return next;
+      });
+    }
+    setInput("");
+    setPendingAttachment(null);
+  };
+
+  const handleFile = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const isImage = file.type.startsWith("image");
+
+    if (file.size > 800 * 1024 && !isImage) {
+      alert("⚠️ File is too large! Since you don't have a storage bucket set up yet, please upload files under 800KB.");
+      e.target.value = "";
+      return;
+    }
+
+    if (isImage) {
+      // Compress image
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const img = new window.Image();
+        img.onload = () => {
+          const canvas = document.createElement("canvas");
+          let width = img.width;
+          let height = img.height;
+          const MAX = 1200;
+          if (width > height && width > MAX) {
+            height *= MAX / width;
+            width = MAX;
+          } else if (height > MAX) {
+            width *= MAX / height;
+            height = MAX;
+          }
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext("2d");
+          ctx?.drawImage(img, 0, 0, width, height);
+          const compressedBase64 = canvas.toDataURL("image/jpeg", 0.7);
+          setPendingAttachment({ name: file.name, url: compressedBase64, type: "image" });
+        };
+        img.src = e.target?.result as string;
+      };
+      reader.readAsDataURL(file);
+    } else {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        const base64Url = reader.result as string;
+        const type: Attachment["type"] = file.type.startsWith("video") ? "video" : "file";
+        setPendingAttachment({ name: file.name, url: base64Url, type });
+      };
+      reader.readAsDataURL(file);
+    }
+    
+    e.target.value = "";
+  };
+
+
+
+  const addReaction = (msgIdx: number, emoji: string) => {
+    if (isAI) return;
+    
+    let targetMsg: ChatMessage | undefined;
+    setTeamMessages(prev => {
+      const msgs = [...(prev[activeId] || [])];
+      const m = { ...msgs[msgIdx] };
+      targetMsg = m;
+      const existing = m.reactions || [];
+      m.reactions = existing.includes(emoji) ? existing.filter(r => r !== emoji) : [...existing, emoji];
+      msgs[msgIdx] = m;
+      return { ...prev, [activeId]: msgs };
+    });
+
+    if (targetMsg) {
+      fetch("/api/messages", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ 
+          id: targetMsg.id, 
+          content: targetMsg.content,
+          ts: targetMsg.ts,
+          emoji 
+        })
+      }).catch(console.error);
+    }
+  };
+
+  const glass: React.CSSProperties = {
+    background: "var(--glass-bg)",
+    border: "1px solid var(--glass-border)",
+    backdropFilter: "blur(24px)",
+    WebkitBackdropFilter: "blur(24px) saturate(180%)",
+  };
+
+  return (
+    <>
+      <style dangerouslySetInnerHTML={{__html: `@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap");
+body {
+    font-family: "Inter", sans-serif;
+    background-image: url(https://lh3.googleusercontent.com/aida/ADBb0uhCilLHmLfDhPMwiCs2nL08qwA6V4xXkJYQ4KtwbpzOH62ThNmDWsEtxzYscnGYjlnkSs9KqANozl3XsH_1co8MEq1TXxitKN8M_ZLcIfMUc-DYny0LMDOLM5Tt0mMigyTZCfAzzVB91vXKYlO7L7hsdofrt6vkvAAaiwsKoPmx8H-JHJyiR5sM-gNy-r6UYF4_Z61SW9RSycIBI7sRuqVXMtbvBMHknTg4V6fzeOS9J6BZeTdDTHgVCjdnfkDJv5uefwuLfcCg);
+    background-size: cover;
+    background-position: center;
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center
+    }
+/* Scrollbar styling for a cleaner look */
+::-webkit-scrollbar {
+    width: 6px
+    }
+::-webkit-scrollbar-track {
+    background: transparent
+    }
+::-webkit-scrollbar-thumb {
+    background: #e5e7eb;
+    border-radius: 10px
+    }
+.rotated-images {
+    position: relative;
+    height: 250px;
+    width: 300px;
+    margin: 0 auto
+    }
+.rotated-img {
+    position: absolute;
+    border-radius: 12px;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)
+    }
+.img-1 {
+    top: 0;
+    left: 20px;
+    z-index: 10;
+    width: 200px;
+    height: 140px;
+    object-fit: cover;
+    transform: rotate(-5deg)
+    }
+.img-2 {
+    top: 70px;
+    left: -20px;
+    z-index: 5;
+    width: 160px;
+    height: 120px;
+    object-fit: cover;
+    transform: rotate(-15deg)
+    }
+.img-3 {
+    top: 90px;
+    left: 60px;
+    z-index: 15;
+    width: 220px;
+    height: 150px;
+    object-fit: cover;
+    transform: rotate(5deg)
+    }
+.app-icon {
+    width: 16px;
+    height: 16px
+    }
+.avatar-img {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    object-fit: cover;
+}
+.status-indicator {
+    position: absolute;
+    bottom: 0;
+    right: 0;
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    border: 2px solid white;
+}
+.status-online { background-color: #22c55e; }
+.status-away { background-color: #eab308; }
+.status-busy { background-color: #ef4444; }
+`}} />
+      <div className="flex items-center justify-center min-h-screen w-full" style={{
+         backgroundImage: "url(https://lh3.googleusercontent.com/aida/ADBb0uhCilLHmLfDhPMwiCs2nL08qwA6V4xXkJYQ4KtwbpzOH62ThNmDWsEtxzYscnGYjlnkSs9KqANozl3XsH_1co8MEq1TXxitKN8M_ZLcIfMUc-DYny0LMDOLM5Tt0mMigyTZCfAzzVB91vXKYlO7L7hsdofrt6vkvAAaiwsKoPmx8H-JHJyiR5sM-gNy-r6UYF4_Z61SW9RSycIBI7sRuqVXMtbvBMHknTg4V6fzeOS9J6BZeTdDTHgVCjdnfkDJv5uefwuLfcCg)",
+         backgroundSize: "cover",
+         backgroundPosition: "center",
+         fontFamily: "'Inter', sans-serif"
+      }}>
+        
+{/*  BEGIN: MainContainer  */}
+<div className="bg-[#f2f2f2] w-full max-w-[1400px] h-[85vh] rounded-[32px] shadow-2xl flex overflow-hidden relative backdrop-blur-sm bg-opacity-95 text-[#2b2b2b] text-[14px]">
+{/*  BEGIN: LeftSidebar  */}
+<aside className="w-[200px] flex flex-col justify-between p-6 pl-8">
+<div className="space-y-4 pt-4 flex-1 flex flex-col h-full overflow-hidden">
+<button className="w-full bg-[#2b2b2b] text-white rounded-full py-2.5 px-4 flex items-center justify-center gap-2 text-sm font-medium hover:bg-black transition-colors shrink-0">
+<i className="fa-solid fa-plus text-xs"></i>
+          New Chat
+        </button>
+<nav className="space-y-1 mt-6 shrink-0">
+<Link className="flex items-center gap-3 px-4 py-2.5 text-gray-600 bg-white rounded-full transition-all shadow-sm" href="/dashboard">
+<i className="fa-solid fa-chart-pie text-[#a3a3a3]"></i>
+            Dashboard
+          </Link>
+</nav>
+{/*  History Log Moved to Left Sidebar  */}
+<div className="space-y-6 mt-8 flex-1 overflow-y-auto pr-2">
+{/*  Today  */}
+<div>
+<h4 className="text-xs font-semibold text-gray-800 mb-3 flex items-center gap-1">
+            Today <i className="fa-solid fa-chevron-down text-[10px] text-gray-400"></i>
+</h4>
+<ul className="space-y-3 text-xs text-gray-500">
+<li className="flex items-center gap-2 truncate hover:text-gray-800 cursor-pointer">
+<i className="fa-regular fa-comment text-[10px]"></i> Generate an image of a lo..
+            </li>
+<li className="flex items-center gap-2 truncate hover:text-gray-800 cursor-pointer">
+<i className="fa-regular fa-comment text-[10px]"></i> What is the capital of Unit..
+            </li>
+</ul>
+</div>
+{/*  Friday, March 26, 2026  */}
+<div>
+<h4 className="text-xs font-semibold text-gray-800 mb-3 flex items-center gap-1">
+            Friday, March 26, 2026 <i className="fa-solid fa-chevron-down text-[10px] text-gray-400"></i>
+</h4>
+<ul className="space-y-3 text-xs text-gray-500">
+<li className="flex items-center gap-2 truncate hover:text-gray-800 cursor-pointer">
+<i className="fa-regular fa-comment text-[10px]"></i> Generate a pencil sketch...
+            </li>
+<li className="flex items-center gap-2 truncate hover:text-gray-800 cursor-pointer">
+<i className="fa-regular fa-comment text-[10px]"></i> What's the best way to s..
+            </li>
+</ul>
+</div>
+{/*  Friday, March 20, 2026  */}
+<div>
+<h4 className="text-xs font-semibold text-gray-800 mb-3 flex items-center gap-1">
+            Friday, March 20, 2026 <i className="fa-solid fa-chevron-down text-[10px] text-gray-400"></i>
+</h4>
+<ul className="space-y-3 text-xs text-gray-500">
+<li className="flex items-center gap-2 truncate hover:text-gray-800 cursor-pointer">
+<i className="fa-regular fa-comment text-[10px]"></i> Compose an email to HR...
+            </li>
+</ul>
+</div>
+</div>
+</div>
+<div className="pb-4 shrink-0 mt-4">
+<button className="w-full bg-[#ef4444] text-white rounded-full py-2 px-4 flex items-center justify-center gap-2 text-xs font-medium hover:bg-[#dc2626] transition-colors shadow-sm">
+<i className="fa-solid fa-user-shield"></i>
+          Team Login
+        </button>
+</div>
+</aside>
+{/*  END: LeftSidebar  */}
+{/*  BEGIN: MainChatArea  */}
+<main className="flex-1 bg-[#fbfbfb] my-4 rounded-[24px] shadow-sm flex flex-col relative overflow-hidden">
+{/*  Top Bar  */}
+<div className="absolute top-0 w-full flex justify-center py-4 bg-gradient-to-b from-[#fbfbfb] to-transparent z-10">
+<button className="text-xs text-gray-500 font-medium flex items-center gap-1 hover:text-gray-700">
+<span className="text-[#ef4444] font-bold text-sm tracking-wider mr-1">MAS</span> AI Studio Workspace <i className="fa-solid fa-chevron-down text-[10px] ml-1"></i>
+</button>
+</div>
+{/*  Chat History  */}
+<div className="flex-1 overflow-y-auto px-10 pt-16 pb-32 flex flex-col gap-8">
+{/*  User Message 1  */}
+<div className="flex flex-col items-end gap-1">
+<div className="bg-[#333333] text-white px-5 py-3 rounded-t-2xl rounded-bl-2xl rounded-br-md max-w-xl shadow-sm">
+            Generate a realistic image of an elephant drinking water
           </div>
-
-          <div style={{ overflowY: 'auto', padding: '0 14px 18px', display: 'flex', flexDirection: 'column', gap: 12, flex: 1, paddingRight: 8 }}>
-            {displayVideos.map(v => {
-              const sc = v.score||0;
-              const scClr = sc>=70?'#22c55e':sc>=50?'#f59e0b':'#ef4444';
-              const scBg  = sc>=70?'rgba(34,197,94,0.1)':sc>=50?'rgba(245,158,11,0.1)':'rgba(239,68,68,0.1)';
-              return (
-                <Link key={v.id} href={`/audit/${v.id}`} style={{ padding: '16px', background: 'transparent', borderRadius: 16, border: '1px solid var(--glass-border)', cursor: 'pointer', textDecoration: 'none', display: 'flex', flexDirection: 'column', gap: 12 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                    <div style={{ padding: '4px 10px', borderRadius: 10, background: scBg, color: scClr, fontSize: 12, fontWeight: 800 }}>{sc}</div>
-                    <div style={{ width: 22, height: 22, borderRadius: '50%', border: '1px solid var(--glass-elevated-border)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                      <div style={{ width: 6, height: 6, borderRadius: '50%', background: scClr }} />
-                    </div>
-                  </div>
-                  <div style={{ fontSize: 13, fontWeight: 800, color: 'var(--text-primary)', lineHeight: 1.4, direction: 'rtl' }}>
-                    {v.title}
-                  </div>
-                  <div style={{ display: 'flex', gap: 12, fontSize: 11, color: 'var(--text-muted)' }}>
-                    <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}><Eye size={12}/>{fmt(v.views||0)}</span>
-                    <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}><Heart size={12}/>{fmt(v.likes||0)}</span>
-                    <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}><MessageCircle size={12}/>{v.comments||0}</span>
-                  </div>
-                </Link>
-              );
-            })}
+<span className="text-[10px] text-gray-400 mr-2">11:22</span>
+</div>
+{/*  Assistant Message 1  */}
+<div className="flex flex-col items-start gap-1">
+<div className="bg-white px-5 py-3 rounded-t-2xl rounded-br-2xl rounded-bl-md max-w-xl shadow-sm border border-gray-100">
+            Sure! now generating images of an elephant drinking water
           </div>
-        </div>
-
-        {/* COL 2 — Score distribution + Sarie CTA */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
-
-          {/* Donut + Views chart */}
-          <div style={{ ...card, padding: '22px 24px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
-              <span style={{ fontSize: 15, fontWeight: 800, color: 'var(--text-primary)' }}>Score Distribution</span>
-              <button style={{ width: 30, height: 30, borderRadius: '50%', border: '1px solid var(--glass-elevated-border)', background: 'var(--glass-elevated)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
-                <ArrowUpRight size={13} color="var(--text-muted)"/>
-              </button>
-            </div>
-            <div style={{ display: 'flex', gap: 24, alignItems: 'center' }}>
-              <DonutChart high={high} med={med} low={low} />
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                {[{ label: 'High (≥70)', val: high, c: '#22c55e' }, { label: 'Mid (50–69)', val: med, c: '#f59e0b' }, { label: 'Low (<50)', val: low, c: '#ef4444' }].map(({ label, val, c }) => (
-                  <div key={label} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                    <div style={{ width: 9, height: 9, borderRadius: '50%', background: c, flexShrink: 0 }} />
-                    <span style={{ fontSize: 12, color: 'var(--text-secondary)', flex: 1 }}>{label}</span>
-                    <span style={{ fontSize: 13, fontWeight: 800, color: 'var(--text-primary)' }}>{val}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
+<span className="text-[10px] text-gray-400 ml-2">11:22</span>
+</div>
+{/*  User Message 2  */}
+<div className="flex flex-col items-end gap-1">
+<div className="bg-[#333333] text-white px-5 py-3 rounded-t-2xl rounded-bl-2xl rounded-br-md max-w-xs shadow-sm">
+            Make it hyper realistic
           </div>
-
-          {/* Audience */}
-          <div style={{ ...card, padding: '22px 24px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 18 }}>
-              <span style={{ fontSize: 15, fontWeight: 800, color: 'var(--text-primary)' }}>Audience</span>
+<span className="text-[10px] text-gray-400 mr-2">11:22</span>
+</div>
+{/*  Assistant Message 2 with Images  */}
+<div className="flex flex-col items-start gap-3 w-full">
+<div className="flex flex-col items-start gap-1">
+<div className="bg-white px-5 py-3 rounded-t-2xl rounded-br-2xl rounded-bl-md max-w-xl shadow-sm border border-gray-100">
+              Of course! Here's what I created
             </div>
-            <GenerationBars generations={generations} />
-          </div>
-
-          {/* Dark Sarie CTA */}
-          <div style={{ borderRadius: 24, padding: '26px 24px', display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', position: 'relative', overflow: 'hidden', background: 'var(--glass-bg)', border: '1px solid var(--glass-border)' }}>
-            {[160,120,80,50].map((s,i) => (
-              <div key={i} style={{ position: 'absolute', top: '40%', left: '50%', transform: 'translate(-50%,-50%)', width: s, height: s, borderRadius: '50%', border: '1px solid var(--glass-elevated-border)' }} />
-            ))}
-            <div style={{ position: 'relative', zIndex: 2, width: 48, height: 48, borderRadius: '50%', background: 'rgba(239,68,68,0.12)', border: '1px solid rgba(239,68,68,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 16, marginTop: 18 }}>
-              <Zap size={20} color="#ef4444" />
-            </div>
-            <div style={{ position: 'relative', zIndex: 2, fontSize: 18, fontWeight: 800, color: 'var(--text-primary)', letterSpacing: '-0.03em', lineHeight: 1.35, marginBottom: 18 }}>
-              Get AI content<br/>strategy now.
-            </div>
-            <button
-              onClick={() => window.dispatchEvent(new CustomEvent("agent-prompt", { detail: { prompt: "اعطيني استراتيجية محتوى كاملة بناءً على بيانات الأكاونت" } }))}
-              style={{ position: 'relative', zIndex: 2, width: '100%', padding: '11px', borderRadius: 14, background: 'var(--btn-primary-bg)', border: 'none', color: '#fff', fontSize: 13, fontWeight: 700, cursor: 'pointer' }}>
-              Talk to Sarie
-            </button>
-          </div>
-        </div>
-
-        {/* COL 3 — Views chart + Trends */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
-
-          {/* Views vs Likes chart */}
-          <div style={{ ...card, padding: '22px 24px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
-              <span style={{ fontSize: 15, fontWeight: 800, color: 'var(--text-primary)' }}>Views vs Likes</span>
-            </div>
-            <div style={{ fontSize: 26, fontWeight: 900, color: 'var(--text-primary)', letterSpacing: '-0.04em', marginBottom: 4 }}>{fmt(totalViews)}</div>
-            <div style={{ display: 'flex', gap: 10, marginBottom: 16 }}>
-              <span style={{ fontSize: 11, display: 'flex', alignItems: 'center', gap: 5, color: 'var(--text-muted)' }}><span style={{ width: 8, height: 8, borderRadius: 2, background: '#ef4444', display: 'inline-block' }}/>Views</span>
-              <span style={{ fontSize: 11, display: 'flex', alignItems: 'center', gap: 5, color: 'var(--text-muted)' }}><span style={{ width: 8, height: 8, borderRadius: 2, background: '#8b5cf6', display: 'inline-block' }}/>Likes</span>
-            </div>
-            <LineChart videos={chartVids} />
-          </div>
-
-          {/* Trends */}
-          <div style={{ ...card, padding: '22px 24px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 18 }}>
-              <span style={{ fontSize: 15, fontWeight: 800, color: 'var(--text-primary)' }}>Trending Now</span>
-              <button style={{ width: 30, height: 30, borderRadius: '50%', border: '1px solid var(--glass-elevated-border)', background: 'var(--glass-elevated)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
-                <ArrowUpRight size={13} color="var(--text-muted)"/>
-              </button>
-            </div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
-              {trends.slice(0,4).map((t: any, i: number) => (
-                <div key={t.rank} style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '12px 0', borderBottom: i<3 ? '1px solid var(--glass-elevated-border)' : 'none' }}>
-                  <div style={{ width: 30, height: 30, borderRadius: 9, background: 'var(--glass-elevated)', border: '1px solid var(--glass-elevated-border)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 800, color: 'var(--text-muted)', flexShrink: 0 }}>#{t.rank}</div>
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{t.name}</div>
-                    <div style={{ fontSize: 10, color: 'var(--text-faint)', marginTop: 2 }}>{t.type} · {t.views}</div>
-                  </div>
-                  <ArrowUpRight size={13} color="var(--text-faint)"/>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Competitors preview */}
-          <div style={{ ...card, padding: '22px 24px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 18 }}>
-              <span style={{ fontSize: 15, fontWeight: 800, color: 'var(--text-primary)' }}>Competitors</span>
-              <Link href="/competitors" style={{ display: 'flex', alignItems: 'center', gap: 4, width: 30, height: 30, borderRadius: '50%', border: '1px solid var(--glass-elevated-border)', background: 'var(--glass-elevated)', justifyContent: 'center', textDecoration: 'none' }}>
-                <ArrowUpRight size={13} color="var(--text-muted)"/>
-              </Link>
-            </div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-              {competitors.slice(0,2).map((c: any) => {
-                const spike = c.status === 'spiking';
-                return (
-                  <div key={c.handle} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 12px', background: 'var(--glass-elevated)', borderRadius: 12, border: '1px solid var(--glass-elevated-border)' }}>
-                    <div style={{ width: 32, height: 32, borderRadius: 10, background: spike ? 'rgba(34,197,94,0.1)' : 'var(--glass-elevated)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: 13, color: spike ? '#22c55e' : 'var(--text-muted)', flexShrink: 0 }}>
-                      {(c.handle||'?')[1]?.toUpperCase()}
-                    </div>
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{c.handle}</div>
-                      <div style={{ fontSize: 10, color: 'var(--text-faint)' }}>{c.topFormat || '—'}</div>
-                    </div>
-                    <span style={{ fontSize: 10, fontWeight: 700, padding: '3px 9px', borderRadius: 100, background: spike ? 'rgba(34,197,94,0.1)' : 'var(--glass-elevated)', color: spike ? '#22c55e' : 'var(--text-muted)' }}>
-                      {spike ? '↑ Spiking' : 'Stable'}
-                    </span>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        </div>
+<span className="text-[10px] text-gray-400 ml-2">11:22</span>
+</div>
+{/*  Image Collage  */}
+<div className="rotated-images mt-4 mb-8 self-center">
+<img alt="Elephant drinking" className="rotated-img img-1" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBc4rkap7cPv3E7V5Ax4Stsn3UXd3kOwFtVO0GPtErqMPPjQDw6lkUNAGfsMq6eYkULS4LY-2WFlfXT6L0mWeQjKgy-CmxmVCq6b6FDNk200t8QVS3aY91XaquEjHi9lJr79ynzgnu7_X05OpdsQcKpr5j1oe-d_Jcc4dOdKUgYerbwSkhEflu_Y7QHBCYxxmFpEOIrXjuzpb39LYvrLzlTeCvfQh1k0-_w6nTvfNITAEMy_TADU7S3lj5gXkKJm8vZTwsAlb6IDA"/>
+<img alt="Elephant in dirt" className="rotated-img img-2" src="https://lh3.googleusercontent.com/aida-public/AB6AXuA44NrGRaPR9GN0QjjEkBr-FfQjJVrbjBy0eHjL1GKZC92ArjeyAn1uCDtakfFuDCJRG9KdEX1yGJ1zmY5t0kWCUC87w7sgE2EEXniP7w4NDhUKuXqltnz_OIvYWC_6CpgBz-i9YQL86wSsYZJSSQRLVRYbSEg4XaT_p6QJVbJot1qqmVEr6KkqqniPZ2t2ytJiiVCEqiTUc9fqdD7HrL0rIdsLYCTYZvHfP7psxOBM1sxfO_dcPjYri0wPsiY4eIxzg9aXZPnwDg"/>
+<img alt="Elephant in water" className="rotated-img img-3" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAbZlIGT35-4k2Jni28zHs9qZMYqwUOQFtaIn6zOYHx4r1JmFSKJGMRlxyLslj3SwiRFBfQSisuNqWpcpO-V46Nlqc-iXmEwcNJ9jNsX8-BtZgEgeeZofb580OaxGHLzuTipV1TBgRg3kIgbMdIX46XHMKXt_wPfUBDX-qgNe3ftaLd2YL5XCt2wcSDGtQdiWcgO5CapckIRjBJ9ArvRRF3bqnK5--QxWRAaqqKQRN9lpDG8lrM3TD8NphMWCUJBKHJ1DbheVixUA"/>
+</div>
+<div className="flex justify-between w-full px-4 text-gray-400">
+<button className="flex items-center gap-2 hover:text-gray-600 text-sm">
+<i className="fa-regular fa-rotate-right"></i> Retry
+             </button>
+<div className="flex gap-4">
+<button className="hover:text-gray-600"><i className="fa-regular fa-thumbs-up"></i></button>
+<button className="hover:text-gray-600"><i className="fa-regular fa-thumbs-down"></i></button>
+</div>
+</div>
+</div>
+</div>
+{/*  Input Area  */}
+<div className="absolute bottom-6 left-0 right-0 px-10">
+<div className="bg-white rounded-full flex items-center px-4 py-2 shadow-md border border-gray-100">
+<button className="text-gray-400 hover:text-gray-600 p-2">
+<i className="fa-solid fa-plus"></i>
+</button>
+<input className="flex-1 border-none focus:ring-0 bg-transparent text-center text-sm text-gray-600 placeholder-gray-400 mx-4" placeholder="Type your prompt" type="text"/>
+<button className="bg-[#333333] text-white rounded-full w-8 h-8 flex items-center justify-center hover:bg-black transition-colors">
+<i className="fa-regular fa-paper-plane text-xs"></i>
+</button>
+</div>
+</div>
+</main>
+{/*  END: MainChatArea  */}
+{/*  BEGIN: RightSidebar  */}
+<aside className="w-[280px] p-6 pr-8 flex flex-col gap-6 overflow-y-auto">
+{/*  Team Chat Header  */}
+<div className="flex justify-between items-center pt-2">
+<h3 className="text-sm font-semibold text-gray-800 flex items-center gap-2">
+<i className="fa-solid fa-users text-gray-400"></i> Team Chat
+</h3>
+<button className="text-gray-400 hover:text-gray-600 bg-white rounded-full w-6 h-6 flex items-center justify-center shadow-sm border border-gray-100">
+<i className="fa-solid fa-plus text-[10px]"></i>
+</button>
+</div>
+{/*  Search Box  */}
+<div className="relative">
+<i className="fa-solid fa-search absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 text-xs"></i>
+<input className="w-full bg-white border border-gray-100 rounded-full py-2 pl-8 pr-4 text-xs focus:outline-none focus:ring-1 focus:ring-gray-200 shadow-sm" placeholder="Search team..." type="text"/>
+</div>
+{/*  Team Members List  */}
+<div className="space-y-4 mt-2">
+{/*  Member 1  */}
+<div className="flex items-center gap-3 p-2 hover:bg-white rounded-xl cursor-pointer transition-colors">
+<div className="relative">
+<img alt="Sarah K." className="avatar-img shadow-sm" src="https://lh3.googleusercontent.com/aida-public/AB6AXuA18Oh_ZVYFNp5PaAvsqoe5WMEjDliUEZCc-rHCVp7u4MqU_tRNyBLQBH6scGpRXk8qEqurmOyES_gXZ_WDuU_IDUzELQUhJ2d_Q2PA4MW2iB-wuKYb1O3wjmMyB4ddiiU2RrBHCeZFvpVhP29Hc0GAZ1JaHg4UFcPDOvuQZW1xSuHbz7Ikf8sSX5aHJBkkdUksKnzp4Wm1ZyZMHi0acM-0bA01YDcrPzpjLEx5yUsl1fKZ34MNhKe967w2O7wAkGGdQto2wn29hA"/>
+<div className="status-indicator status-online"></div>
+</div>
+<div className="flex-1 min-w-0">
+<div className="flex justify-between items-baseline">
+<h4 className="text-xs font-semibold text-gray-800 truncate">Sarah K.</h4>
+<span className="text-[9px] text-gray-400">1m</span>
+</div>
+<p className="text-[11px] text-gray-500 truncate">I'll check the design files now.</p>
+</div>
+</div>
+{/*  Member 2  */}
+<div className="flex items-center gap-3 p-2 hover:bg-white rounded-xl cursor-pointer transition-colors">
+<div className="relative">
+<img alt="Alex M." className="avatar-img shadow-sm" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCN70FYFZyEyUJw8Epzfa_tdHqi30fLeRnWBNvrE5yQUQLhPOrQvdQ1s-i9jg586ko0Qs06lse0Pt-WPx0ytq_23TYVQv3C18gvqwCWTSfGW01vTdFT4QTS617FLnePNCJDd2OKOKo6rfHZeHt5gGdlyGeaIINXQetPlo-1G0wmj3HQ_PnyY5yuINIm2qz6FV6ApJWiuuVrBpg4UeMMaxBZ78UawW1APraznTRFQDKoInxtj8wVCoI82wyXHo3rwMEuN7i-qr5xeA"/>
+<div className="status-indicator status-away"></div>
+</div>
+<div className="flex-1 min-w-0">
+<div className="flex justify-between items-baseline">
+<h4 className="text-xs font-semibold text-gray-800 truncate">Alex M.</h4>
+<span className="text-[9px] text-gray-400">12m</span>
+</div>
+<p className="text-[11px] text-gray-500 truncate">Can we review the PR?</p>
+</div>
+</div>
+{/*  Member 3  */}
+<div className="flex items-center gap-3 p-2 hover:bg-white rounded-xl cursor-pointer transition-colors">
+<div className="relative">
+<img alt="David L." className="avatar-img shadow-sm" src="https://lh3.googleusercontent.com/aida-public/AB6AXuA8wP-119dq8BAZqeBT1FRNpl1SoLMnfy09Fz9NyK3Ih2wcInQdt6LcF-KxESnochMS5bMJtVcgZQWn3Is27DS8bfhl0ufRkHEnQlDvaKIO_fMBlxe6JuIgB84R-3O4IUKTfmDNV5d8WYUdTgFSsC6bOzikj7njqtPnklwZN5B7WI7OkOwhATnJ5JdJ-J7L3wPxhJDu4TOoX-VQq9wWGC3dFsGgvKo8ZBvtJaq55v_9TIfynA7CUuJatblorGKBwTMiVtou55WlFA"/>
+<div className="status-indicator status-busy"></div>
+</div>
+<div className="flex-1 min-w-0">
+<div className="flex justify-between items-baseline">
+<h4 className="text-xs font-semibold text-gray-800 truncate">David L.</h4>
+<span className="text-[9px] text-gray-400">1h</span>
+</div>
+<p className="text-[11px] text-gray-500 truncate">In a meeting, back later.</p>
+</div>
+</div>
+{/*  Member 4  */}
+<div className="flex items-center gap-3 p-2 hover:bg-white rounded-xl cursor-pointer transition-colors">
+<div className="relative">
+<img alt="Emily R." className="avatar-img shadow-sm opacity-60" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCspKC7yE_vCgt7rgJ2QQyq9H0taa8I4sEyRUSdPejqPogCAiv0-QH_eDGfsba8Fr1-ROWF0xPFE-8yC_Mxf3SU7eGqAolsGqJ-Dq6B84R_FI5ai6_GLTAg1p-lYBdrN7MD6G_Rb5Wt6e8EZgvdHr7ohZB623zXDze9PSbb9xg1H-R0Vt5iE5PJutekNFytpTIPOce0J8Z0FsU8tgLqsWgxqOcotDZ-kcMOs4KNbRmaK3jSKvRr3N870nu0OoevvSSaQ1whgAto7w"/>
+<div className="status-indicator bg-gray-300"></div>
+</div>
+<div className="flex-1 min-w-0">
+<div className="flex justify-between items-baseline">
+<h4 className="text-xs font-semibold text-gray-800 truncate">Emily R.</h4>
+<span className="text-[9px] text-gray-400">Yesterday</span>
+</div>
+<p className="text-[11px] text-gray-500 truncate">Thanks for the update!</p>
+</div>
+</div>
+</div>
+</aside>
+{/*  END: RightSidebar  */}
+{/*  Assistant Avatar Floating Widget  */}
+<div className="absolute bottom-8 right-8 flex items-end gap-3 z-20">
+<div className="bg-black text-white text-xs px-4 py-2 rounded-2xl rounded-br-sm shadow-lg mb-4">
+        Hi, How can i help<br />you today?
       </div>
-    </div>
+<img alt="Robot Assistant" className="w-16 h-16 object-cover rounded-full drop-shadow-xl border-2 border-white bg-white" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBC8o0Dh-48odiXykGf9dXZ3HQkqIfgf9DTRu5eek1doIbEYtT3mV9F81Cy0qYDCLwiee969EF8rp7BbSKDfanY00VuM7fdfaI5ep1w21ALHKbPuxkPnI6gSjMFcyH-A_4CAA37vlxHFk2pGPo5LeOezJJbSGhBXzZ8pz6cZQkiCn-j75BUoOxkfoudEM5roWGn3ZNugRg5ryjuqujKC1VbF1_LKy_SrkhUusodJAw_WiJctH9uPZBHfrOrf070sDEU62d6PK_FUA"/>
+</div>
+</div>
+{/*  END: MainContainer  */}
+
+      </div>
+    </>
   );
 }
