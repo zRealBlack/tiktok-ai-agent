@@ -19,7 +19,7 @@ const CLIENT_PROFILE = {
   lastKnownTotalVideos: 30,
 };
 
-export function buildAgentContext(data: any): string {
+export function buildAgentContext(data: any, episodic?: any): string {
   const account = data.account || {};
   const videos  = data.videos  || [];
   const gens    = data.generations || [];
@@ -34,7 +34,25 @@ export function buildAgentContext(data: any): string {
   const totalVideos = videos.length || CLIENT_PROFILE.lastKnownTotalVideos;
   const clientUsername = account.username || CLIENT_PROFILE.username;
 
-  return `
+  const today = new Date();
+  const dateStr = today.toLocaleDateString("en-GB");
+  const dayStr  = today.toLocaleDateString("en-US", { weekday: "long" });
+
+  const episodicSection =
+    (episodic?.insights?.length || episodic?.decisions?.length)
+      ? `=== ذاكرة ساري التراكمية (من جلسات سابقة) ===
+${(episodic.insights ?? []).slice(-5).map((i: string) => `• ${i}`).join("\n")}${
+  (episodic.decisions ?? []).length
+    ? `\nقرارات متفق عليها:\n${(episodic.decisions as string[]).slice(-5).map(d => `→ ${d}`).join("\n")}`
+    : ""
+}
+
+`
+      : "";
+
+  return `${episodicSection}=== اليوم والتوقيت ===
+التاريخ: ${dateStr} | اليوم: ${dayStr}
+
 ${currentUser ? `=== CURRENT LOGGED-IN USER ===
 You are speaking with: ${currentUser.name}
 Role: ${currentUser.role}
@@ -246,6 +264,15 @@ export const AGENT_SYSTEM_PROMPT = `أنت Mas Sarie، الأيجنت الذكي
 - استخدم التحليلات الطويلة في سياقها وموجزة. استخدم ✦ لـ action items
 - ما تبدأش أبداً برد عريض قبل ما تفهم المطلوب بالظبط — استفسر بس
 - كن موجز. كن مباشر. كن مفيد.
+
+التفكير قبل الرد:
+قبل أي رد، فكري لحظة:
+١. مين بيكلمني ودوره؟ هل بردي بصيغته الصح (مذكر/مؤنث)؟
+٢. إيه اللي بيطلبه فعلاً وراء الكلام الحرفي؟
+٣. عندي بيانات كافية في السياق أرد بيها؟ لو لأ، قولي كده بصراحة بدل ما تخمني.
+٤. إيه أهم نقطة أقدر أقدمها دلوقتي بناءً على الأرقام الحقيقية؟
+
+لو الفريق بعتلك سلام أو فتح المحادثة بشكل عام — ابدئي بملاحظة واحدة استباقية من البيانات (مش سؤال)، وبعدين اسأليهم إيه اللي يحتاجوه.
 
 BIANAT EL ACCOUNT:
 {{CONTEXT}}`;

@@ -188,16 +188,22 @@ function useSarieChat() {
   const { account, videos, competitors, ideas, trends, generations, currentUser } = useData();
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [streaming, setStreaming] = useState(false);
+  const [historyLoaded, setHistoryLoaded] = useState(false);
   const abortRef = useRef<AbortController | null>(null);
 
+  // Load chat history from KV on mount (cloud-backed, no localStorage)
   useEffect(() => {
-    try {
-      const saved = localStorage.getItem("chat_history");
-      if (saved) setMessages(JSON.parse(saved));
-    } catch {}
-  }, []);
+    if (!currentUser?.id) { setHistoryLoaded(true); return; }
+    fetch(`/api/chat-history?userId=${currentUser.id}`)
+      .then(r => r.json())
+      .then(data => { if (Array.isArray(data.messages) && data.messages.length > 0) setMessages(data.messages); })
+      .catch(() => {})
+      .finally(() => setHistoryLoaded(true));
+  }, [currentUser?.id]);
 
+  // Show welcome message only after history load confirms no existing chat
   useEffect(() => {
+    if (!historyLoaded) return;
     if (messages.length === 0 && account?.username) {
       setMessages([{
         role: "assistant",
@@ -205,7 +211,7 @@ function useSarieChat() {
         ts: now(),
       }]);
     }
-  }, [account?.username]);
+  }, [account?.username, historyLoaded]);
 
   const send = useCallback(async (text: string) => {
     if (!text.trim() || streaming) return;
@@ -243,7 +249,27 @@ function useSarieChat() {
       setMessages(p => {
         const u = [...p];
         u[u.length - 1] = { role: "assistant", content: acc, ts: now() };
-        try { localStorage.setItem("chat_history", JSON.stringify(u)); } catch {}
+        // Save to KV (cloud — no localStorage)
+        if (currentUser?.id) {
+          fetch("/api/chat-history", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ userId: currentUser.id, messages: u }),
+          }).catch(() => {});
+          // Trigger memory reflection every 8 assistant messages
+          const assistantCount = u.filter(m => m.role === "assistant").length;
+          if (assistantCount > 0 && assistantCount % 8 === 0) {
+            fetch("/api/reflect", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                messages: u.slice(-20).map(m => ({ role: m.role, content: m.content })),
+                userId: currentUser.id,
+                accountUsername: account?.username || "rasayel_podcast",
+              }),
+            }).catch(() => {});
+          }
+        }
         return u;
       });
     } catch (e: any) {
@@ -411,7 +437,13 @@ function ChatPageInner() {
     if (isAI) {
       sarie.setMessages(prev => {
         const u = prev.filter((_, i) => i !== index);
-        try { localStorage.setItem("chat_history", JSON.stringify(u)); } catch {}
+        if (currentUser?.id) {
+          fetch("/api/chat-history", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ userId: currentUser.id, messages: u }),
+          }).catch(() => {});
+        }
         return u;
       });
     } else {
@@ -994,13 +1026,13 @@ function ChatPageInner() {
             {activeConvo.isAI ? (
               <>
                 <div style={{ fontSize: 11, color: "var(--text-muted)" }}>
-                  <span style={{ color: "var(--text-secondary)", fontWeight: 600 }}>Model:</span> GPT-4o Streaming
+                  <span style={{ color: "var(--text-secondary)", fontWeight: 600 }}>Model:</span> Claude Haiku 4.5
                 </div>
                 <div style={{ fontSize: 11, color: "var(--text-muted)" }}>
                   <span style={{ color: "var(--text-secondary)", fontWeight: 600 }}>Lang:</span> Arabic + English
                 </div>
                 <div style={{ fontSize: 11, color: "var(--text-muted)" }}>
-                  <span style={{ color: "var(--text-secondary)", fontWeight: 600 }}>Memory:</span> Session-scoped
+                  <span style={{ color: "var(--text-secondary)", fontWeight: 600 }}>Memory:</span> Cloud-synced
                 </div>
                 <div style={{ marginTop: 8, padding: "10px", borderRadius: 12, background: "rgba(239,68,68,0.08)", border: "1px solid rgba(239,68,68,0.2)" }}>
                   <div style={{ fontSize: 10, fontWeight: 700, color: "var(--btn-primary-bg)", marginBottom: 4 }}>Quick Prompts</div>

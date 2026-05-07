@@ -55,17 +55,20 @@ export async function POST(req: Request) {
     // This is the same proven method the dashboard uses to show rasayel data
     let kvAccountRaw: unknown = null;
     let kvCompetitorRaw: unknown = null;
+    let kvInsightsRaw: unknown = null;
     try {
-      [kvAccountRaw, kvCompetitorRaw] = await Promise.all([
+      [kvAccountRaw, kvCompetitorRaw, kvInsightsRaw] = await Promise.all([
         redis.get("tiktok_data"),
         redis.get("competitor_data"),
+        redis.get("sarie_memory:insights"),
       ]);
     } catch (e) {
       console.error("KV read failed in AI route:", e);
     }
 
-    const kvAccountData = parseKV(kvAccountRaw);
+    const kvAccountData   = parseKV(kvAccountRaw);
     const kvCompetitorData = parseKV(kvCompetitorRaw);
+    const episodicMemory  = parseKV(kvInsightsRaw);
 
     // Debug log so we can verify on Vercel
     console.log("[AI] KV account:", kvAccountData?.account?.username, "followers:", kvAccountData?.account?.followers);
@@ -83,7 +86,7 @@ export async function POST(req: Request) {
     };
     // ──────────────────────────────────────────────────────────────
 
-    const context = buildAgentContext(mergedContext);
+    const context = buildAgentContext(mergedContext, episodicMemory);
     const systemPrompt = AGENT_SYSTEM_PROMPT.replace("{{CONTEXT}}", context);
 
     // Build Anthropic messages — support multimodal (image + text) when imageUrl is present
@@ -104,7 +107,7 @@ export async function POST(req: Request) {
     // Streaming response
     const stream = await client.messages.create({
       model: "claude-haiku-4-5-20251001",
-      max_tokens: 2000,
+      max_tokens: 4096,
       system: systemPrompt,
       messages: formattedMessages,
       stream: true,
@@ -136,8 +139,8 @@ export async function POST(req: Request) {
           }
           console.log(`[AI] Stream complete. Total chunks: ${chunkCount}, Input: ${inputTokens}, Output: ${outputTokens}`);
           
-          // Calculate cost (Haiku approx pricing)
-          const cost = (inputTokens / 1000000) * 0.25 + (outputTokens / 1000000) * 1.25;
+          // Calculate cost (Haiku 4.5 pricing)
+          const cost = (inputTokens / 1000000) * 0.80 + (outputTokens / 1000000) * 4.0;
           
           if (cost > 0 && currentUserId !== "unknown") {
             try {
