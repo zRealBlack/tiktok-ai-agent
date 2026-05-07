@@ -864,22 +864,33 @@ body {
       <button onClick={() => setPendingAttachment(null)} className="text-gray-400 hover:text-red-500 p-1"><X size={14}/></button>
     </div>
   )}
-  <div className="bg-white rounded-full flex items-center px-4 py-2 shadow-md border border-gray-100 relative">
-    <button onClick={() => fileInputRef.current?.click()} className="text-gray-400 hover:text-gray-600 p-2">
-      <i className="fa-solid fa-plus"></i>
+  <div className="bg-[#f5f5f5] rounded-[32px] flex items-end px-3 py-2 relative">
+    <button onClick={() => fileInputRef.current?.click()} className="text-gray-500 hover:text-gray-800 p-2 mb-0.5">
+      <i className="fa-solid fa-plus text-lg"></i>
     </button>
     <input ref={fileInputRef} type="file" accept="image/*,video/*,.pdf,.doc,.docx,.txt" className="hidden" onChange={handleFile} />
     
-    <input 
-      className="flex-1 border-none focus:ring-0 bg-transparent text-sm text-gray-600 placeholder-gray-400 mx-4" 
+    <textarea 
+      className="flex-1 border-none focus:outline-none outline-none focus:ring-0 bg-transparent text-sm text-gray-700 placeholder-gray-500 mx-4 resize-none py-2.5 max-h-[120px]" 
       placeholder={isAI ? "اسأل ساري..." : "Type your prompt"} 
       value={input}
-      onChange={e => setInput(e.target.value)}
-      onKeyDown={e => e.key === "Enter" && handleSend()}
+      onChange={e => {
+        setInput(e.target.value);
+        e.target.style.height = 'auto';
+        e.target.style.height = e.target.scrollHeight + 'px';
+      }}
+      onKeyDown={e => {
+        if (e.key === "Enter" && !e.shiftKey) {
+          e.preventDefault();
+          handleSend();
+        }
+      }}
+      rows={1}
       dir={isAI ? "rtl" : "ltr"}
+      style={{ minHeight: '40px', textAlign: input ? (isAI ? 'right' : 'left') : 'center' }}
     />
-    <button onClick={handleSend} disabled={!input.trim() && !pendingAttachment} className="bg-[#333333] text-white rounded-full w-8 h-8 flex items-center justify-center hover:bg-black transition-colors disabled:opacity-50">
-      <i className="fa-regular fa-paper-plane text-xs"></i>
+    <button onClick={handleSend} disabled={!input.trim() && !pendingAttachment} className="bg-[#2b2b2b] text-white rounded-full w-10 h-10 flex items-center justify-center hover:bg-black transition-colors disabled:opacity-50 mb-0.5 shrink-0">
+      <i className="fa-regular fa-paper-plane"></i>
     </button>
   </div>
 </div>
