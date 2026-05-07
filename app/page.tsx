@@ -824,7 +824,7 @@ body {
           <i className="fa-solid fa-gear w-4 text-center"></i>
           Settings
         </button>
-        <button onClick={() => { window.location.href = '/'; }} className="w-full text-left px-4 py-2.5 text-xs flex items-center gap-2 hover:bg-red-50 hover:text-red-600 transition-colors text-red-500 font-medium">
+        <button onClick={() => { localStorage.removeItem('mas_ai_authenticated_user'); window.location.href = '/'; }} className="w-full text-left px-4 py-2.5 text-xs flex items-center gap-2 hover:bg-red-50 hover:text-red-600 transition-colors text-red-500 font-medium">
           <i className="fa-solid fa-sign-out-alt w-4 text-center"></i>
           Sign Out
         </button>
