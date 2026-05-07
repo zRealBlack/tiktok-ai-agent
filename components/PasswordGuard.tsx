@@ -3,15 +3,16 @@
 import { useState, useEffect } from 'react';
 import Image from 'next/image';
 import { Lock, ShieldCheck, Cpu, Users, ArrowRight, AlertCircle, Mail, Key } from 'lucide-react';
-import MasLogo from '@/public/MAS-aistudiored.png';
-import { authenticateUser, TeamMember } from '@/lib/auth';
+import { authenticateUser, authenticateAdmin } from '@/lib/auth';
 
 const SESSION_KEY = 'mas_ai_authenticated_user';
 
 export default function PasswordGuard({ children }: { children: React.ReactNode }) {
   const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
+  const [loginMode, setLoginMode] = useState<'team' | 'admin'>('team');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [adminPin, setAdminPin] = useState('');
   const [error, setError] = useState(false);
   const [isMounting, setIsMounting] = useState(true);
 
@@ -36,16 +37,23 @@ export default function PasswordGuard({ children }: { children: React.ReactNode 
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    const user = authenticateUser(email, password);
+    let user = null;
+
+    if (loginMode === 'team') {
+      user = authenticateUser(email, password);
+    } else {
+      user = authenticateAdmin(adminPin);
+    }
+
     if (user) {
       localStorage.setItem(SESSION_KEY, JSON.stringify(user));
-      // Dispatch an event so other components (like DataContext) can pick up the login immediately
       window.dispatchEvent(new Event("mas_user_login"));
       setIsAuthenticated(true);
       setError(false);
     } else {
       setError(true);
       setPassword('');
+      setAdminPin('');
     }
   };
 
@@ -104,54 +112,86 @@ export default function PasswordGuard({ children }: { children: React.ReactNode 
           </div>
 
           <div className="mb-10">
-            <h1 className="text-[24px] font-bold text-gray-800 tracking-tight mb-2">Team Login</h1>
+            <h1 className="text-[24px] font-bold text-gray-800 tracking-tight mb-2">
+              {loginMode === 'team' ? 'Team Login' : 'Admin Login'}
+            </h1>
             <p className="text-[13px] text-gray-500">
-              Enter your email and 4-digit PIN.
+              {loginMode === 'team' 
+                ? 'Enter your email and password to access your workspace.' 
+                : 'Enter your 4-digit Master PIN.'}
             </p>
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-6 w-full">
-            <div className="space-y-2">
-              <label className="text-[11px] font-bold text-gray-400 uppercase tracking-widest ml-1">Email Address</label>
-              <div className="relative group">
-                <div className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400">
-                  <Mail size={18} />
-                </div>
-                <input
-                  type="email"
-                  value={email}
-                  onChange={(e) => { setEmail(e.target.value); if (error) setError(false); }}
-                  placeholder="e.g. yassin@mas.ai"
-                  className={`w-full h-14 bg-[#fbfbfb] rounded-[24px] pl-12 pr-4 text-[14px] text-gray-800 border transition-all outline-none placeholder:text-gray-400 focus:bg-white focus:ring-2 focus:ring-gray-100 ${error ? 'border-red-500/50' : 'border-gray-100'}`}
-                  autoFocus
-                  required
-                />
-              </div>
-            </div>
-
-            <div className="space-y-2">
-              <label className="text-[11px] font-bold text-gray-400 uppercase tracking-widest ml-1">Security PIN</label>
-              <div className="relative group">
-                <div className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400">
-                  <Key size={18} />
-                </div>
-                <input
-                  type="password"
-                  value={password}
-                  onChange={(e) => { setPassword(e.target.value); if (error) setError(false); }}
-                  placeholder="••••"
-                  maxLength={4}
-                  className={`w-full h-14 bg-[#fbfbfb] rounded-[24px] pl-12 pr-4 text-[16px] tracking-[0.5em] font-black text-gray-800 border transition-all outline-none placeholder:text-gray-400 placeholder:tracking-normal placeholder:font-normal focus:bg-white focus:ring-2 focus:ring-gray-100 ${error ? 'border-red-500/50 text-red-500' : 'border-gray-100'}`}
-                  required
-                />
-                {error && (
-                  <div className="absolute right-4 top-1/2 -translate-y-1/2 flex items-center gap-1.5 text-[#ef4444] animate-in fade-in slide-in-from-right-1 bg-red-50 px-2 py-1 rounded-full">
-                    <AlertCircle size={14} />
-                    <span className="text-[10px] font-bold uppercase tracking-widest">Incorrect</span>
+            {loginMode === 'team' ? (
+              <>
+                <div className="space-y-2">
+                  <label className="text-[11px] font-bold text-gray-400 uppercase tracking-widest ml-1">Email Address</label>
+                  <div className="relative group">
+                    <div className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400">
+                      <Mail size={18} />
+                    </div>
+                    <input
+                      type="email"
+                      value={email}
+                      onChange={(e) => { setEmail(e.target.value); if (error) setError(false); }}
+                      placeholder="e.g. yassin@mas.ai"
+                      className={`w-full h-14 bg-[#fbfbfb] rounded-[24px] pl-12 pr-4 text-[14px] text-gray-800 border transition-all outline-none placeholder:text-gray-400 focus:bg-white focus:ring-2 focus:ring-gray-100 ${error ? 'border-red-500/50' : 'border-gray-100'}`}
+                      autoFocus
+                      required
+                    />
                   </div>
-                )}
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-[11px] font-bold text-gray-400 uppercase tracking-widest ml-1">Password</label>
+                  <div className="relative group">
+                    <div className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400">
+                      <Lock size={18} />
+                    </div>
+                    <input
+                      type="password"
+                      value={password}
+                      onChange={(e) => { setPassword(e.target.value); if (error) setError(false); }}
+                      placeholder="Enter your password"
+                      className={`w-full h-14 bg-[#fbfbfb] rounded-[24px] pl-12 pr-4 text-[14px] text-gray-800 border transition-all outline-none placeholder:text-gray-400 focus:bg-white focus:ring-2 focus:ring-gray-100 ${error ? 'border-red-500/50 text-red-500' : 'border-gray-100'}`}
+                      required
+                    />
+                    {error && (
+                      <div className="absolute right-4 top-1/2 -translate-y-1/2 flex items-center gap-1.5 text-[#ef4444] animate-in fade-in slide-in-from-right-1 bg-red-50 px-2 py-1 rounded-full">
+                        <AlertCircle size={14} />
+                        <span className="text-[10px] font-bold uppercase tracking-widest">Incorrect</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </>
+            ) : (
+              <div className="space-y-2">
+                <label className="text-[11px] font-bold text-gray-400 uppercase tracking-widest ml-1">Master PIN</label>
+                <div className="relative group">
+                  <div className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400">
+                    <Key size={18} />
+                  </div>
+                  <input
+                    type="password"
+                    value={adminPin}
+                    onChange={(e) => { setAdminPin(e.target.value); if (error) setError(false); }}
+                    placeholder="••••"
+                    maxLength={4}
+                    className={`w-full h-14 bg-[#fbfbfb] rounded-[24px] pl-12 pr-4 text-[16px] tracking-[0.5em] font-black text-gray-800 border transition-all outline-none placeholder:text-gray-400 placeholder:tracking-normal placeholder:font-normal focus:bg-white focus:ring-2 focus:ring-gray-100 ${error ? 'border-red-500/50 text-red-500' : 'border-gray-100'}`}
+                    autoFocus
+                    required
+                  />
+                  {error && (
+                    <div className="absolute right-4 top-1/2 -translate-y-1/2 flex items-center gap-1.5 text-[#ef4444] animate-in fade-in slide-in-from-right-1 bg-red-50 px-2 py-1 rounded-full">
+                      <AlertCircle size={14} />
+                      <span className="text-[10px] font-bold uppercase tracking-widest">Incorrect</span>
+                    </div>
+                  )}
+                </div>
               </div>
-            </div>
+            )}
             
             <button
               type="submit"
@@ -160,6 +200,19 @@ export default function PasswordGuard({ children }: { children: React.ReactNode 
               Authenticate
               <ArrowRight size={16} />
             </button>
+            
+            <div className="flex justify-center mt-6">
+              <button
+                type="button"
+                onClick={() => {
+                  setLoginMode(loginMode === 'team' ? 'admin' : 'team');
+                  setError(false);
+                }}
+                className="text-[12px] font-semibold text-gray-400 hover:text-gray-800 transition-colors"
+              >
+                {loginMode === 'team' ? 'Login in to admin panel' : 'Back to Team Login'}
+              </button>
+            </div>
           </form>
         </div>
       </div>
