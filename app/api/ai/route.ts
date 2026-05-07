@@ -89,9 +89,12 @@ export async function POST(req: Request) {
     const context = buildAgentContext(mergedContext, episodicMemory);
     const systemPrompt = AGENT_SYSTEM_PROMPT.replace("{{CONTEXT}}", context);
 
+    // Keep only the last 10 messages to limit token growth, but still benefit from prompt caching
+    const recentMessages = messages.slice(-10);
+
     // Build Anthropic messages — support multimodal (image + text) when imageUrl is present
-    const formattedMessages = await Promise.all(
-      messages.map(async (m: { role: string; content: string; imageUrl?: string }) => {
+    const formattedMessages: any[] = await Promise.all(
+      recentMessages.map(async (m: { role: string; content: string; imageUrl?: string }) => {
         const content: any[] = [];
         if (m.imageUrl) {
           const img = await fetchImageAsBase64(m.imageUrl);
@@ -104,11 +107,26 @@ export async function POST(req: Request) {
       })
     );
 
+    // Add cache_control to the last user message for maximum cache hits on chat history
+    if (formattedMessages.length > 0) {
+      const lastMsg = formattedMessages[formattedMessages.length - 1];
+      const lastContentBlock = lastMsg.content[lastMsg.content.length - 1];
+      if (lastContentBlock) {
+        lastContentBlock.cache_control = { type: "ephemeral" };
+      }
+    }
+
     // Streaming response
     const stream = await client.messages.create({
       model: "claude-haiku-4-5-20251001",
       max_tokens: 4096,
-      system: systemPrompt,
+      system: [
+        {
+          type: "text",
+          text: systemPrompt,
+          cache_control: { type: "ephemeral" }
+        }
+      ],
       messages: formattedMessages,
       stream: true,
     });
