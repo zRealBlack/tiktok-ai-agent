@@ -25,7 +25,22 @@ export default function AuditPage() {
   const needFix     = latestVideos.filter((v: any) => v.score < 60).length;
 
   return (
-    <div className="p-4 md:p-8 max-w-[1400px] mx-auto">
+    <div className="dashboard-audit p-4 md:p-8 max-w-[1400px] mx-auto">
+      <style>{`
+        .dashboard-audit {
+          --glass-bg: #ffffff;
+          --glass-border: #f3f4f6;
+          --glass-elevated: #f9fafb;
+          --glass-elevated-border: #f3f4f6;
+          --text-primary: #1f2937;
+          --text-secondary: #4b5563;
+          --text-muted: #6b7280;
+          --text-faint: #9ca3af;
+          --bg-base: #ffffff;
+          --glass-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.05);
+          --btn-primary-bg: #ef4444;
+        }
+      `}</style>
 
       {/* ── PAGE TITLE ─────────────────────────── */}
       <div style={{ marginBottom: 28 }}>

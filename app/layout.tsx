@@ -1,8 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
-import Sidebar from "@/components/Sidebar";
-import TopBar from "@/components/TopBar";
 import { ThemeProvider } from "@/components/ThemeProvider";
 import { DataProvider } from "@/components/DataContext";
 import PasswordGuard from "@/components/PasswordGuard";
@@ -56,11 +54,7 @@ export default function RootLayout({
                 }}
               />
               <PwaRegister />
-              <Sidebar />
-              <main className="flex-1 flex flex-col overflow-auto h-full relative ml-0 md:ml-[72px] pb-[72px] md:pb-0 transition-all duration-300">
-                <TopBar />
-                <div className="flex-1 flex flex-col min-h-0 page-fade">{children}</div>
-              </main>
+              {children}
             </PasswordGuard>
           </DataProvider>
         </ThemeProvider>

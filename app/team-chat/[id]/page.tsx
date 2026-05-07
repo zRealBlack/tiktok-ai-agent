@@ -1,10 +1,297 @@
 
-import React from 'react';
+'use client';
 import Link from 'next/link';
+import { useState, useRef, useEffect, useCallback, Suspense } from "react";
+import Image from "next/image";
+import { Send, Loader2, Square, Search, Phone, Video, MoreVertical, Smile, Paperclip, Check, CheckCheck, X, FileText, Film, Copy, Trash2, Pencil, Forward, MoreHorizontal, ArrowLeft } from "lucide-react";
+import { useData } from "@/components/DataContext";
+import MarkdownMessage from "@/components/MarkdownMessage";
+
+// --- Types & Helpers ---
+const EMOJIS = ["😂","❤️","🔥","👏","😮","😢","🤔","💯","🚀","✅","👍","🎉","💪","😍","🙏","⚡","🎯","💡","🤣","😎"];
+const now = () => new Date().toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" });
+
+const INITIAL_CONVERSATIONS = [
+  { id: "sarie", name: "Sarie", isAI: true, lastMessage: "الأيجنت شغال! إيه اللي تحتاجه؟", time: "Now", unread: 0, online: true, role: "AI Content Strategist" },
+  { id: "dina", name: "Dina Amer", isAI: false, lastMessage: "", time: "", unread: 0, online: true, role: "CEO & Podcaster" },
+  { id: "yassin", name: "Yassin Gaml", isAI: false, lastMessage: "", time: "", unread: 0, online: true, role: "Developer / AI Specialist" },
+  { id: "haitham", name: "Haitham Abdel-aziz", isAI: false, lastMessage: "", time: "", unread: 0, online: true, role: "Director & Head of Production" },
+  { id: "shahd", name: "Shahd Sayed", isAI: false, lastMessage: "", time: "", unread: 0, online: true, role: "Ugc Creator" },
+  { id: "sara", name: "Sara Hatem", isAI: false, lastMessage: "", time: "", unread: 0, online: true, role: "Marketing & Operation Management" },
+  { id: "shahdm", name: "Shahd Mahmoud", isAI: false, lastMessage: "", time: "", unread: 0, online: true, role: "Community Manager" },
+  { id: "yousef", name: "Yousef Hatem", isAI: false, lastMessage: "", time: "", unread: 0, online: true, role: "Ai Artist" },
+];
+
+function AvatarCircle({ name, src, size = 40, online }: { name: string; src?: string | null; size?: number; online?: boolean }) {
+  const initial = (name || "?")[0].toUpperCase();
+  const colors = ["#ef4444", "#8b5cf6", "#3b82f6", "#22c55e", "#f59e0b", "#ec4899"];
+  const color = colors[name.charCodeAt(0) % colors.length];
+
+  return (
+    <div style={{ position: "relative", flexShrink: 0 }}>
+      <div
+        style={{
+          width: size, height: size, borderRadius: "50%",
+          background: color, display: "flex", alignItems: "center",
+          justifyContent: "center", fontSize: size * 0.36,
+          fontWeight: 800, color: "#fff", overflow: "hidden",
+        }}
+      >
+        {src ? (
+          <Image src={src} alt={name} width={size} height={size} style={{ objectFit: "cover" }} />
+        ) : initial}
+      </div>
+      {online && (
+        <span style={{
+          position: "absolute", bottom: 1, right: 1,
+          width: 9, height: 9, borderRadius: "50%",
+          background: "#22c55e", border: "1.5px solid var(--bg-base)",
+        }} />
+      )}
+    </div>
+  );
+}
 
 export default function TeamChatPage({ params }: { params: { id: string } }) {
-  // We can eventually load the team member based on params.id
+  const { currentUser } = useData();
+  const activeId = params.id;
+  const activeConvo = INITIAL_CONVERSATIONS.find(c => c.id === activeId) || INITIAL_CONVERSATIONS[1];
+
+  const [input, setInput] = useState("");
+  const [showEmoji, setShowEmoji] = useState(false);
+  const [pendingAttachment, setPendingAttachment] = useState<any>(null);
+  const [teamMessages, setTeamMessages] = useState<Record<string, any[]>>({});
+  const [hoverMsg, setHoverMsg] = useState<number | null>(null);
+  const [activeMenu, setActiveMenu] = useState<number | null>(null);
+  const [forwardingMsg, setForwardingMsg] = useState<string | null>(null);
+  const [selectedForwards, setSelectedForwards] = useState<string[]>([]);
+  const [contextMenu, setContextMenu] = useState<any>(null);
   
+  const bottomRef = useRef<HTMLDivElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // 1-second polling for global team messages
+  useEffect(() => {
+    let timeout: any;
+    const fetchMsgs = async () => {
+      try {
+        const res = await fetch("/api/messages");
+        if (res.ok) {
+          const data = await res.json();
+          if (data.messages && currentUser) {
+            const reconstructed: Record<string, any[]> = {
+              dina: [], yassin: [], hesham: [], shahd: [], sara: [], haitham: [], shahdm: [], yousef: []
+            };
+            
+            data.messages.forEach((rawMsg: any) => {
+              const msg = typeof rawMsg === 'string' ? JSON.parse(rawMsg) : rawMsg;
+              
+              if (msg.senderId === currentUser.id) {
+                if (reconstructed[msg.receiverId]) {
+                  reconstructed[msg.receiverId].push({
+                    id: msg.id, role: "user", content: msg.content, ts: msg.ts, status: "delivered", attachment: msg.attachment, isForwarded: msg.isForwarded, reactions: msg.reactions
+                  });
+                }
+              } else if (msg.receiverId === currentUser.id) {
+                if (reconstructed[msg.senderId]) {
+                  reconstructed[msg.senderId].push({
+                    id: msg.id, role: "assistant", content: msg.content, ts: msg.ts, status: "seen", attachment: msg.attachment, isForwarded: msg.isForwarded, reactions: msg.reactions
+                  });
+                }
+              }
+            });
+            setTeamMessages(reconstructed);
+          }
+        }
+      } catch (err) {}
+      timeout = setTimeout(fetchMsgs, 1000);
+    };
+    
+    fetchMsgs();
+    return () => clearTimeout(timeout);
+  }, [currentUser]);
+
+  const messages = teamMessages[activeId] || [];
+
+  useEffect(() => {
+    bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages.length]);
+
+  const handleDelete = (index: number) => {
+    const msgs = teamMessages[activeId as keyof typeof teamMessages] || [];
+    const msgToDelete = msgs[index];
+    
+    setTeamMessages(prev => {
+      const u = [...(prev[activeId as keyof typeof teamMessages] || [])];
+      u.splice(index, 1);
+      return { ...prev, [activeId]: u };
+    });
+
+    if (msgToDelete?.id || (msgToDelete?.content && msgToDelete?.ts)) {
+      fetch("/api/messages", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ 
+          id: msgToDelete.id,
+          content: msgToDelete.content,
+          ts: msgToDelete.ts 
+        })
+      }).catch(console.error);
+    }
+    setActiveMenu(null);
+  };
+
+  const handleCopy = (content: string) => {
+    navigator.clipboard.writeText(content);
+    setActiveMenu(null);
+  };
+
+  const handleEdit = (index: number, content: string) => {
+    setInput(content);
+    handleDelete(index);
+    setActiveMenu(null);
+  };
+
+  const handleForward = (content: string) => {
+    setForwardingMsg(content as any);
+    setActiveMenu(null);
+  };
+
+  const confirmForward = (targetIds: string[]) => {
+    if (!forwardingMsg || !currentUser) return;
+    
+    targetIds.forEach(targetId => {
+      const msgId = Date.now().toString() + "-" + Math.random().toString(36).substr(2, 9);
+      const msg = { id: msgId, role: "user", content: forwardingMsg, ts: now(), isForwarded: true, status: "sent" };
+      setTeamMessages(prev => ({ ...prev, [targetId]: [...(prev[targetId] || []), msg] }));
+      
+      fetch("/api/messages", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          id: msgId,
+          senderId: currentUser.id,
+          receiverId: targetId,
+          content: forwardingMsg,
+          ts: now(),
+          isForwarded: true
+        })
+      }).catch(console.error);
+    });
+
+    setForwardingMsg(null);
+    setSelectedForwards([]);
+  };
+
+  const handleSend = () => {
+    const text = input.trim();
+    if (!text && !pendingAttachment) return;
+    
+    const msgId = Date.now().toString() + "-" + Math.random().toString(36).substr(2, 9);
+    const msg = { id: msgId, role: "user", content: text || "", ts: now(), status: "sent", ...(pendingAttachment ? { attachment: pendingAttachment } : {}) };
+    setTeamMessages(prev => ({ ...prev, [activeId]: [...(prev[activeId] || []), msg] }));
+    
+    if (currentUser) {
+      fetch("/api/messages", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          id: msgId,
+          senderId: currentUser.id,
+          receiverId: activeId,
+          content: text || "",
+          ts: now(),
+          attachment: pendingAttachment
+        })
+      }).catch(console.error);
+    }
+    
+    setTimeout(() => {
+      setTeamMessages(prev => {
+        const arr = [...(prev[activeId] || [])];
+        if (arr.length > 0) arr[arr.length - 1] = { ...arr[arr.length - 1], status: "delivered" };
+        return { ...prev, [activeId]: arr };
+      });
+    }, 600);
+    
+    setInput("");
+    setPendingAttachment(null);
+  };
+
+  const handleFile = (e: any) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const isImage = file.type.startsWith("image");
+
+    if (file.size > 800 * 1024 && !isImage) {
+      alert("⚠️ File is too large!");
+      e.target.value = "";
+      return;
+    }
+
+    if (isImage) {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const img = new window.Image();
+        img.onload = () => {
+          const canvas = document.createElement("canvas");
+          let width = img.width;
+          let height = img.height;
+          const MAX = 1200;
+          if (width > height && width > MAX) {
+            height *= MAX / width;
+            width = MAX;
+          } else if (height > MAX) {
+            width *= MAX / height;
+            height = MAX;
+          }
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext("2d");
+          ctx?.drawImage(img, 0, 0, width, height);
+          const compressedBase64 = canvas.toDataURL("image/jpeg", 0.7);
+          setPendingAttachment({ name: file.name, url: compressedBase64, type: "image" });
+        };
+        img.src = e.target?.result as string;
+      };
+      reader.readAsDataURL(file);
+    } else {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setPendingAttachment({ name: file.name, url: reader.result, type: file.type.startsWith("video") ? "video" : "file" });
+      };
+      reader.readAsDataURL(file);
+    }
+    e.target.value = "";
+  };
+
+  const addReaction = (msgIdx: number, emoji: string) => {
+    let targetMsg: any;
+    setTeamMessages(prev => {
+      const msgs = [...(prev[activeId as keyof typeof teamMessages] || [])];
+      const m = { ...msgs[msgIdx] };
+      targetMsg = m;
+      const existing = m.reactions || [];
+      m.reactions = existing.includes(emoji) ? existing.filter((r: string) => r !== emoji) : [...existing, emoji];
+      msgs[msgIdx] = m;
+      return { ...prev, [activeId]: msgs };
+    });
+
+    if (targetMsg) {
+      fetch("/api/messages", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ 
+          id: targetMsg.id, 
+          content: targetMsg.content,
+          ts: targetMsg.ts,
+          emoji 
+        })
+      }).catch(console.error);
+    }
+  };
+
   return (
     <div className="min-h-screen w-full bg-[#e4dfd8] flex items-center justify-center p-8" style={{
       backgroundImage: "url(https://lh3.googleusercontent.com/aida/ADBb0uhCilLHmLfDhPMwiCs2nL08qwA6V4xXkJYQ4KtwbpzOH62ThNmDWsEtxzYscnGYjlnkSs9KqANozl3XsH_1co8MEq1TXxitKN8M_ZLcIfMUc-DYny0LMDOLM5Tt0mMigyTZCfAzzVB91vXKYlO7L7hsdofrt6vkvAAaiwsKoPmx8H-JHJyiR5sM-gNy-r6UYF4_Z61SW9RSycIBI7sRuqVXMtbvBMHknTg4V6fzeOS9J6BZeTdDTHgVCjdnfkDJv5uefwuLfcCg)",
@@ -12,208 +299,196 @@ export default function TeamChatPage({ params }: { params: { id: string } }) {
       backgroundPosition: "center",
       fontFamily: "'Inter', sans-serif"
     }}>
-      
-{/*  BEGIN: MainContainer  */}
-<div className="bg-surface w-full max-w-[1400px] h-[85vh] rounded-[32px] shadow-2xl flex overflow-hidden relative backdrop-blur-sm bg-opacity-95 text-on-surface">
-{/*  BEGIN: LeftSidebar (User Info)  */}
-<aside className="w-[240px] flex flex-col justify-between p-6 pl-8 border-r border-surface-container">
-<div className="space-y-4 pt-4 flex-1 flex flex-col h-full overflow-hidden">
-<button className="w-fit bg-surface-container-lowest border border-outline-variant text-on-surface rounded-full py-2 px-4 flex items-center justify-center gap-2 text-sm font-medium hover:bg-surface-container transition-colors shrink-0 shadow-sm">
-<i className="fa-solid fa-arrow-left text-xs"></i>
-          Back
-        </button>
-{/*  User Profile Area  */}
-<div className="flex flex-col items-center mt-10">
-<div className="relative mb-4">
-<img alt="Sarah K." className="w-24 h-24 rounded-full object-cover shadow-md border-4 border-surface" src="https://lh3.googleusercontent.com/aida-public/AB6AXuA18Oh_ZVYFNp5PaAvsqoe5WMEjDliUEZCc-rHCVp7u4MqU_tRNyBLQBH6scGpRXk8qEqurmOyES_gXZ_WDuU_IDUzELQUhJ2d_Q2PA4MW2iB-wuKYb1O3wjmMyB4ddiiU2RrBHCeZFvpVhP29Hc0GAZ1JaHg4UFcPDOvuQZW1xSuHbz7Ikf8sSX5aHJBkkdUksKnzp4Wm1ZyZMHi0acM-0bA01YDcrPzpjLEx5yUsl1fKZ34MNhKe967w2O7wAkGGdQto2wn29hA"/>
-<div className="absolute bottom-1 right-1 w-4 h-4 rounded-full bg-[#22c55e] border-2 border-surface"></div>
-</div>
-<h2 className="text-headline-md text-on-surface">Sarah K.</h2>
-<p className="text-body-md text-on-surface-variant mt-1 text-center">Senior Content Strategist</p>
-<div className="mt-3 px-3 py-1 bg-surface-container rounded-full text-label-md text-on-surface-variant flex items-center gap-2">
-<i className="fa-regular fa-clock"></i> 09:42 AM (Local)
-    </div>
-</div>
-{/*  About Section  */}
-<div className="mt-8 space-y-6">
-<div>
-<h3 className="text-label-sm text-on-surface-variant uppercase tracking-wider mb-2">About</h3>
-<p className="text-body-md text-on-surface">Focusing on product messaging and user flows for the upcoming Q3 launch campaign.</p>
-</div>
-<div>
-<h3 className="text-label-sm text-on-surface-variant uppercase tracking-wider mb-2">Contact Info</h3>
-<ul className="space-y-3">
-<li className="flex items-center gap-3 text-body-md text-on-surface">
-<i className="fa-regular fa-envelope text-on-surface-variant w-4"></i> sarah.k@mas.ai
-            </li>
-<li className="flex items-center gap-3 text-body-md text-on-surface">
-<i className="fa-solid fa-phone text-on-surface-variant w-4"></i> +1 (555) 019-2834
-            </li>
-<li className="flex items-center gap-3 text-body-md text-on-surface">
-<i className="fa-brands fa-slack text-on-surface-variant w-4"></i> @sarah_k
-            </li>
-</ul>
-</div>
-</div>
-</div>
-</aside>
-{/*  END: LeftSidebar  */}
-{/*  BEGIN: MainChatArea (Team Chat)  */}
-<main className="flex-1 bg-surface-container-lowest my-4 mr-4 rounded-[24px] shadow-sm flex flex-col relative overflow-hidden border border-surface-container">
-{/*  Top Bar  */}
-<div className="absolute top-0 w-full flex justify-between items-center px-8 py-4 bg-surface-container-lowest/90 backdrop-blur-md z-10 border-b border-surface-container">
-<div className="flex items-center gap-3">
-<div className="relative">
-<img alt="Sarah K." className="w-8 h-8 rounded-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuA18Oh_ZVYFNp5PaAvsqoe5WMEjDliUEZCc-rHCVp7u4MqU_tRNyBLQBH6scGpRXk8qEqurmOyES_gXZ_WDuU_IDUzELQUhJ2d_Q2PA4MW2iB-wuKYb1O3wjmMyB4ddiiU2RrBHCeZFvpVhP29Hc0GAZ1JaHg4UFcPDOvuQZW1xSuHbz7Ikf8sSX5aHJBkkdUksKnzp4Wm1ZyZMHi0acM-0bA01YDcrPzpjLEx5yUsl1fKZ34MNhKe967w2O7wAkGGdQto2wn29hA"/>
-<div className="absolute bottom-0 right-0 w-2.5 h-2.5 rounded-full bg-[#22c55e] border-2 border-surface-container-lowest"></div>
-</div>
-<div>
-<h2 className="text-headline-md text-on-surface text-base">Sarah K.</h2>
-<p className="text-label-sm text-on-surface-variant font-normal">Active now</p>
-</div>
-</div>
-<div className="flex gap-4 text-on-surface-variant">
-<button className="hover:text-on-surface transition-colors"><i className="fa-solid fa-phone"></i></button>
-<button className="hover:text-on-surface transition-colors"><i className="fa-solid fa-video"></i></button>
-<button className="hover:text-on-surface transition-colors"><i className="fa-solid fa-ellipsis-vertical"></i></button>
-</div>
-</div>
-{/*  Chat History  */}
-<div className="flex-1 overflow-y-auto px-10 pt-24 pb-32 flex flex-col gap-6">
-{/*  Time separator  */}
-<div className="text-center text-label-md text-on-surface-variant my-2">Today, 10:45 AM</div>
-{/*  User Message 1  */}
-<div className="flex flex-col items-end gap-1">
-<div className="bg-primary text-on-primary text-body-md px-5 py-3 rounded-t-2xl rounded-bl-2xl rounded-br-md max-w-xl shadow-sm">
-            Hey Sarah, have you checked the design files for the new campaign?
-          </div>
-<span className="text-[10px] text-on-surface-variant mr-2">10:45</span>
-</div>
-{/*  Teammate Message 1  */}
-<div className="flex items-end gap-2 max-w-2xl">
-<img alt="Sarah K." className="w-6 h-6 rounded-full object-cover mb-5" src="https://lh3.googleusercontent.com/aida-public/AB6AXuA18Oh_ZVYFNp5PaAvsqoe5WMEjDliUEZCc-rHCVp7u4MqU_tRNyBLQBH6scGpRXk8qEqurmOyES_gXZ_WDuU_IDUzELQUhJ2d_Q2PA4MW2iB-wuKYb1O3wjmMyB4ddiiU2RrBHCeZFvpVhP29Hc0GAZ1JaHg4UFcPDOvuQZW1xSuHbz7Ikf8sSX5aHJBkkdUksKnzp4Wm1ZyZMHi0acM-0bA01YDcrPzpjLEx5yUsl1fKZ34MNhKe967w2O7wAkGGdQto2wn29hA"/>
-<div className="flex flex-col items-start gap-1 flex-1">
-<div className="bg-surface-container text-on-surface text-body-md px-5 py-3 rounded-t-2xl rounded-br-2xl rounded-bl-md shadow-sm border border-surface-container-high">
-            Hi! Yes, I'm looking at them right now. The new layout looks great.
-          </div>
-<span className="text-[10px] text-on-surface-variant ml-2">10:48</span>
-</div>
-</div>
-{/*  User Message 2  */}
-<div className="flex flex-col items-end gap-1">
-<div className="bg-primary text-on-primary text-body-md px-5 py-3 rounded-t-2xl rounded-bl-2xl rounded-br-md max-w-xl shadow-sm">
-            Awesome. Let me know if you need any text adjustments or if the copy needs to be shorter.
-          </div>
-<span className="text-[10px] text-on-surface-variant mr-2">10:50</span>
-</div>
-{/*  Teammate Message 2  */}
-<div className="flex items-end gap-2 max-w-2xl">
-<img alt="Sarah K." className="w-6 h-6 rounded-full object-cover mb-5" src="https://lh3.googleusercontent.com/aida-public/AB6AXuA18Oh_ZVYFNp5PaAvsqoe5WMEjDliUEZCc-rHCVp7u4MqU_tRNyBLQBH6scGpRXk8qEqurmOyES_gXZ_WDuU_IDUzELQUhJ2d_Q2PA4MW2iB-wuKYb1O3wjmMyB4ddiiU2RrBHCeZFvpVhP29Hc0GAZ1JaHg4UFcPDOvuQZW1xSuHbz7Ikf8sSX5aHJBkkdUksKnzp4Wm1ZyZMHi0acM-0bA01YDcrPzpjLEx5yUsl1fKZ34MNhKe967w2O7wAkGGdQto2wn29hA"/>
-<div className="flex flex-col items-start gap-1 flex-1">
-<div className="bg-surface-container text-on-surface text-body-md px-5 py-3 rounded-t-2xl rounded-br-2xl rounded-bl-md shadow-sm border border-surface-container-high">
-              Will do! I'll probably need to tweak the hero copy a bit to fit the new aspect ratio. I'll ping you when I have a draft ready.
+      <div className="bg-white w-full max-w-[1400px] h-[85vh] rounded-[32px] shadow-2xl flex overflow-hidden relative">
+        {/* LeftSidebar (User Info) */}
+        <aside className="w-[240px] flex flex-col justify-between p-6 pl-8 border-r border-gray-100 bg-[#fbfbfb]">
+          <div className="space-y-4 pt-4 flex-1 flex flex-col h-full overflow-hidden">
+            <Link href="/" className="w-fit bg-white border border-gray-100 text-gray-800 rounded-full py-2 px-4 flex items-center justify-center gap-2 text-sm font-medium hover:bg-gray-50 transition-colors shadow-sm">
+              <i className="fa-solid fa-arrow-left text-xs"></i> Back
+            </Link>
+            <div className="flex flex-col items-center mt-10">
+              <div className="relative mb-4">
+                <AvatarCircle name={activeConvo.name} size={96} online={activeConvo.online} />
+              </div>
+              <h2 className="text-xl font-bold text-gray-800">{activeConvo.name}</h2>
+              <p className="text-xs text-gray-500 mt-1 text-center">{activeConvo.role}</p>
+              <div className="mt-3 px-3 py-1 bg-gray-100 rounded-full text-xs text-gray-500 flex items-center gap-2">
+                <i className="fa-regular fa-clock"></i> 09:42 AM (Local)
+              </div>
             </div>
-<span className="text-[10px] text-on-surface-variant ml-2">11:02</span>
-</div>
-</div>
-</div>
-{/*  Input Area  */}
-<div className="absolute bottom-6 left-0 right-0 px-10">
-<div className="bg-surface-container-lowest rounded-full flex items-center px-4 py-2 shadow-md border border-surface-container">
-<button className="text-on-surface-variant hover:text-on-surface p-2 transition-colors">
-<i className="fa-solid fa-paperclip"></i>
-</button>
-<button className="text-on-surface-variant hover:text-on-surface p-2 transition-colors">
-<i className="fa-regular fa-face-smile"></i>
-</button>
-<input className="flex-1 border-none focus:ring-0 bg-transparent text-sm text-on-surface font-body-md placeholder-on-surface-variant mx-4" placeholder="Type a message..." type="text"/>
-<button className="bg-primary text-on-primary rounded-full w-8 h-8 flex items-center justify-center hover:opacity-90 transition-opacity">
-<i className="fa-solid fa-paper-plane text-xs"></i>
-</button>
-</div>
-</div>
-</main>
-{/*  END: MainChatArea  */}
-{/*  BEGIN: RightSidebar (Team Chat List)  */}
-<aside className="w-[280px] p-6 pr-8 flex flex-col gap-6 overflow-y-auto bg-surface">
-{/*  Team Chat Header  */}
-<div className="flex justify-between items-center pt-2">
-<h3 className="text-headline-md text-on-surface text-sm flex items-center gap-2">
-<i className="fa-solid fa-users text-on-surface-variant"></i> Team Chat
-</h3>
-<button className="text-on-surface-variant hover:text-on-surface bg-surface-container-lowest rounded-full w-6 h-6 flex items-center justify-center shadow-sm border border-surface-container">
-<i className="fa-solid fa-plus text-[10px]"></i>
-</button>
-</div>
-{/*  Search Box  */}
-<div className="relative">
-<i className="fa-solid fa-search absolute left-3 top-1/2 transform -translate-y-1/2 text-on-surface-variant text-xs"></i>
-<input className="w-full bg-surface-container-lowest border border-surface-container rounded-full py-2 pl-8 pr-4 text-xs font-body-md focus:outline-none focus:border-outline shadow-sm placeholder-on-surface-variant text-on-surface" placeholder="Search team..." type="text"/>
-</div>
-{/*  Team Members List  */}
-<div className="space-y-2 mt-2">
-{/*  Member 1 (Active)  */}
-<div className="flex items-center gap-3 p-2 bg-surface-container rounded-xl cursor-pointer transition-colors">
-<div className="relative">
-<img alt="Sarah K." className="avatar-img shadow-sm" src="https://lh3.googleusercontent.com/aida-public/AB6AXuA18Oh_ZVYFNp5PaAvsqoe5WMEjDliUEZCc-rHCVp7u4MqU_tRNyBLQBH6scGpRXk8qEqurmOyES_gXZ_WDuU_IDUzELQUhJ2d_Q2PA4MW2iB-wuKYb1O3wjmMyB4ddiiU2RrBHCeZFvpVhP29Hc0GAZ1JaHg4UFcPDOvuQZW1xSuHbz7Ikf8sSX5aHJBkkdUksKnzp4Wm1ZyZMHi0acM-0bA01YDcrPzpjLEx5yUsl1fKZ34MNhKe967w2O7wAkGGdQto2wn29hA"/>
-<div className="status-indicator status-online"></div>
-</div>
-<div className="flex-1 min-w-0">
-<div className="flex justify-between items-baseline">
-<h4 className="text-label-md font-semibold text-on-surface truncate">Sarah K.</h4>
-<span className="text-[9px] text-on-surface-variant">11:02</span>
-</div>
-<p className="text-[11px] font-body-md text-on-surface-variant truncate">I'll ping you when I have a d...</p>
-</div>
-</div>
-{/*  Member 2  */}
-<div className="flex items-center gap-3 p-2 hover:bg-surface-container-low rounded-xl cursor-pointer transition-colors">
-<div className="relative">
-<img alt="Alex M." className="avatar-img shadow-sm" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCN70FYFZyEyUJw8Epzfa_tdHqi30fLeRnWBNvrE5yQUQLhPOrQvdQ1s-i9jg586ko0Qs06lse0Pt-WPx0ytq_23TYVQv3C18gvqwCWTSfGW01vTdFT4QTS617FLnePNCJDd2OKOKo6rfHZeHt5gGdlyGeaIINXQetPlo-1G0wmj3HQ_PnyY5yuINIm2qz6FV6ApJWiuuVrBpg4UeMMaxBZ78UawW1APraznTRFQDKoInxtj8wVCoI82wyXHo3rwMEuN7i-qr5xeA"/>
-<div className="status-indicator status-away"></div>
-</div>
-<div className="flex-1 min-w-0">
-<div className="flex justify-between items-baseline">
-<h4 className="text-label-md font-semibold text-on-surface truncate">Alex M.</h4>
-<span className="text-[9px] text-on-surface-variant">12m</span>
-</div>
-<p className="text-[11px] font-body-md text-on-surface-variant truncate">Can we review the PR?</p>
-</div>
-</div>
-{/*  Member 3  */}
-<div className="flex items-center gap-3 p-2 hover:bg-surface-container-low rounded-xl cursor-pointer transition-colors">
-<div className="relative">
-<img alt="David L." className="avatar-img shadow-sm" src="https://lh3.googleusercontent.com/aida-public/AB6AXuA8wP-119dq8BAZqeBT1FRNpl1SoLMnfy09Fz9NyK3Ih2wcInQdt6LcF-KxESnochMS5bMJtVcgZQWn3Is27DS8bfhl0ufRkHEnQlDvaKIO_fMBlxe6JuIgB84R-3O4IUKTfmDNV5d8WYUdTgFSsC6bOzikj7njqtPnklwZN5B7WI7OkOwhATnJ5JdJ-J7L3wPxhJDu4TOoX-VQq9wWGC3dFsGgvKo8ZBvtJaq55v_9TIfynA7CUuJatblorGKBwTMiVtou55WlFA"/>
-<div className="status-indicator status-busy"></div>
-</div>
-<div className="flex-1 min-w-0">
-<div className="flex justify-between items-baseline">
-<h4 className="text-label-md font-semibold text-on-surface truncate">David L.</h4>
-<span className="text-[9px] text-on-surface-variant">1h</span>
-</div>
-<p className="text-[11px] font-body-md text-on-surface-variant truncate">In a meeting, back later.</p>
-</div>
-</div>
-{/*  Member 4  */}
-<div className="flex items-center gap-3 p-2 hover:bg-surface-container-low rounded-xl cursor-pointer transition-colors">
-<div className="relative">
-<img alt="Emily R." className="avatar-img shadow-sm opacity-60" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCspKC7yE_vCgt7rgJ2QQyq9H0taa8I4sEyRUSdPejqPogCAiv0-QH_eDGfsba8Fr1-ROWF0xPFE-8yC_Mxf3SU7eGqAolsGqJ-Dq6B84R_FI5ai6_GLTAg1p-lYBdrN7MD6G_Rb5Wt6e8EZgvdHr7ohZB623zXDze9PSbb9xg1H-R0Vt5iE5PJutekNFytpTIPOce0J8Z0FsU8tgLqsWgxqOcotDZ-kcMOs4KNbRmaK3jSKvRr3N870nu0OoevvSSaQ1whgAto7w"/>
-<div className="status-indicator bg-outline-variant"></div>
-</div>
-<div className="flex-1 min-w-0">
-<div className="flex justify-between items-baseline">
-<h4 className="text-label-md font-semibold text-on-surface truncate">Emily R.</h4>
-<span className="text-[9px] text-on-surface-variant">Yesterday</span>
-</div>
-<p className="text-[11px] font-body-md text-on-surface-variant truncate">Thanks for the update!</p>
-</div>
-</div>
-</div>
-</aside>
-{/*  END: RightSidebar  */}
-</div>
-{/*  END: MainContainer  */}
+            <div className="mt-8 space-y-6">
+              <div>
+                <h3 className="text-[10px] text-gray-400 uppercase tracking-wider mb-2 font-bold">About</h3>
+                <p className="text-xs text-gray-600 leading-relaxed">Focusing on product messaging and user flows for the upcoming Q3 launch campaign.</p>
+              </div>
+              <div>
+                <h3 className="text-[10px] text-gray-400 uppercase tracking-wider mb-2 font-bold">Contact Info</h3>
+                <ul className="space-y-3">
+                  <li className="flex items-center gap-3 text-xs text-gray-600"><i className="fa-regular fa-envelope text-gray-400 w-4"></i> {activeConvo.id}@mas.ai</li>
+                  <li className="flex items-center gap-3 text-xs text-gray-600"><i className="fa-solid fa-phone text-gray-400 w-4"></i> +1 (555) 019-2834</li>
+                  <li className="flex items-center gap-3 text-xs text-gray-600"><i className="fa-brands fa-slack text-gray-400 w-4"></i> @{activeConvo.id}</li>
+                </ul>
+              </div>
+            </div>
+          </div>
+        </aside>
 
+        {/* MainChatArea */}
+        <main className="flex-1 bg-white flex flex-col relative overflow-hidden">
+          <div className="absolute top-0 w-full flex justify-between items-center px-8 py-4 bg-white/90 backdrop-blur-md z-10 border-b border-gray-100">
+            <div className="flex items-center gap-3">
+              <AvatarCircle name={activeConvo.name} size={32} online={activeConvo.online} />
+              <div>
+                <h2 className="font-bold text-gray-800 text-base">{activeConvo.name}</h2>
+                <p className="text-xs text-gray-500 font-medium">{activeConvo.online ? "Active now" : "Offline"}</p>
+              </div>
+            </div>
+            <div className="flex gap-4 text-gray-400">
+              <button className="hover:text-gray-600 transition-colors"><Phone size={18} /></button>
+              <button className="hover:text-gray-600 transition-colors"><Video size={18} /></button>
+              <button className="hover:text-gray-600 transition-colors"><MoreVertical size={18} /></button>
+            </div>
+          </div>
+
+          <div className="flex-1 overflow-y-auto px-10 pt-24 pb-32 flex flex-col gap-6">
+            <div className="text-center text-xs text-gray-400 my-2 font-medium">Today, 10:45 AM</div>
+            {messages.length === 0 && <div className="text-center text-gray-400 text-sm mt-10">No messages yet. Send a message to start the conversation!</div>}
+            
+            {messages.map((m, i) => {
+              const isUser = m.role === "user";
+              return (
+                <div key={i} className={`flex flex-col ${isUser ? 'items-end' : 'items-start'} gap-1`}
+                  onMouseEnter={() => setHoverMsg(i)}
+                  onMouseLeave={() => setHoverMsg(null)}
+                >
+                  <div 
+                    onContextMenu={(e) => { e.preventDefault(); setContextMenu({ msgIdx: i }); }}
+                    className="relative group flex items-end gap-2"
+                    style={{ flexDirection: isUser ? "row-reverse" : "row", maxWidth: "100%" }}
+                  >
+                    {!isUser && <AvatarCircle name={activeConvo.name} size={24} />}
+                    <div className={`${isUser ? 'bg-[#ef4444] text-white rounded-t-2xl rounded-bl-2xl rounded-br-md border-none' : 'bg-[#fbfbfb] text-gray-800 rounded-t-2xl rounded-br-2xl rounded-bl-md border border-gray-100'} px-5 py-3 max-w-xl shadow-sm relative`}>
+                      {m.attachment && m.attachment.type === "image" && <img src={m.attachment.url} alt="" className="w-full max-w-[240px] rounded-xl block mb-2" />}
+                      {m.attachment && m.attachment.type === "video" && <video src={m.attachment.url} controls className="w-full max-w-[240px] rounded-xl block mb-2" />}
+                      {m.attachment && m.attachment.type === "file" && (
+                        <div className="flex items-center gap-2 px-2 py-1.5 mb-2">
+                          <FileText size={18} color={isUser ? "#fff" : "var(--text-muted)"} />
+                          <span className="text-xs font-semibold">{m.attachment.name}</span>
+                        </div>
+                      )}
+                      {m.isForwarded && <div className={`text-[10px] ${isUser ? "text-white/70" : "text-gray-400"} mb-1 italic flex items-center gap-1`}><Forward size={10} /> Forwarded</div>}
+                      
+                      {m.content && <MarkdownMessage content={m.content} />}
+
+                      {/* Action Menu */}
+                      <div className={`absolute top-1/2 -translate-y-1/2 ${isUser ? 'right-full mr-2' : 'left-full ml-2'} flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity`}>
+                         <button onClick={() => handleForward(m.content)} title="Forward" className="p-1.5 text-gray-400 hover:text-gray-600 bg-white rounded-full shadow-sm border border-gray-100"><Forward size={12} /></button>
+                         <button onClick={() => handleCopy(m.content)} title="Copy" className="p-1.5 text-gray-400 hover:text-gray-600 bg-white rounded-full shadow-sm border border-gray-100"><Copy size={12} /></button>
+                         {isUser && (
+                           <div className="relative">
+                             <button onClick={(e) => { e.stopPropagation(); setActiveMenu(activeMenu === i ? null : i); }} className="p-1.5 text-gray-400 hover:text-gray-600 bg-white rounded-full shadow-sm border border-gray-100"><MoreHorizontal size={12} /></button>
+                             {activeMenu === i && (
+                               <div className="absolute top-full left-0 mt-1 bg-white border border-gray-100 rounded-xl p-1 shadow-md z-20 min-w-[100px]">
+                                 <button onClick={() => handleEdit(i, m.content)} className="w-full flex items-center gap-2 text-gray-700 text-xs py-2 px-3 hover:bg-gray-50 rounded-lg"><Pencil size={12}/> Edit</button>
+                                 <button onClick={() => handleDelete(i)} className="w-full flex items-center gap-2 text-red-500 text-xs py-2 px-3 hover:bg-red-50 rounded-lg"><Trash2 size={12}/> Delete</button>
+                               </div>
+                             )}
+                           </div>
+                         )}
+                      </div>
+                    </div>
+                  </div>
+
+                  {m.reactions && m.reactions.length > 0 && (
+                    <div className={`flex gap-1 mt-1 ${isUser ? 'mr-4' : 'ml-8'} flex-wrap`}>
+                      {m.reactions.map((r: string, ri: number) => <span key={ri} onClick={() => addReaction(i, r)} className="text-xs cursor-pointer bg-white rounded-full px-2 py-0.5 border border-gray-100 shadow-sm">{r}</span>)}
+                    </div>
+                  )}
+
+                  <div className={`flex items-center gap-1 text-[10px] text-gray-400 ${isUser ? 'mr-2' : 'ml-8'}`}>
+                    {m.ts || now()}
+                    {isUser && ((!m.status || m.status === "seen") ? <CheckCheck size={12} className="text-blue-500" /> : m.status === "delivered" ? <CheckCheck size={12} className="text-gray-400" /> : <Check size={12} className="text-gray-400" />)}
+                  </div>
+                </div>
+              );
+            })}
+            <div ref={bottomRef} />
+          </div>
+
+          <div className="absolute bottom-6 left-0 right-0 px-10">
+            <div className="flex flex-col gap-2 relative">
+              {pendingAttachment && (
+                <div className="bg-white rounded-2xl flex items-center gap-3 p-3 shadow-md border border-gray-100 max-w-sm self-end">
+                  {pendingAttachment.type === "image" && <img src={pendingAttachment.url} alt="" className="w-10 h-10 object-cover rounded-lg" />}
+                  {pendingAttachment.type === "video" && <Film size={18} className="text-gray-400" />}
+                  {pendingAttachment.type === "file" && <FileText size={18} className="text-gray-400" />}
+                  <span className="flex-1 text-xs text-gray-600 truncate">{pendingAttachment.name}</span>
+                  <button onClick={() => setPendingAttachment(null)} className="text-gray-400 hover:text-gray-600"><X size={14} /></button>
+                </div>
+              )}
+              {showEmoji && (
+                <div className="absolute bottom-full right-16 mb-2 bg-white border border-gray-100 rounded-2xl p-3 shadow-md flex flex-wrap gap-1 max-w-[200px] z-50">
+                  {EMOJIS.map(e => <button key={e} onClick={() => { setInput(v => v + e); setShowEmoji(false); }} className="text-xl p-1 hover:bg-gray-100 rounded-lg">{e}</button>)}
+                </div>
+              )}
+              {forwardingMsg && (
+                <div className="absolute bottom-full left-0 right-0 mb-4 bg-white rounded-2xl shadow-lg border border-gray-100 p-4 z-50 max-w-md mx-auto">
+                  <div className="flex justify-between items-center mb-4">
+                    <h4 className="font-semibold text-gray-800 text-sm">Forward to...</h4>
+                    <button onClick={() => setForwardingMsg(null)} className="text-gray-400"><X size={16} /></button>
+                  </div>
+                  <div className="max-h-48 overflow-y-auto flex flex-col gap-2 mb-4">
+                    {INITIAL_CONVERSATIONS.filter(c => !c.isAI).map(c => (
+                      <label key={c.id} className="flex items-center gap-3 p-2 hover:bg-gray-50 rounded-xl cursor-pointer">
+                        <input type="checkbox" className="rounded text-red-500 focus:ring-red-500" checked={selectedForwards.includes(c.id)} onChange={(e) => { if (e.target.checked) setSelectedForwards(p => [...p, c.id]); else setSelectedForwards(p => p.filter(id => id !== c.id)); }} />
+                        <span className="text-sm font-medium text-gray-700">{c.name}</span>
+                      </label>
+                    ))}
+                  </div>
+                  <button className="w-full bg-red-500 text-white rounded-xl py-2 text-sm font-bold disabled:opacity-50" disabled={selectedForwards.length === 0} onClick={() => confirmForward(selectedForwards)}>Send</button>
+                </div>
+              )}
+              <div className="bg-[#fbfbfb] rounded-full flex items-center px-4 py-2 shadow-sm border border-gray-100">
+                <button onClick={() => fileInputRef.current?.click()} className="text-gray-400 hover:text-gray-600 p-2"><Paperclip size={18} /></button>
+                <input ref={fileInputRef} type="file" accept="image/*,video/*,.pdf,.doc,.docx,.txt" className="hidden" onChange={handleFile} />
+                <button onClick={() => setShowEmoji(!showEmoji)} className={`p-2 ${showEmoji ? 'text-red-500' : 'text-gray-400 hover:text-gray-600'}`}><Smile size={18} /></button>
+                <input className="flex-1 border-none focus:ring-0 bg-transparent text-sm text-gray-700 placeholder-gray-400 mx-4" placeholder="Type a message..." type="text" value={input} onChange={e => setInput(e.target.value)} onKeyDown={e => { if(e.key === 'Enter') handleSend(); }} />
+                <button className="bg-[#ef4444] text-white rounded-full w-8 h-8 flex items-center justify-center hover:bg-red-600 transition-colors shrink-0" onClick={handleSend}><Send size={14} /></button>
+              </div>
+            </div>
+          </div>
+        </main>
+
+        {/* RightSidebar (Team Chat List) */}
+        <aside className="w-[280px] p-6 pr-8 flex flex-col gap-6 overflow-y-auto bg-white border-l border-gray-100">
+          <div className="flex justify-between items-center pt-2">
+            <h3 className="font-bold text-gray-800 text-sm flex items-center gap-2">
+              Team Chat
+            </h3>
+            <button className="text-gray-400 hover:text-gray-600 bg-gray-50 rounded-full w-6 h-6 flex items-center justify-center shadow-sm border border-gray-100">
+              <i className="fa-solid fa-plus text-[10px]"></i>
+            </button>
+          </div>
+          <div className="relative">
+            <Search size={14} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
+            <input className="w-full bg-[#fbfbfb] border border-gray-100 rounded-full py-2 pl-8 pr-4 text-xs font-medium focus:outline-none focus:ring-1 focus:ring-gray-200 shadow-sm placeholder-gray-400 text-gray-700" placeholder="Search team..." type="text"/>
+          </div>
+          <div className="space-y-2 mt-2">
+            {INITIAL_CONVERSATIONS.filter(c => !c.isAI).map(c => (
+              <Link key={c.id} href={`/team-chat/${c.id}`} className={`flex items-center gap-3 p-2 rounded-xl cursor-pointer transition-colors ${activeId === c.id ? 'bg-gray-100' : 'hover:bg-gray-50'}`}>
+                <AvatarCircle name={c.name} size={36} online={c.online} />
+                <div className="flex-1 min-w-0">
+                  <div className="flex justify-between items-baseline">
+                    <h4 className="text-xs font-bold text-gray-800 truncate">{c.name}</h4>
+                    <span className="text-[9px] text-gray-400">{c.time || '1h'}</span>
+                  </div>
+                  <p className="text-[10px] font-medium text-gray-500 truncate">{c.lastMessage || '...'}</p>
+                </div>
+              </Link>
+            ))}
+          </div>
+        </aside>
+      </div>
     </div>
   );
 }
