@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { useState, useRef, useEffect, useCallback, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import Image from "next/image";
-import { Send, Plus, Loader2, Square, Search, Phone, Video, MoreVertical, Smile, Paperclip, Check, CheckCheck, X, FileText, Film, Copy, Trash2, Pencil, Forward, MoreHorizontal, ArrowLeft } from "lucide-react";
+import { Send, Plus, Loader2, Square, Search, Phone, Video, MoreVertical, Smile, Paperclip, Check, CheckCheck, X, FileText, Film, Copy, Trash2, Pencil, Forward, MoreHorizontal, ArrowLeft, Compass, LayoutGrid, History, MessageCircle } from "lucide-react";
 import { useData } from "@/components/DataContext";
 import MarkdownMessage from "@/components/MarkdownMessage";
 import SarieAvatar from "@/public/sarie_generated.png";
@@ -744,54 +744,69 @@ body {
 {/*  BEGIN: LeftSidebar  */}
 <aside className="w-[200px] flex flex-col justify-between p-6 pl-8">
 <div className="space-y-4 pt-4 flex-1 flex flex-col h-full overflow-hidden">
-<button className="w-full bg-[#2b2b2b] text-white rounded-full py-2.5 px-4 flex items-center justify-center gap-2 text-sm font-medium hover:bg-black transition-colors shrink-0">
-<i className="fa-solid fa-plus text-xs"></i>
-          New Chat
-        </button>
-<nav className="space-y-1 mt-6 shrink-0">
-<Link className="flex items-center gap-3 px-4 py-2.5 text-gray-600 bg-white rounded-full transition-all shadow-sm" href="/dashboard">
-<i className="fa-solid fa-chart-pie text-[#a3a3a3]"></i>
-            Dashboard
-          </Link>
+<nav className="space-y-2.5 mt-2 shrink-0 flex flex-col items-start">
+  <button className="bg-[#2b2b2b] text-white rounded-[20px] py-2 px-5 flex items-center gap-2 text-[13px] font-medium hover:bg-black transition-colors shadow-sm">
+    <Plus size={14} className="text-gray-300" />
+    New Chat
+  </button>
+  <button className="bg-white/80 text-gray-700 rounded-[20px] py-2 px-5 flex items-center gap-2.5 text-[13px] font-medium hover:bg-white transition-colors shadow-sm">
+    <Search size={14} className="text-gray-500" />
+    Search
+  </button>
+  <button className="bg-white/80 text-gray-700 rounded-[20px] py-2 px-5 flex items-center gap-2.5 text-[13px] font-medium hover:bg-white transition-colors shadow-sm">
+    <Compass size={14} className="text-gray-500" />
+    Community
+  </button>
+  <Link href="/dashboard" className="bg-white/80 text-gray-700 rounded-[20px] py-2 px-5 flex items-center gap-2.5 text-[13px] font-medium hover:bg-white transition-colors shadow-sm">
+    <LayoutGrid size={14} className="text-gray-500" />
+    Dashboard
+  </Link>
+  <button className="bg-white/80 text-gray-700 rounded-[20px] py-2 px-5 flex items-center gap-2.5 text-[13px] font-medium hover:bg-white transition-colors shadow-sm">
+    <History size={14} className="text-gray-500" />
+    History
+  </button>
 </nav>
-{/*  History Log Moved to Left Sidebar  */}
+
+{/*  History Log  */}
 <div className="space-y-6 mt-8 flex-1 overflow-y-auto pr-2">
 {/*  Today  */}
 <div>
-<h4 className="text-xs font-semibold text-gray-800 mb-3 flex items-center gap-1">
-            Today <i className="fa-solid fa-chevron-down text-[10px] text-gray-400"></i>
+<h4 className="text-[13px] font-bold text-gray-800 mb-3 flex items-center gap-1.5">
+            Today <i className="fa-solid fa-chevron-down text-[10px] text-gray-500 font-normal"></i>
 </h4>
-<ul className="space-y-3 text-xs text-gray-500">
-<li className="flex items-center gap-2 truncate hover:text-gray-800 cursor-pointer">
-<i className="fa-regular fa-comment text-[10px]"></i> Generate an image of a lo..
+<ul className="space-y-3.5 text-[13px] text-gray-600">
+<li className="flex items-center gap-2.5 truncate hover:text-gray-900 cursor-pointer">
+<MessageCircle size={14} className="text-gray-500" /> Generate an image of a lo..
             </li>
-<li className="flex items-center gap-2 truncate hover:text-gray-800 cursor-pointer">
-<i className="fa-regular fa-comment text-[10px]"></i> What is the capital of Unit..
+<li className="flex items-center gap-2.5 truncate hover:text-gray-900 cursor-pointer">
+<MessageCircle size={14} className="text-gray-500" /> What is the capital of Unit..
             </li>
 </ul>
 </div>
+
 {/*  Friday, March 26, 2026  */}
 <div>
-<h4 className="text-xs font-semibold text-gray-800 mb-3 flex items-center gap-1">
-            Friday, March 26, 2026 <i className="fa-solid fa-chevron-down text-[10px] text-gray-400"></i>
+<h4 className="text-[13px] font-bold text-gray-800 mb-3 flex items-center gap-1.5 mt-2">
+            Friday, March 26, 2026 <i className="fa-solid fa-chevron-down text-[10px] text-gray-500 font-normal"></i>
 </h4>
-<ul className="space-y-3 text-xs text-gray-500">
-<li className="flex items-center gap-2 truncate hover:text-gray-800 cursor-pointer">
-<i className="fa-regular fa-comment text-[10px]"></i> Generate a pencil sketch...
+<ul className="space-y-3.5 text-[13px] text-gray-600">
+<li className="flex items-center gap-2.5 truncate hover:text-gray-900 cursor-pointer">
+<MessageCircle size={14} className="text-gray-500" /> Generate a pencil sketch...
             </li>
-<li className="flex items-center gap-2 truncate hover:text-gray-800 cursor-pointer">
-<i className="fa-regular fa-comment text-[10px]"></i> What's the best way to s..
+<li className="flex items-center gap-2.5 truncate hover:text-gray-900 cursor-pointer">
+<MessageCircle size={14} className="text-gray-500" /> What's the best way to s..
             </li>
 </ul>
 </div>
+
 {/*  Friday, March 20, 2026  */}
 <div>
-<h4 className="text-xs font-semibold text-gray-800 mb-3 flex items-center gap-1">
-            Friday, March 20, 2026 <i className="fa-solid fa-chevron-down text-[10px] text-gray-400"></i>
+<h4 className="text-[13px] font-bold text-gray-800 mb-3 flex items-center gap-1.5 mt-2">
+            Friday, March 20, 2026 <i className="fa-solid fa-chevron-down text-[10px] text-gray-500 font-normal"></i>
 </h4>
-<ul className="space-y-3 text-xs text-gray-500">
-<li className="flex items-center gap-2 truncate hover:text-gray-800 cursor-pointer">
-<i className="fa-regular fa-comment text-[10px]"></i> Compose an email to HR...
+<ul className="space-y-3.5 text-[13px] text-gray-600">
+<li className="flex items-center gap-2.5 truncate hover:text-gray-900 cursor-pointer">
+<MessageCircle size={14} className="text-gray-500" /> Compose an email to HR...
             </li>
 </ul>
 </div>
@@ -809,8 +824,8 @@ body {
 <main className="flex-1 bg-[#fbfbfb] my-4 rounded-[24px] shadow-sm flex flex-col relative overflow-hidden">
 {/*  Top Bar  */}
 <div className="absolute top-0 w-full flex justify-center py-4 bg-gradient-to-b from-[#fbfbfb] to-transparent z-10">
-<button className="text-xs text-gray-500 font-medium flex items-center gap-1 hover:text-gray-700">
-<span className="text-[#ef4444] font-bold text-sm tracking-wider mr-1">MAS</span> AI Studio Workspace <i className="fa-solid fa-chevron-down text-[10px] ml-1"></i>
+<button className="text-xs text-gray-800 font-semibold flex items-center gap-1 hover:text-black">
+<span className="font-bold text-sm tracking-wider mr-1">Sarie 2.1</span> <i className="fa-solid fa-chevron-down text-[10px] ml-1 text-gray-500"></i>
 </button>
 </div>
 <div className="flex-1 overflow-y-auto px-10 pt-16 pb-32 flex flex-col gap-8">
