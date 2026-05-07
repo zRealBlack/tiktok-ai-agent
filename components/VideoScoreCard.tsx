@@ -93,7 +93,7 @@ export default function VideoScoreCard({ video, compact = false }: { video: Vide
   return (
     <div
       className="glass-panel rounded-2xl overflow-hidden transition-all duration-200 hover:-translate-y-0.5 cursor-pointer group"
-      onClick={() => router.push(`/audit/${video.id}`)}
+      onClick={() => router.push(`/dashboard/audit/${video.id}`)}
     >
       {/* Cover thumbnail */}
       {showCover ? (
