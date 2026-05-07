@@ -293,13 +293,10 @@ export default function TeamChatPage({ params }: { params: { id: string } }) {
   };
 
   return (
-    <div className="min-h-screen w-full bg-[#e4dfd8] flex items-center justify-center p-8" style={{
-      backgroundImage: "url(https://lh3.googleusercontent.com/aida/ADBb0uhCilLHmLfDhPMwiCs2nL08qwA6V4xXkJYQ4KtwbpzOH62ThNmDWsEtxzYscnGYjlnkSs9KqANozl3XsH_1co8MEq1TXxitKN8M_ZLcIfMUc-DYny0LMDOLM5Tt0mMigyTZCfAzzVB91vXKYlO7L7hsdofrt6vkvAAaiwsKoPmx8H-JHJyiR5sM-gNy-r6UYF4_Z61SW9RSycIBI7sRuqVXMtbvBMHknTg4V6fzeOS9J6BZeTdDTHgVCjdnfkDJv5uefwuLfcCg)",
-      backgroundSize: "cover",
-      backgroundPosition: "center",
+    <div className="h-screen w-full bg-[#fbfbfb] flex items-center justify-center" style={{
       fontFamily: "'Inter', sans-serif"
     }}>
-      <div className="bg-white w-full max-w-[1400px] h-[85vh] rounded-[32px] shadow-2xl flex overflow-hidden relative">
+      <div className="w-full h-full bg-[#fbfbfb] flex relative text-[#2b2b2b] text-[14px]">
         {/* LeftSidebar (User Info) */}
         <aside className="w-[240px] flex flex-col justify-between p-6 pl-8 border-r border-gray-100 bg-[#fbfbfb]">
           <div className="space-y-4 pt-4 flex-1 flex flex-col h-full overflow-hidden">

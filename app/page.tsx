@@ -735,15 +735,12 @@ body {
 .status-away { background-color: #eab308; }
 .status-busy { background-color: #ef4444; }
 `}} />
-      <div className="flex items-center justify-center min-h-screen w-full" style={{
-         backgroundImage: "url(https://lh3.googleusercontent.com/aida/ADBb0uhCilLHmLfDhPMwiCs2nL08qwA6V4xXkJYQ4KtwbpzOH62ThNmDWsEtxzYscnGYjlnkSs9KqANozl3XsH_1co8MEq1TXxitKN8M_ZLcIfMUc-DYny0LMDOLM5Tt0mMigyTZCfAzzVB91vXKYlO7L7hsdofrt6vkvAAaiwsKoPmx8H-JHJyiR5sM-gNy-r6UYF4_Z61SW9RSycIBI7sRuqVXMtbvBMHknTg4V6fzeOS9J6BZeTdDTHgVCjdnfkDJv5uefwuLfcCg)",
-         backgroundSize: "cover",
-         backgroundPosition: "center",
+      <div className="flex items-center justify-center h-screen w-full bg-[#fbfbfb]" style={{
          fontFamily: "'Inter', sans-serif"
       }}>
         
 {/*  BEGIN: MainContainer  */}
-<div className="bg-[#f2f2f2] w-full max-w-[1400px] h-[85vh] rounded-[32px] shadow-2xl flex overflow-hidden relative backdrop-blur-sm bg-opacity-95 text-[#2b2b2b] text-[14px]">
+<div className="bg-[#f2f2f2] w-full h-full flex overflow-hidden relative text-[#2b2b2b] text-[14px]">
 {/*  BEGIN: LeftSidebar  */}
 <aside className="w-[200px] flex flex-col justify-between p-6 pl-8">
 <div className="space-y-4 pt-4 flex-1 flex flex-col h-full overflow-hidden">
