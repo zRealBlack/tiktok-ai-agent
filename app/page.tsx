@@ -962,12 +962,9 @@ body {
 </div>
 </aside>
 {/*  END: RightSidebar  */}
-{/*  Assistant Avatar Floating Widget  */}
-<div className="absolute bottom-8 right-8 flex items-end gap-3 z-20">
-<div className="bg-black text-white text-xs px-4 py-2 rounded-2xl rounded-br-sm shadow-lg mb-4">
-        Hi, How can i help<br />you today?
-      </div>
-<img alt="Robot Assistant" className="w-16 h-16 object-cover rounded-full drop-shadow-xl border-2 border-white bg-white" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBC8o0Dh-48odiXykGf9dXZ3HQkqIfgf9DTRu5eek1doIbEYtT3mV9F81Cy0qYDCLwiee969EF8rp7BbSKDfanY00VuM7fdfaI5ep1w21ALHKbPuxkPnI6gSjMFcyH-A_4CAA37vlxHFk2pGPo5LeOezJJbSGhBXzZ8pz6cZQkiCn-j75BUoOxkfoudEM5roWGn3ZNugRg5ryjuqujKC1VbF1_LKy_SrkhUusodJAw_WiJctH9uPZBHfrOrf070sDEU62d6PK_FUA"/>
+{/*  Logo Floating Widget  */}
+<div className="absolute bottom-8 right-8 flex items-end z-20">
+  <img alt="Masaa Logo" className="w-20 object-contain drop-shadow-xl" src="/masaa.png" />
 </div>
 </div>
 {/*  END: MainContainer  */}
