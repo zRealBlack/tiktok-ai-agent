@@ -2,52 +2,63 @@
 
 import { useState, useEffect } from 'react';
 import Image from 'next/image';
-import { usePathname } from 'next/navigation';
-import { Lock, ShieldCheck, Cpu, Users, ArrowRight, AlertCircle, Mail, Key } from 'lucide-react';
+import { usePathname, useRouter } from 'next/navigation';
+import { Lock, ShieldCheck, Cpu, Users, ArrowRight, AlertCircle, Mail } from 'lucide-react';
 import { authenticateUser } from '@/lib/auth';
 
 const SESSION_KEY = 'mas_ai_authenticated_user';
 
+let globalAdminVerified = false;
+
 export default function PasswordGuard({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
-  const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
+  const router = useRouter();
+  
+  const [isTeamAuthenticated, setIsTeamAuthenticated] = useState<boolean | null>(null);
+  const [isAdminAuthenticated, setIsAdminAuthenticated] = useState<boolean>(globalAdminVerified);
+  
+  const [loginMode, setLoginMode] = useState<'team' | 'admin'>('team');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [adminPin, setAdminPin] = useState('');
   const [error, setError] = useState(false);
   const [isMounting, setIsMounting] = useState(true);
 
   useEffect(() => {
-    if (pathname && pathname.startsWith('/developer')) {
-      setIsAuthenticated(true);
-      setIsMounting(false);
-      return;
+    setIsAdminAuthenticated(globalAdminVerified);
+    if (pathname?.startsWith('/developer')) {
+      setLoginMode('admin');
+    } else {
+      setLoginMode('team');
     }
+  }, [pathname]);
 
+  useEffect(() => {
     const authUserStr = localStorage.getItem(SESSION_KEY);
     if (authUserStr) {
       try {
         const user = JSON.parse(authUserStr);
         if (user && user.id) {
-          setIsAuthenticated(true);
+          setIsTeamAuthenticated(true);
         } else {
-          setIsAuthenticated(false);
+          setIsTeamAuthenticated(false);
         }
       } catch {
-        setIsAuthenticated(false);
+        setIsTeamAuthenticated(false);
       }
     } else {
-      setIsAuthenticated(false);
+      setIsTeamAuthenticated(false);
     }
     setIsMounting(false);
-  }, [pathname]);
+  }, []);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleTeamSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     const user = authenticateUser(email, password);
     if (user) {
       localStorage.setItem(SESSION_KEY, JSON.stringify(user));
       window.dispatchEvent(new Event("mas_user_login"));
-      setIsAuthenticated(true);
+      setIsTeamAuthenticated(true);
       setError(false);
     } else {
       setError(true);
@@ -55,11 +66,34 @@ export default function PasswordGuard({ children }: { children: React.ReactNode 
     }
   };
 
-  if (isMounting || isAuthenticated === null) {
+  const handleAdminPinChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const val = e.target.value.replace(/\D/g, '').slice(0, 6);
+    setAdminPin(val);
+    if (error) setError(false);
+
+    if (val.length === 6) {
+      if (val === '272008') {
+        globalAdminVerified = true;
+        setIsAdminAuthenticated(true);
+        router.push('/developer');
+      } else {
+        setError(true);
+        setTimeout(() => setAdminPin(''), 600);
+      }
+    }
+  };
+
+  if (isMounting || isTeamAuthenticated === null) {
     return <div className="fixed inset-0 bg-[#0a0a0c] flex items-center justify-center" />;
   }
 
-  if (isAuthenticated) {
+  const isDeveloperRoute = pathname?.startsWith('/developer');
+
+  if (isDeveloperRoute && isAdminAuthenticated) {
+    return <>{children}</>;
+  }
+
+  if (!isDeveloperRoute && isTeamAuthenticated) {
     return <>{children}</>;
   }
 
@@ -67,7 +101,6 @@ export default function PasswordGuard({ children }: { children: React.ReactNode 
     <div className="fixed inset-0 z-[9999] bg-[#f2f2f2] flex items-center justify-center p-4 font-sans">
       <div className="max-w-[850px] w-full bg-white rounded-[32px] shadow-[0_8px_30px_rgb(0,0,0,0.04)] overflow-hidden flex flex-col md:flex-row border border-gray-100 animate-in fade-in zoom-in-95 duration-700">
         
-        {/* Left Side: Branding */}
         <div className="md:w-[380px] bg-gray-50/50 p-10 flex flex-col justify-between border-r border-gray-100 hidden md:flex">
           <div>
             <img src="/masmas.png" alt="Mas AI Studio" className="h-9 object-contain mb-8 opacity-90 drop-shadow-sm" />
@@ -99,9 +132,7 @@ export default function PasswordGuard({ children }: { children: React.ReactNode 
           </div>
         </div>
 
-        {/* Right Side: Form */}
         <div className="flex-1 p-10 md:p-14 flex flex-col justify-center relative">
-          
           <div className="absolute top-6 right-8">
             <div className="flex items-center gap-2 py-1.5 px-3 rounded-full bg-emerald-50 border border-emerald-100">
               <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
@@ -111,16 +142,17 @@ export default function PasswordGuard({ children }: { children: React.ReactNode 
 
           <div className="mb-10">
             <h1 className="text-[24px] font-bold text-gray-800 tracking-tight mb-2">
-              {loginMode === 'team' ? 'Team Login' : 'Admin Login'}
+              {loginMode === 'team' ? 'Team Login' : 'Developer Login'}
             </h1>
             <p className="text-[13px] text-gray-500">
               {loginMode === 'team' 
                 ? 'Enter your email and password to access your workspace.' 
-                : 'Enter your 4-digit Master PIN.'}
+                : 'Enter your 6-digit Master PIN.'}
             </p>
           </div>
 
-          <form onSubmit={handleSubmit} className="space-y-6 w-full">
+          <form onSubmit={loginMode === 'team' ? handleTeamSubmit : (e) => e.preventDefault()} className="space-y-6 w-full">
+            {loginMode === 'team' ? (
               <>
                 <div className="space-y-2">
                   <label className="text-[11px] font-bold text-gray-400 uppercase tracking-widest ml-1">Email Address</label>
@@ -163,14 +195,59 @@ export default function PasswordGuard({ children }: { children: React.ReactNode 
                   </div>
                 </div>
               </>
+            ) : (
+              <div className="space-y-6 flex flex-col items-center justify-center mt-2 pb-4">
+                <div className="relative w-full max-w-[340px] mx-auto mt-4">
+                  <input
+                    type="tel"
+                    value={adminPin}
+                    onChange={handleAdminPinChange}
+                    className="absolute inset-0 opacity-0 cursor-pointer w-full h-full z-10"
+                    autoFocus
+                  />
+                  <div className={`flex justify-between w-full gap-2 ${error ? 'animate-pulse' : ''}`}>
+                    {[...Array(6)].map((_, i) => {
+                      const isFilled = i < adminPin.length;
+                      return (
+                        <div key={i} className={`w-[46px] h-[46px] rounded-full flex items-center justify-center transition-all duration-300 ${isFilled ? 'bg-gray-50 border-2 border-gray-800' : 'bg-gray-50/30 border border-gray-200'}`}>
+                          <div className={`rounded-full transition-all duration-300 ${isFilled ? 'w-2.5 h-2.5 bg-gray-800' : 'w-1.5 h-1.5 bg-gray-400'}`} />
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+                {error && (
+                  <div className="flex items-center gap-1.5 text-[#ef4444] animate-in fade-in bg-red-50 px-3 py-1.5 rounded-full mt-2">
+                    <AlertCircle size={14} />
+                    <span className="text-[10px] font-bold uppercase tracking-widest">Incorrect PIN</span>
+                  </div>
+                )}
+              </div>
+            )}
             
-            <button
-              type="submit"
-              className="w-full h-14 bg-black text-white rounded-[24px] text-[14px] font-bold flex items-center justify-center gap-2 transition-all hover:bg-gray-800 active:scale-[0.98] mt-6 shadow-md"
-            >
-              Authenticate
-              <ArrowRight size={16} />
-            </button>
+            {loginMode === 'team' && (
+              <button
+                type="submit"
+                className="w-full h-14 bg-black text-white rounded-[24px] text-[14px] font-bold flex items-center justify-center gap-2 transition-all hover:bg-gray-800 active:scale-[0.98] mt-6 shadow-md"
+              >
+                Authenticate
+                <ArrowRight size={16} />
+              </button>
+            )}
+
+            <div className="flex justify-center mt-6">
+              <button
+                type="button"
+                onClick={() => {
+                  setLoginMode(loginMode === 'team' ? 'admin' : 'team');
+                  setError(false);
+                  setAdminPin('');
+                }}
+                className="text-[12px] font-semibold text-gray-400 hover:text-gray-800 transition-colors"
+              >
+                {loginMode === 'team' ? 'Login in to admin panel' : 'Back to Team Login'}
+              </button>
+            </div>
           </form>
         </div>
       </div>

@@ -1,97 +1,30 @@
 'use client';
 
 import { useEffect, useState } from "react";
-import { useData } from "@/components/DataContext";
-import { useRouter } from "next/navigation";
 import { TEAM_MEMBERS } from "@/lib/auth";
 import { ShieldAlert, Terminal, Database, Server, Cpu, Trash2, KeyRound, Activity, AlertTriangle, Coins } from "lucide-react";
 import NeuralGraph from "@/components/NeuralGraph";
 
 export default function DeveloperAdminPage() {
-  const { currentUser } = useData();
-  const router = useRouter();
   const [mounted, setMounted] = useState(false);
   const [usageData, setUsageData] = useState<Record<string, number>>({});
-  const [isAdminAuthenticated, setIsAdminAuthenticated] = useState(false);
-  const [adminPin, setAdminPin] = useState('');
-  const [error, setError] = useState(false);
 
   useEffect(() => {
     setMounted(true);
     
-    // Fetch usage data when authenticated
-    if (isAdminAuthenticated) {
-      fetch('/api/admin/usage')
-        .then(res => res.json())
-        .then(data => {
-          if (data.usage) {
-            setUsageData(data.usage);
-          }
-        })
-        .catch(console.error);
-    }
-  }, [isAdminAuthenticated]);
+    // Fetch usage data
+    fetch('/api/admin/usage')
+      .then(res => res.json())
+      .then(data => {
+        if (data.usage) {
+          setUsageData(data.usage);
+        }
+      })
+      .catch(console.error);
+  }, []);
 
   if (!mounted) {
     return <div className="fixed inset-0 bg-[#0a0a0c] flex items-center justify-center" />;
-  }
-
-  if (!isAdminAuthenticated) {
-    return (
-      <div className="fixed inset-0 z-[9999] bg-[#f2f2f2] flex items-center justify-center p-4 font-sans">
-        <div className="max-w-[400px] w-full bg-white rounded-[32px] shadow-[0_8px_30px_rgb(0,0,0,0.04)] overflow-hidden border border-gray-100 animate-in fade-in zoom-in-95 duration-700 p-10 flex flex-col items-center">
-          <img src="/masmas.png" alt="Mas AI Studio" className="h-8 object-contain mb-8 opacity-90 drop-shadow-sm" />
-          
-          <div className="mb-6 text-center">
-            <h1 className="text-[20px] font-bold text-gray-800 tracking-tight mb-1">Developer Login</h1>
-            <p className="text-[12px] text-gray-500">
-              Enter the 6-digit Master PIN.
-            </p>
-          </div>
-
-          <div className="space-y-6 flex flex-col items-center justify-center w-full">
-            <div className="relative w-full max-w-[300px] mx-auto">
-              <input
-                type="tel"
-                value={adminPin}
-                onChange={(e) => {
-                  const val = e.target.value.replace(/\D/g, '').slice(0, 6);
-                  setAdminPin(val);
-                  if (error) setError(false);
-
-                  if (val.length === 6) {
-                    if (val === '272008') {
-                      setIsAdminAuthenticated(true);
-                    } else {
-                      setError(true);
-                      setTimeout(() => setAdminPin(''), 600);
-                    }
-                  }
-                }}
-                className="absolute inset-0 opacity-0 cursor-pointer w-full h-full z-10"
-                autoFocus
-              />
-              <div className={`flex justify-between w-full gap-2 ${error ? 'animate-pulse' : ''}`}>
-                {[...Array(6)].map((_, i) => {
-                  const isFilled = i < adminPin.length;
-                  return (
-                    <div key={i} className={`w-[40px] h-[40px] rounded-full flex items-center justify-center transition-all duration-300 ${isFilled ? 'bg-gray-50 border-2 border-gray-800' : 'bg-gray-50/30 border border-gray-200'}`}>
-                      <div className={`rounded-full transition-all duration-300 ${isFilled ? 'w-2.5 h-2.5 bg-gray-800' : 'w-1 h-1 bg-gray-400'}`} />
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-            {error && (
-              <div className="flex items-center gap-1.5 text-[#ef4444] animate-in fade-in bg-red-50 px-3 py-1.5 rounded-full mt-2">
-                <AlertTriangle size={14} />
-                <span className="text-[10px] font-bold uppercase tracking-widest">Incorrect PIN</span>
-              </div>
-            )}
-          </div>
-        </div>
-      </div>
-    );
   }
 
   const cardStyle: React.CSSProperties = {
@@ -283,7 +216,6 @@ export default function DeveloperAdminPage() {
             </div>
           </div>
         </div>
-        
         
         {/* Sarie Core Intelligence Neural Graph */}
         <NeuralGraph />
