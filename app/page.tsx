@@ -749,22 +749,10 @@ body {
     <Plus size={14} className="text-gray-300" />
     New Chat
   </button>
-  <button className="bg-white/80 text-gray-700 rounded-[20px] py-2 px-5 flex items-center gap-2.5 text-[13px] font-medium hover:bg-white transition-colors shadow-sm">
-    <Search size={14} className="text-gray-500" />
-    Search
-  </button>
-  <button className="bg-white/80 text-gray-700 rounded-[20px] py-2 px-5 flex items-center gap-2.5 text-[13px] font-medium hover:bg-white transition-colors shadow-sm">
-    <Compass size={14} className="text-gray-500" />
-    Community
-  </button>
   <Link href="/dashboard" className="bg-white/80 text-gray-700 rounded-[20px] py-2 px-5 flex items-center gap-2.5 text-[13px] font-medium hover:bg-white transition-colors shadow-sm">
     <LayoutGrid size={14} className="text-gray-500" />
     Dashboard
   </Link>
-  <button className="bg-white/80 text-gray-700 rounded-[20px] py-2 px-5 flex items-center gap-2.5 text-[13px] font-medium hover:bg-white transition-colors shadow-sm">
-    <History size={14} className="text-gray-500" />
-    History
-  </button>
 </nav>
 
 {/*  History Log  */}
