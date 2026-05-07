@@ -74,8 +74,8 @@ export function authenticateUser(email: string, password: string): Omit<TeamMemb
 }
 
 export function authenticateAdmin(pin: string): Omit<TeamMember, 'password'> | null {
-  // Admin is Yassin, his pin is 4289 (derived from Yassin@4289)
-  if (pin === "4289") {
+  // Admin is Yassin, his pin is 272008
+  if (pin === "272008") {
     const admin = TEAM_MEMBERS.find(u => u.id === "yassin");
     if (admin) {
       const { password: _, ...userWithoutPassword } = admin;

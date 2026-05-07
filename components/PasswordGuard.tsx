@@ -167,39 +167,61 @@ export default function PasswordGuard({ children }: { children: React.ReactNode 
                 </div>
               </>
             ) : (
-              <div className="space-y-2">
-                <label className="text-[11px] font-bold text-gray-400 uppercase tracking-widest ml-1">Master PIN</label>
-                <div className="relative group">
-                  <div className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400">
-                    <Key size={18} />
-                  </div>
+              <div className="space-y-6 flex flex-col items-center justify-center mt-2 pb-4">
+                <div className="relative w-full max-w-[340px] mx-auto mt-4">
                   <input
-                    type="password"
+                    type="tel"
                     value={adminPin}
-                    onChange={(e) => { setAdminPin(e.target.value); if (error) setError(false); }}
-                    placeholder="••••"
-                    maxLength={4}
-                    className={`w-full h-14 bg-[#fbfbfb] rounded-[24px] pl-12 pr-4 text-[16px] tracking-[0.5em] font-black text-gray-800 border transition-all outline-none placeholder:text-gray-400 placeholder:tracking-normal placeholder:font-normal focus:bg-white focus:ring-2 focus:ring-gray-100 ${error ? 'border-red-500/50 text-red-500' : 'border-gray-100'}`}
+                    onChange={(e) => {
+                      const val = e.target.value.replace(/\D/g, '').slice(0, 6);
+                      setAdminPin(val);
+                      if (error) setError(false);
+
+                      if (val.length === 6) {
+                        const user = authenticateAdmin(val);
+                        if (user) {
+                          localStorage.setItem(SESSION_KEY, JSON.stringify(user));
+                          window.dispatchEvent(new Event("mas_user_login"));
+                          setIsAuthenticated(true);
+                          window.location.href = '/developer';
+                        } else {
+                          setError(true);
+                          setTimeout(() => setAdminPin(''), 600);
+                        }
+                      }
+                    }}
+                    className="absolute inset-0 opacity-0 cursor-pointer w-full h-full z-10"
                     autoFocus
-                    required
                   />
-                  {error && (
-                    <div className="absolute right-4 top-1/2 -translate-y-1/2 flex items-center gap-1.5 text-[#ef4444] animate-in fade-in slide-in-from-right-1 bg-red-50 px-2 py-1 rounded-full">
-                      <AlertCircle size={14} />
-                      <span className="text-[10px] font-bold uppercase tracking-widest">Incorrect</span>
-                    </div>
-                  )}
+                  <div className={`flex justify-between w-full gap-2 ${error ? 'animate-pulse' : ''}`}>
+                    {[...Array(6)].map((_, i) => {
+                      const isFilled = i < adminPin.length;
+                      return (
+                        <div key={i} className={`w-[46px] h-[46px] rounded-full flex items-center justify-center transition-all duration-300 ${isFilled ? 'bg-gray-50 border-2 border-gray-800' : 'bg-gray-50/30 border border-gray-200'}`}>
+                          <div className={`rounded-full transition-all duration-300 ${isFilled ? 'w-2.5 h-2.5 bg-gray-800' : 'w-1.5 h-1.5 bg-gray-400'}`} />
+                        </div>
+                      );
+                    })}
+                  </div>
                 </div>
+                {error && (
+                  <div className="flex items-center gap-1.5 text-[#ef4444] animate-in fade-in bg-red-50 px-3 py-1.5 rounded-full mt-2">
+                    <AlertCircle size={14} />
+                    <span className="text-[10px] font-bold uppercase tracking-widest">Incorrect PIN</span>
+                  </div>
+                )}
               </div>
             )}
             
-            <button
-              type="submit"
-              className="w-full h-14 bg-black text-white rounded-[24px] text-[14px] font-bold flex items-center justify-center gap-2 transition-all hover:bg-gray-800 active:scale-[0.98] mt-6 shadow-md"
-            >
-              Authenticate
-              <ArrowRight size={16} />
-            </button>
+            {loginMode === 'team' && (
+              <button
+                type="submit"
+                className="w-full h-14 bg-black text-white rounded-[24px] text-[14px] font-bold flex items-center justify-center gap-2 transition-all hover:bg-gray-800 active:scale-[0.98] mt-6 shadow-md"
+              >
+                Authenticate
+                <ArrowRight size={16} />
+              </button>
+            )}
             
             <div className="flex justify-center mt-6">
               <button
