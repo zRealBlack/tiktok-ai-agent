@@ -2,21 +2,27 @@
 
 import { useState, useEffect } from 'react';
 import Image from 'next/image';
+import { usePathname } from 'next/navigation';
 import { Lock, ShieldCheck, Cpu, Users, ArrowRight, AlertCircle, Mail, Key } from 'lucide-react';
-import { authenticateUser, authenticateAdmin } from '@/lib/auth';
+import { authenticateUser } from '@/lib/auth';
 
 const SESSION_KEY = 'mas_ai_authenticated_user';
 
 export default function PasswordGuard({ children }: { children: React.ReactNode }) {
+  const pathname = usePathname();
   const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
-  const [loginMode, setLoginMode] = useState<'team' | 'admin'>('team');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [adminPin, setAdminPin] = useState('');
   const [error, setError] = useState(false);
   const [isMounting, setIsMounting] = useState(true);
 
   useEffect(() => {
+    if (pathname && pathname.startsWith('/developer')) {
+      setIsAuthenticated(true);
+      setIsMounting(false);
+      return;
+    }
+
     const authUserStr = localStorage.getItem(SESSION_KEY);
     if (authUserStr) {
       try {
@@ -33,18 +39,11 @@ export default function PasswordGuard({ children }: { children: React.ReactNode 
       setIsAuthenticated(false);
     }
     setIsMounting(false);
-  }, []);
+  }, [pathname]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    let user = null;
-
-    if (loginMode === 'team') {
-      user = authenticateUser(email, password);
-    } else {
-      user = authenticateAdmin(adminPin);
-    }
-
+    const user = authenticateUser(email, password);
     if (user) {
       localStorage.setItem(SESSION_KEY, JSON.stringify(user));
       window.dispatchEvent(new Event("mas_user_login"));
@@ -53,7 +52,6 @@ export default function PasswordGuard({ children }: { children: React.ReactNode 
     } else {
       setError(true);
       setPassword('');
-      setAdminPin('');
     }
   };
 
@@ -123,7 +121,6 @@ export default function PasswordGuard({ children }: { children: React.ReactNode 
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-6 w-full">
-            {loginMode === 'team' ? (
               <>
                 <div className="space-y-2">
                   <label className="text-[11px] font-bold text-gray-400 uppercase tracking-widest ml-1">Email Address</label>
@@ -166,75 +163,14 @@ export default function PasswordGuard({ children }: { children: React.ReactNode 
                   </div>
                 </div>
               </>
-            ) : (
-              <div className="space-y-6 flex flex-col items-center justify-center mt-2 pb-4">
-                <div className="relative w-full max-w-[340px] mx-auto mt-4">
-                  <input
-                    type="tel"
-                    value={adminPin}
-                    onChange={(e) => {
-                      const val = e.target.value.replace(/\D/g, '').slice(0, 6);
-                      setAdminPin(val);
-                      if (error) setError(false);
-
-                      if (val.length === 6) {
-                        const user = authenticateAdmin(val);
-                        if (user) {
-                          localStorage.setItem(SESSION_KEY, JSON.stringify(user));
-                          window.dispatchEvent(new Event("mas_user_login"));
-                          setIsAuthenticated(true);
-                          window.location.href = '/developer';
-                        } else {
-                          setError(true);
-                          setTimeout(() => setAdminPin(''), 600);
-                        }
-                      }
-                    }}
-                    className="absolute inset-0 opacity-0 cursor-pointer w-full h-full z-10"
-                    autoFocus
-                  />
-                  <div className={`flex justify-between w-full gap-2 ${error ? 'animate-pulse' : ''}`}>
-                    {[...Array(6)].map((_, i) => {
-                      const isFilled = i < adminPin.length;
-                      return (
-                        <div key={i} className={`w-[46px] h-[46px] rounded-full flex items-center justify-center transition-all duration-300 ${isFilled ? 'bg-gray-50 border-2 border-gray-800' : 'bg-gray-50/30 border border-gray-200'}`}>
-                          <div className={`rounded-full transition-all duration-300 ${isFilled ? 'w-2.5 h-2.5 bg-gray-800' : 'w-1.5 h-1.5 bg-gray-400'}`} />
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-                {error && (
-                  <div className="flex items-center gap-1.5 text-[#ef4444] animate-in fade-in bg-red-50 px-3 py-1.5 rounded-full mt-2">
-                    <AlertCircle size={14} />
-                    <span className="text-[10px] font-bold uppercase tracking-widest">Incorrect PIN</span>
-                  </div>
-                )}
-              </div>
-            )}
             
-            {loginMode === 'team' && (
-              <button
-                type="submit"
-                className="w-full h-14 bg-black text-white rounded-[24px] text-[14px] font-bold flex items-center justify-center gap-2 transition-all hover:bg-gray-800 active:scale-[0.98] mt-6 shadow-md"
-              >
-                Authenticate
-                <ArrowRight size={16} />
-              </button>
-            )}
-            
-            <div className="flex justify-center mt-6">
-              <button
-                type="button"
-                onClick={() => {
-                  setLoginMode(loginMode === 'team' ? 'admin' : 'team');
-                  setError(false);
-                }}
-                className="text-[12px] font-semibold text-gray-400 hover:text-gray-800 transition-colors"
-              >
-                {loginMode === 'team' ? 'Login in to admin panel' : 'Back to Team Login'}
-              </button>
-            </div>
+            <button
+              type="submit"
+              className="w-full h-14 bg-black text-white rounded-[24px] text-[14px] font-bold flex items-center justify-center gap-2 transition-all hover:bg-gray-800 active:scale-[0.98] mt-6 shadow-md"
+            >
+              Authenticate
+              <ArrowRight size={16} />
+            </button>
           </form>
         </div>
       </div>
