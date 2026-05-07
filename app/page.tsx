@@ -320,6 +320,7 @@ function ChatPageInner() {
   const [selectedForwards, setSelectedForwards] = useState<string[]>([]);
   const [contextMenu, setContextMenu] = useState<{ msgIdx: number } | null>(null);
   const [showChatOnMobile, setShowChatOnMobile] = useState(false);
+  const [showUserMenu, setShowUserMenu] = useState(false);
   const [readReceipts, setReadReceipts] = useState<Record<string, number>>({});
   const bottomRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -800,17 +801,36 @@ body {
 </div>
 </div>
 </div>
-<div className="pb-4 shrink-0 mt-4 border-t border-gray-100 pt-4">
-  <div className="flex items-center gap-3 w-full p-2 hover:bg-white rounded-xl cursor-pointer transition-colors">
-    <AvatarCircle name={currentUser?.name || "User"} size={36} online={true} />
+<div className="pb-4 shrink-0 mt-4 border-t border-gray-100 pt-4 relative">
+  <div 
+    onClick={() => setShowUserMenu(!showUserMenu)}
+    className="flex items-center gap-2 w-full p-2 hover:bg-white rounded-xl cursor-pointer transition-colors"
+  >
+    <AvatarCircle name={currentUser?.name || "User"} size={28} online={true} />
     <div className="flex-1 min-w-0">
-      <h4 className="text-sm font-bold text-gray-800 truncate">{currentUser?.name || "User"}</h4>
-      <p className="text-[10px] text-gray-500 truncate">{currentUser?.role || "Team Member"}</p>
+      <h4 className="text-[11px] font-bold text-gray-800 truncate leading-tight">{currentUser?.name || "User"}</h4>
+      <p className="text-[9px] text-gray-500 truncate">{currentUser?.role || "Team Member"}</p>
     </div>
     <button className="text-gray-400 hover:text-gray-600 transition-colors">
-      <i className="fa-solid fa-gear"></i>
+      <i className="fa-solid fa-gear text-[10px]"></i>
     </button>
   </div>
+  
+  {showUserMenu && (
+    <>
+      <div className="fixed inset-0 z-40" onClick={() => setShowUserMenu(false)}></div>
+      <div className="absolute bottom-full left-0 mb-2 w-full bg-white border border-gray-100 rounded-xl shadow-lg z-50 overflow-hidden py-1">
+        <button onClick={() => setShowUserMenu(false)} className="w-full text-left px-4 py-2.5 text-xs flex items-center gap-2 hover:bg-gray-50 transition-colors text-gray-700 font-medium">
+          <i className="fa-solid fa-gear w-4 text-center"></i>
+          Settings
+        </button>
+        <button onClick={() => { window.location.href = '/'; }} className="w-full text-left px-4 py-2.5 text-xs flex items-center gap-2 hover:bg-red-50 hover:text-red-600 transition-colors text-red-500 font-medium">
+          <i className="fa-solid fa-sign-out-alt w-4 text-center"></i>
+          Sign Out
+        </button>
+      </div>
+    </>
+  )}
 </div>
 </aside>
 {/*  END: LeftSidebar  */}
