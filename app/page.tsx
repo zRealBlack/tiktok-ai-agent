@@ -800,11 +800,17 @@ body {
 </div>
 </div>
 </div>
-<div className="pb-4 shrink-0 mt-4">
-<button className="w-full bg-[#ef4444] text-white rounded-full py-2 px-4 flex items-center justify-center gap-2 text-xs font-medium hover:bg-[#dc2626] transition-colors shadow-sm">
-<i className="fa-solid fa-user-shield"></i>
-          Team Login
-        </button>
+<div className="pb-4 shrink-0 mt-4 border-t border-gray-100 pt-4">
+  <div className="flex items-center gap-3 w-full p-2 hover:bg-white rounded-xl cursor-pointer transition-colors">
+    <AvatarCircle name={currentUser?.name || "User"} size={36} online={true} />
+    <div className="flex-1 min-w-0">
+      <h4 className="text-sm font-bold text-gray-800 truncate">{currentUser?.name || "User"}</h4>
+      <p className="text-[10px] text-gray-500 truncate">{currentUser?.role || "Team Member"}</p>
+    </div>
+    <button className="text-gray-400 hover:text-gray-600 transition-colors">
+      <i className="fa-solid fa-gear"></i>
+    </button>
+  </div>
 </div>
 </aside>
 {/*  END: LeftSidebar  */}
