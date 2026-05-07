@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { useState, useRef, useEffect, useCallback, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import Image from "next/image";
-import { Send, Loader2, Square, Search, Phone, Video, MoreVertical, Smile, Paperclip, Check, CheckCheck, X, FileText, Film, Copy, Trash2, Pencil, Forward, MoreHorizontal, ArrowLeft } from "lucide-react";
+import { Send, Plus, Loader2, Square, Search, Phone, Video, MoreVertical, Smile, Paperclip, Check, CheckCheck, X, FileText, Film, Copy, Trash2, Pencil, Forward, MoreHorizontal, ArrowLeft } from "lucide-react";
 import { useData } from "@/components/DataContext";
 import MarkdownMessage from "@/components/MarkdownMessage";
 import SarieAvatar from "@/public/sarie_generated.png";
@@ -818,7 +818,7 @@ body {
   const isUser = m.role === "user";
   return (
     <div key={i} className={`flex flex-col gap-1 ${isUser ? "items-end" : "items-start"}`}>
-      <div className={`px-5 py-3 shadow-sm max-w-xl ${isUser ? "bg-[#333333] text-white rounded-t-2xl rounded-bl-2xl rounded-br-md" : "bg-white border border-gray-100 rounded-t-2xl rounded-br-2xl rounded-bl-md text-gray-800"}`} dir={!isUser ? "rtl" : "ltr"}>
+      <div className={`px-6 py-3.5 max-w-xl ${isUser ? "bg-[#2b2b2b] text-white rounded-[28px] rounded-br-none shadow-sm" : "bg-white rounded-[28px] rounded-bl-none shadow-[0_2px_10px_-4px_rgba(0,0,0,0.05)] text-gray-800"}`} dir={!isUser ? "rtl" : "ltr"}>
         {m.attachment && m.attachment.type === "image" && (
           <img src={m.attachment.url} alt={m.attachment.name} className="w-full max-w-[240px] rounded-xl block mb-2" />
         )}
@@ -856,42 +856,44 @@ body {
 )}
 <div ref={bottomRef} />
 </div>
-<div className="absolute bottom-6 left-0 right-0 px-10">
-  {pendingAttachment && (
-    <div className="bg-white rounded-2xl p-2 mb-2 shadow-sm border border-gray-100 flex items-center gap-3">
-      {pendingAttachment.type === "image" && <img src={pendingAttachment.url} className="w-10 h-10 object-cover rounded-lg" />}
-      <span className="text-xs text-gray-500 flex-1 truncate">{pendingAttachment.name}</span>
-      <button onClick={() => setPendingAttachment(null)} className="text-gray-400 hover:text-red-500 p-1"><X size={14}/></button>
+<div className="absolute bottom-6 left-0 right-0 px-10 flex flex-col items-center">
+  <div className="w-full max-w-2xl">
+    {pendingAttachment && (
+      <div className="bg-white rounded-2xl p-2 mb-2 shadow-sm border border-gray-100 flex items-center gap-3">
+        {pendingAttachment.type === "image" && <img src={pendingAttachment.url} className="w-10 h-10 object-cover rounded-lg" />}
+        <span className="text-xs text-gray-500 flex-1 truncate">{pendingAttachment.name}</span>
+        <button onClick={() => setPendingAttachment(null)} className="text-gray-400 hover:text-red-500 p-1"><X size={14}/></button>
+      </div>
+    )}
+    <div className="bg-[#f5f5f5] rounded-[32px] flex items-end px-4 py-2 relative">
+      <button onClick={() => fileInputRef.current?.click()} className="text-gray-500 hover:text-gray-800 p-2 mb-1">
+        <Plus size={20} />
+      </button>
+      <input ref={fileInputRef} type="file" accept="image/*,video/*,.pdf,.doc,.docx,.txt" className="hidden" onChange={handleFile} />
+      
+      <textarea 
+        className="flex-1 border-none focus:outline-none outline-none focus:ring-0 bg-transparent text-[15px] text-gray-700 placeholder-gray-500 mx-4 resize-none py-2.5 max-h-[120px]" 
+        placeholder={isAI ? "اسأل ساري..." : "Type your prompt"} 
+        value={input}
+        onChange={e => {
+          setInput(e.target.value);
+          e.target.style.height = 'auto';
+          e.target.style.height = e.target.scrollHeight + 'px';
+        }}
+        onKeyDown={e => {
+          if (e.key === "Enter" && !e.shiftKey) {
+            e.preventDefault();
+            handleSend();
+          }
+        }}
+        rows={1}
+        dir={isAI ? "rtl" : "ltr"}
+        style={{ minHeight: '40px', textAlign: input ? (isAI ? 'right' : 'left') : 'center' }}
+      />
+      <button onClick={handleSend} disabled={!input.trim() && !pendingAttachment} className="bg-[#2b2b2b] text-white rounded-full w-9 h-9 flex items-center justify-center hover:bg-black transition-colors disabled:opacity-50 mb-1 shrink-0">
+        <Send size={16} className="-ml-0.5" />
+      </button>
     </div>
-  )}
-  <div className="bg-[#f5f5f5] rounded-[32px] flex items-end px-3 py-2 relative">
-    <button onClick={() => fileInputRef.current?.click()} className="text-gray-500 hover:text-gray-800 p-2 mb-0.5">
-      <i className="fa-solid fa-plus text-lg"></i>
-    </button>
-    <input ref={fileInputRef} type="file" accept="image/*,video/*,.pdf,.doc,.docx,.txt" className="hidden" onChange={handleFile} />
-    
-    <textarea 
-      className="flex-1 border-none focus:outline-none outline-none focus:ring-0 bg-transparent text-sm text-gray-700 placeholder-gray-500 mx-4 resize-none py-2.5 max-h-[120px]" 
-      placeholder={isAI ? "اسأل ساري..." : "Type your prompt"} 
-      value={input}
-      onChange={e => {
-        setInput(e.target.value);
-        e.target.style.height = 'auto';
-        e.target.style.height = e.target.scrollHeight + 'px';
-      }}
-      onKeyDown={e => {
-        if (e.key === "Enter" && !e.shiftKey) {
-          e.preventDefault();
-          handleSend();
-        }
-      }}
-      rows={1}
-      dir={isAI ? "rtl" : "ltr"}
-      style={{ minHeight: '40px', textAlign: input ? (isAI ? 'right' : 'left') : 'center' }}
-    />
-    <button onClick={handleSend} disabled={!input.trim() && !pendingAttachment} className="bg-[#2b2b2b] text-white rounded-full w-10 h-10 flex items-center justify-center hover:bg-black transition-colors disabled:opacity-50 mb-0.5 shrink-0">
-      <i className="fa-regular fa-paper-plane"></i>
-    </button>
   </div>
 </div>
 </main>
