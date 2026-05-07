@@ -11,7 +11,7 @@ export const TEAM_MEMBERS: TeamMember[] = [
   {
     id: "yassin",
     email: "yassin@mas.ai",
-    password: "Yassin@4289",
+    password: "4289",
     name: "Yassin Gaml",
     role: "Ai Specialist & Developer",
     bio: "The developer of the dashboard, Sarie, and everything technical."
@@ -19,7 +19,7 @@ export const TEAM_MEMBERS: TeamMember[] = [
   {
     id: "dina",
     email: "dina@mas.ai",
-    password: "Dina@1984",
+    password: "1984",
     name: "Dina Amer",
     role: "CEO & Podcaster",
     bio: "The podcaster of Rasayel podcast and CEO."
@@ -27,7 +27,7 @@ export const TEAM_MEMBERS: TeamMember[] = [
   {
     id: "haitham",
     email: "haitham@mas.ai",
-    password: "Haitham@5678",
+    password: "5678",
     name: "Haitham Abdel-aziz",
     role: "Director & Head of Production",
     bio: "The video director and post-production specialist."
@@ -35,7 +35,7 @@ export const TEAM_MEMBERS: TeamMember[] = [
   {
     id: "shahd",
     email: "shahd@mas.ai",
-    password: "Shahd@9123",
+    password: "9123",
     name: "Shahd Sayed",
     role: "Ugc Creator",
     bio: "UGC content creator."
@@ -43,7 +43,7 @@ export const TEAM_MEMBERS: TeamMember[] = [
   {
     id: "sara",
     email: "sara@mas.ai",
-    password: "Sara@1234",
+    password: "1234",
     name: "Sara Hatem",
     role: "Marketing Manager & Creative Lead",
     bio: "Leads creative direction, content strategy, and production across all clients. Manages the full content cycle from planning to script development. Supervises content and moderation teams, and handles new client onboarding and marketing strategies."
@@ -51,7 +51,7 @@ export const TEAM_MEMBERS: TeamMember[] = [
   {
     id: "shahdm",
     email: "shahdm@mas.ai",
-    password: "Shahdm@9012",
+    password: "9012",
     name: "Shahd Mahmoud",
     role: "Content Creator & Community Manager",
     bio: "Handles content, monthly plans, trends, and market research."
@@ -59,7 +59,7 @@ export const TEAM_MEMBERS: TeamMember[] = [
   {
     id: "yousef",
     email: "yousef@mas.ai",
-    password: "Yousef@3456",
+    password: "3456",
     name: "Yousef Hatem",
     role: "Ai Artist",
     bio: "Generates videos with AI."
