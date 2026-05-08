@@ -183,39 +183,150 @@ const INITIAL_TEAM_MESSAGES: Record<string, ChatMessage[]> = {
   dina: [], yassin: [], hesham: [], shahd: [], sara: [], haitham: [], shahdm: [], yousef: []
 };
 
+// ─── Session types ────────────────────────────────────────────────────────────
+
+interface SessionMeta {
+  id: string;
+  title: string;
+  lastMessage: string;
+  ts: string;
+  messageCount: number;
+}
+
 // ─── Sarie AI hook ────────────────────────────────────────────────────────────
+
+function makeSessionId() {
+  return `sess_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
+}
+
+function makeWelcome(username: string, followers: number): ChatMessage {
+  return {
+    role: "assistant",
+    content: `الأيجنت شغال! عندي كل البيانات بتاعة ${username} (${followers.toLocaleString()} متابع). إيه اللي تحتاجه؟`,
+    ts: now(),
+  };
+}
 
 function useSarieChat() {
   const { account, videos, competitors, ideas, trends, generations, currentUser } = useData();
-  const [messages, setMessages] = useState<ChatMessage[]>([]);
-  const [streaming, setStreaming] = useState(false);
+  const [messages, setMessages]           = useState<ChatMessage[]>([]);
+  const [streaming, setStreaming]         = useState(false);
+  const [sessions, setSessions]           = useState<SessionMeta[]>([]);
+  const [currentSessionId, setCurrentSessionId] = useState<string>("");
   const [historyLoaded, setHistoryLoaded] = useState(false);
-  const abortRef = useRef<AbortController | null>(null);
+  const abortRef        = useRef<AbortController | null>(null);
+  const sessionIdRef    = useRef<string>("");
 
-  // Load chat history from KV on mount (cloud-backed, no localStorage)
+  // Keep ref in sync so callbacks always see the latest session id
+  useEffect(() => { sessionIdRef.current = currentSessionId; }, [currentSessionId]);
+
+  // On mount: load session index, then load most recent session's messages
   useEffect(() => {
     if (!currentUser?.id) { setHistoryLoaded(true); return; }
     fetch(`/api/chat-history?userId=${currentUser.id}`)
       .then(r => r.json())
-      .then(data => { if (Array.isArray(data.messages) && data.messages.length > 0) setMessages(data.messages); })
-      .catch(() => {})
+      .then(async data => {
+        const list: SessionMeta[] = Array.isArray(data.sessions) ? data.sessions : [];
+        setSessions(list);
+        if (list.length > 0) {
+          const latest = list[0];
+          setCurrentSessionId(latest.id);
+          sessionIdRef.current = latest.id;
+          const d = await fetch(`/api/chat-history?userId=${currentUser.id}&sessionId=${latest.id}`)
+            .then(r => r.json()).catch(() => ({ messages: [] }));
+          if (Array.isArray(d.messages) && d.messages.length > 0) setMessages(d.messages);
+        } else {
+          const sid = makeSessionId();
+          setCurrentSessionId(sid);
+          sessionIdRef.current = sid;
+        }
+      })
+      .catch(() => {
+        const sid = makeSessionId();
+        setCurrentSessionId(sid);
+        sessionIdRef.current = sid;
+      })
       .finally(() => setHistoryLoaded(true));
   }, [currentUser?.id]);
 
-  // Show welcome message only after history load confirms no existing chat
+  // Welcome message — only after history load confirms empty session
   useEffect(() => {
     if (!historyLoaded) return;
     if (messages.length === 0 && account?.username) {
-      setMessages([{
-        role: "assistant",
-        content: `الأيجنت شغال! عندي كل البيانات بتاعة ${account.username} (${(account.followers || 0).toLocaleString()} متابع). إيه اللي تحتاجه؟`,
-        ts: now(),
-      }]);
+      setMessages([makeWelcome(account.username, account.followers || 0)]);
     }
   }, [account?.username, historyLoaded]);
 
+  // Save messages + update session index in KV
+  const saveSession = useCallback((msgs: ChatMessage[], sessId: string) => {
+    if (!currentUser?.id || !sessId) return;
+    const firstUserMsg = msgs.find(m => m.role === "user");
+    const title = firstUserMsg ? firstUserMsg.content.slice(0, 45) : "محادثة جديدة";
+    const lastMsg = msgs[msgs.length - 1];
+    const meta: SessionMeta = {
+      id: sessId,
+      title,
+      lastMessage: lastMsg?.content?.slice(0, 80) || "",
+      ts: new Date().toISOString(),
+      messageCount: msgs.length,
+    };
+    fetch("/api/chat-history", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        userId: currentUser.id,
+        sessionId: sessId,
+        messages: msgs,
+        title: meta.title,
+        lastMessage: meta.lastMessage,
+        ts: meta.ts,
+      }),
+    }).catch(() => {});
+    setSessions(prev => [meta, ...prev.filter(s => s.id !== sessId)]);
+  }, [currentUser?.id]);
+
+  // Create a brand-new chat session
+  const newChat = useCallback(() => {
+    if (streaming) return;
+    const sid = makeSessionId();
+    setCurrentSessionId(sid);
+    sessionIdRef.current = sid;
+    const welcome = account?.username
+      ? [makeWelcome(account.username, account.followers || 0)]
+      : [];
+    setMessages(welcome);
+  }, [streaming, account]);
+
+  // Switch to an existing session
+  const loadSession = useCallback(async (sessId: string) => {
+    if (streaming || sessId === sessionIdRef.current) return;
+    setCurrentSessionId(sessId);
+    sessionIdRef.current = sessId;
+    setMessages([]);
+    if (!currentUser?.id) return;
+    const data = await fetch(`/api/chat-history?userId=${currentUser.id}&sessionId=${sessId}`)
+      .then(r => r.json()).catch(() => ({ messages: [] }));
+    if (Array.isArray(data.messages) && data.messages.length > 0) {
+      setMessages(data.messages);
+    }
+  }, [streaming, currentUser?.id]);
+
+  // Delete a session
+  const deleteSession = useCallback(async (sessId: string) => {
+    if (!currentUser?.id) return;
+    await fetch("/api/chat-history", {
+      method: "DELETE",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ userId: currentUser.id, sessionId: sessId }),
+    }).catch(() => {});
+    setSessions(prev => prev.filter(s => s.id !== sessId));
+    // If deleting current session, start a new one
+    if (sessId === sessionIdRef.current) newChat();
+  }, [currentUser?.id, newChat]);
+
   const send = useCallback(async (text: string) => {
     if (!text.trim() || streaming) return;
+    const sessId  = sessionIdRef.current;
     const userMsg: ChatMessage = { role: "user", content: text, ts: now() };
     const next = [...messages, userMsg];
     setMessages(next);
@@ -235,7 +346,7 @@ function useSarieChat() {
       });
       if (!res.ok) throw new Error("AI error");
       const reader = res.body!.getReader();
-      const dec = new TextDecoder();
+      const dec    = new TextDecoder();
       let acc = "";
       while (true) {
         const { done, value } = await reader.read();
@@ -250,14 +361,10 @@ function useSarieChat() {
       setMessages(p => {
         const u = [...p];
         u[u.length - 1] = { role: "assistant", content: acc, ts: now() };
-        // Save to KV (cloud — no localStorage)
+        // Cloud save (no localStorage)
+        saveSession(u, sessId);
+        // Reflection every 8 assistant messages
         if (currentUser?.id) {
-          fetch("/api/chat-history", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ userId: currentUser.id, messages: u }),
-          }).catch(() => {});
-          // Trigger memory reflection every 8 assistant messages
           const assistantCount = u.filter(m => m.role === "assistant").length;
           if (assistantCount > 0 && assistantCount % 8 === 0) {
             fetch("/api/reflect", {
@@ -277,12 +384,12 @@ function useSarieChat() {
       if (e?.name === "AbortError") return;
       setMessages(p => {
         const u = p.filter(m => !m.streaming);
-        return [...u, { role: "assistant", content: "⚠️ Sorry, the AI model is experiencing extremely high demand right now. Please try again in a few seconds.", ts: now() }];
+        return [...u, { role: "assistant", content: "⚠️ مشكلة في الاتصال — حاول تاني بعد ثانية.", ts: now() }];
       });
     } finally {
       setStreaming(false);
     }
-  }, [messages, streaming, account, videos, competitors, ideas, trends, generations, currentUser]);
+  }, [messages, streaming, account, videos, competitors, ideas, trends, generations, currentUser, saveSession]);
 
   const stop = () => {
     abortRef.current?.abort();
@@ -294,7 +401,7 @@ function useSarieChat() {
     });
   };
 
-  return { messages, setMessages, streaming, send, stop };
+  return { messages, setMessages, streaming, send, stop, sessions, currentSessionId, historyLoaded, newChat, loadSession, deleteSession };
 }
 
 // ─── Main Page ────────────────────────────────────────────────────────────────
@@ -325,6 +432,7 @@ function ChatPageInner() {
   const bottomRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const sarie = useSarieChat();
+  const { sessions, currentSessionId, historyLoaded, newChat, loadSession, deleteSession } = sarie;
   const { currentUser } = useData();
   const searchParams = useSearchParams();
   const promptHandled = useRef(false);
@@ -439,11 +547,18 @@ function ChatPageInner() {
     if (isAI) {
       sarie.setMessages(prev => {
         const u = prev.filter((_, i) => i !== index);
-        if (currentUser?.id) {
+        if (currentUser?.id && currentSessionId) {
           fetch("/api/chat-history", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ userId: currentUser.id, messages: u }),
+            body: JSON.stringify({
+              userId: currentUser.id,
+              sessionId: currentSessionId,
+              messages: u,
+              title: u.find(m => m.role === "user")?.content?.slice(0, 45) || "محادثة جديدة",
+              lastMessage: u[u.length - 1]?.content?.slice(0, 80) || "",
+              ts: new Date().toISOString(),
+            }),
           }).catch(() => {});
         }
         return u;
@@ -746,59 +861,63 @@ body {
 <aside className="w-[200px] flex flex-col justify-between p-6 pl-8">
 <div className="space-y-4 pt-4 flex-1 flex flex-col h-full overflow-hidden">
 <nav className="space-y-2.5 mt-2 shrink-0 flex flex-col items-start">
-  <button className="bg-[#2b2b2b] text-white rounded-[20px] py-2 px-5 flex items-center gap-2 text-[13px] font-medium hover:bg-black transition-colors shadow-sm">
+  <button
+    onClick={newChat}
+    className="bg-[#2b2b2b] text-white rounded-[20px] py-2 px-5 flex items-center gap-2 text-[13px] font-medium hover:bg-black transition-colors shadow-sm w-full"
+  >
     <Plus size={14} className="text-gray-300" />
     New Chat
   </button>
-  <Link href="/dashboard" className="bg-white/80 text-gray-700 rounded-[20px] py-2 px-5 flex items-center gap-2.5 text-[13px] font-medium hover:bg-white transition-colors shadow-sm">
+  <Link href="/dashboard" className="bg-white/80 text-gray-700 rounded-[20px] py-2 px-5 flex items-center gap-2.5 text-[13px] font-medium hover:bg-white transition-colors shadow-sm w-full">
     <LayoutGrid size={14} className="text-gray-500" />
     Dashboard
   </Link>
 </nav>
 
-{/*  History Log  */}
-<div className="space-y-6 mt-8 flex-1 overflow-y-auto pr-2">
-{/*  Today  */}
-<div>
-<h4 className="text-[13px] font-bold text-gray-800 mb-3 flex items-center gap-1.5">
-            Today <i className="fa-solid fa-chevron-down text-[10px] text-gray-500 font-normal"></i>
-</h4>
-<ul className="space-y-3.5 text-[13px] text-gray-600">
-<li className="flex items-center gap-2.5 truncate hover:text-gray-900 cursor-pointer">
-<MessageCircle size={14} className="text-gray-500" /> Generate an image of a lo..
+{/* Live Chat History */}
+<div className="space-y-1 mt-6 flex-1 overflow-y-auto pr-1">
+  {sessions.length === 0 && historyLoaded && (
+    <p className="text-[11px] text-gray-400 px-1 mt-4">No previous chats yet.</p>
+  )}
+  {(() => {
+    const todayStr = new Date().toDateString();
+    const yesterdayStr = new Date(Date.now() - 86400000).toDateString();
+    const groups: { label: string; items: SessionMeta[] }[] = [];
+    const seen = new Map<string, SessionMeta[]>();
+    sessions.forEach(s => {
+      const d = new Date(s.ts);
+      const label = d.toDateString() === todayStr ? "Today"
+        : d.toDateString() === yesterdayStr ? "Yesterday"
+        : d.toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" });
+      if (!seen.has(label)) { seen.set(label, []); groups.push({ label, items: seen.get(label)! }); }
+      seen.get(label)!.push(s);
+    });
+    return groups.map(g => (
+      <div key={g.label} className="mb-4">
+        <h4 className="text-[10px] font-bold text-gray-400 uppercase tracking-wider px-1 mb-1.5">{g.label}</h4>
+        <ul className="space-y-0.5">
+          {g.items.map(s => (
+            <li key={s.id} className="group relative">
+              <button
+                onClick={() => loadSession(s.id)}
+                className={`w-full text-left flex items-start gap-2 px-2 py-1.5 rounded-xl transition-colors text-[12px] ${s.id === currentSessionId ? 'bg-white text-gray-900 font-semibold shadow-sm' : 'text-gray-600 hover:bg-white/60 hover:text-gray-900'}`}
+              >
+                <MessageCircle size={13} className="text-gray-400 mt-0.5 shrink-0" />
+                <span className="truncate">{s.title || "محادثة جديدة"}</span>
+              </button>
+              <button
+                onClick={(e) => { e.stopPropagation(); deleteSession(s.id); }}
+                className="absolute right-1 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 p-1 text-gray-300 hover:text-red-400 transition-all"
+                title="Delete"
+              >
+                <X size={11} />
+              </button>
             </li>
-<li className="flex items-center gap-2.5 truncate hover:text-gray-900 cursor-pointer">
-<MessageCircle size={14} className="text-gray-500" /> What is the capital of Unit..
-            </li>
-</ul>
-</div>
-
-{/*  Friday, March 26, 2026  */}
-<div>
-<h4 className="text-[13px] font-bold text-gray-800 mb-3 flex items-center gap-1.5 mt-2">
-            Friday, March 26, 2026 <i className="fa-solid fa-chevron-down text-[10px] text-gray-500 font-normal"></i>
-</h4>
-<ul className="space-y-3.5 text-[13px] text-gray-600">
-<li className="flex items-center gap-2.5 truncate hover:text-gray-900 cursor-pointer">
-<MessageCircle size={14} className="text-gray-500" /> Generate a pencil sketch...
-            </li>
-<li className="flex items-center gap-2.5 truncate hover:text-gray-900 cursor-pointer">
-<MessageCircle size={14} className="text-gray-500" /> What's the best way to s..
-            </li>
-</ul>
-</div>
-
-{/*  Friday, March 20, 2026  */}
-<div>
-<h4 className="text-[13px] font-bold text-gray-800 mb-3 flex items-center gap-1.5 mt-2">
-            Friday, March 20, 2026 <i className="fa-solid fa-chevron-down text-[10px] text-gray-500 font-normal"></i>
-</h4>
-<ul className="space-y-3.5 text-[13px] text-gray-600">
-<li className="flex items-center gap-2.5 truncate hover:text-gray-900 cursor-pointer">
-<MessageCircle size={14} className="text-gray-500" /> Compose an email to HR...
-            </li>
-</ul>
-</div>
+          ))}
+        </ul>
+      </div>
+    ));
+  })()}
 </div>
 </div>
 <div className="pb-4 shrink-0 mt-4 border-t border-gray-100 pt-4 relative">
