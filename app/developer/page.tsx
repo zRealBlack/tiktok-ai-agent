@@ -3,7 +3,6 @@
 import { useEffect, useState } from "react";
 import { TEAM_MEMBERS } from "@/lib/auth";
 import { ShieldAlert, Terminal, Database, Server, Cpu, Trash2, KeyRound, Activity, AlertTriangle, Coins } from "lucide-react";
-import NeuralGraph from "@/components/NeuralGraph";
 
 export default function DeveloperAdminPage() {
   const [mounted, setMounted] = useState(false);
@@ -36,8 +35,8 @@ export default function DeveloperAdminPage() {
   };
 
   return (
-    <div className="flex-1 overflow-auto bg-[#f2f2f2] min-h-full pb-20 font-sans">
-      <div className="max-w-[1400px] mx-auto w-full p-6 md:p-8 space-y-8">
+    <div className="flex-1 overflow-auto p-8 flex flex-col gap-8">
+      <div className="max-w-[1400px] w-full space-y-8">
         
         {/* Header */}
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
@@ -216,9 +215,6 @@ export default function DeveloperAdminPage() {
             </div>
           </div>
         </div>
-        
-        {/* Sarie Core Intelligence Neural Graph */}
-        <NeuralGraph />
 
       </div>
     </div>
