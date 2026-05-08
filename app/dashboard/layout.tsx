@@ -2,6 +2,9 @@
 import React, { useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import { useData } from "@/components/DataContext";
+import { Settings } from 'lucide-react';
+import SettingsModal from "@/components/SettingsModal";
 
 function AccountDropdown() {
   const [isOpen, setIsOpen] = useState(false);
@@ -72,6 +75,9 @@ function SubNav() {
 }
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
+  const { currentUser } = useData();
+  const [showSettings, setShowSettings] = useState(false);
+
   return (
     <div className="h-screen w-full bg-white flex items-center justify-center p-8" style={{
       fontFamily: "'Inter', sans-serif"
@@ -117,10 +123,21 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             </div>
           </div>
           <div className="pb-4 shrink-0 mt-4">
-            <button className="w-full bg-[#ef4444] text-white rounded-full py-2 px-4 flex items-center justify-center gap-2 text-xs font-medium hover:bg-[#dc2626] transition-colors shadow-sm">
-              <i className="fa-solid fa-user-shield"></i>
-              Team Login
-            </button>
+            <div className="flex items-center gap-3 px-3 py-2.5 bg-white border border-gray-100 rounded-2xl shadow-sm">
+              <div className="w-10 h-10 rounded-full bg-[#ef4444] flex items-center justify-center text-white font-bold text-sm flex-shrink-0 shadow-sm">
+                {currentUser ? currentUser.name[0].toUpperCase() : "U"}
+              </div>
+              <div className="flex flex-col overflow-hidden flex-1">
+                <span className="text-[13px] font-bold text-gray-800 truncate">{currentUser ? currentUser.name : "Admin User"}</span>
+                <span className="text-[10px] text-gray-500 truncate">{currentUser ? currentUser.email : "admin@mas.ai"}</span>
+              </div>
+              <button 
+                onClick={() => setShowSettings(true)}
+                className="text-gray-400 hover:text-gray-700 transition-colors p-1.5 hover:bg-gray-50 rounded-full"
+              >
+                <Settings size={16} strokeWidth={2} />
+              </button>
+            </div>
           </div>
         </aside>
         {/*  END: LeftSidebar  */}
@@ -155,6 +172,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       </div>
       {/*  END: MainContainer  */}
 
+      {/* Settings Modal */}
+      {showSettings && <SettingsModal onClose={() => setShowSettings(false)} />}
     </div>
   );
 }
