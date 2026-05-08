@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { useState, useRef, useEffect, useCallback, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import Image from "next/image";
-import { Send, Plus, Loader2, Square, Search, Phone, Video, MoreVertical, Smile, Paperclip, Check, CheckCheck, X, FileText, Film, Copy, Trash2, Pencil, Forward, MoreHorizontal, ArrowLeft, Compass, LayoutGrid, History, MessageCircle } from "lucide-react";
+import { Send, Plus, Loader2, Square, Search, Phone, Video, MoreVertical, Smile, Paperclip, Check, CheckCheck, X, FileText, Film, Copy, Trash2, Pencil, Forward, MoreHorizontal, ArrowLeft, Compass, LayoutGrid, History, MessageCircle, Settings, LogOut } from "lucide-react";
 import { useData } from "@/components/DataContext";
 import MarkdownMessage from "@/components/MarkdownMessage";
 import SarieAvatar from "@/public/sarie_generated.png";
@@ -931,7 +931,7 @@ body {
       <p className="text-[9px] text-gray-500 truncate">{currentUser?.role || "Team Member"}</p>
     </div>
     <button className="text-gray-400 hover:text-gray-600 transition-colors">
-      <i className="fa-solid fa-gear text-[10px]"></i>
+      <Settings size={12} />
     </button>
   </div>
   
@@ -940,11 +940,11 @@ body {
       <div className="fixed inset-0 z-40" onClick={() => setShowUserMenu(false)}></div>
       <div className="absolute bottom-full left-0 mb-2 w-full bg-white border border-gray-100 rounded-xl shadow-lg z-50 overflow-hidden py-1">
         <button onClick={() => setShowUserMenu(false)} className="w-full text-left px-4 py-2.5 text-xs flex items-center gap-2 hover:bg-gray-50 transition-colors text-gray-700 font-medium">
-          <i className="fa-solid fa-gear w-4 text-center"></i>
+          <Settings size={12} className="text-gray-500" />
           Settings
         </button>
         <button onClick={() => { localStorage.removeItem('mas_ai_authenticated_user'); window.location.href = '/'; }} className="w-full text-left px-4 py-2.5 text-xs flex items-center gap-2 hover:bg-red-50 hover:text-red-600 transition-colors text-red-500 font-medium">
-          <i className="fa-solid fa-sign-out-alt w-4 text-center"></i>
+          <LogOut size={12} />
           Sign Out
         </button>
       </div>

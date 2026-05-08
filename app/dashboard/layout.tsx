@@ -18,15 +18,10 @@ function AccountDropdown() {
     <div className="relative">
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="w-full bg-white border border-gray-200 text-gray-700 text-xs flex items-center justify-between p-2.5 shadow-sm rounded-full px-4 hover:border-gray-300 transition-colors"
+        className="w-full bg-white border border-gray-200 text-gray-700 text-xs flex items-center justify-center gap-2 py-2.5 px-4 shadow-sm rounded-full hover:border-gray-300 transition-colors"
       >
-        <div className="flex items-center gap-2.5">
-          <div style={{ width: 18, height: 18, borderRadius: '50%', background: selected.color, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 9, fontWeight: 800, color: '#fff', flexShrink: 0 }}>
-            {selected.initial}
-          </div>
-          <span className="font-semibold truncate">{selected.username}</span>
-        </div>
-        <ChevronDown size={12} className={`text-gray-400 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
+        <span className="font-semibold truncate">{selected.username}</span>
+        <ChevronDown size={12} className={`text-gray-400 transition-transform shrink-0 ${isOpen ? 'rotate-180' : ''}`} />
       </button>
       {isOpen && (
         <>
@@ -36,13 +31,10 @@ function AccountDropdown() {
               <button
                 key={c.id}
                 onClick={() => { setSelected(c); setIsOpen(false); }}
-                className={`w-full text-left px-4 py-2.5 text-[13px] flex items-center gap-3 hover:bg-gray-50 transition-colors ${selected.id === c.id ? 'bg-gray-50 text-gray-900 font-bold' : 'text-gray-600 font-medium'}`}
+                className={`w-full text-center px-4 py-2.5 text-[12px] flex items-center justify-center gap-2 hover:bg-gray-50 transition-colors ${selected.id === c.id ? 'bg-gray-50 text-gray-900 font-bold' : 'text-gray-600 font-medium'}`}
               >
-                <div style={{ width: 20, height: 20, borderRadius: '50%', background: c.color, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 9, fontWeight: 800, color: '#fff', flexShrink: 0 }}>
-                  {c.initial}
-                </div>
-                <span className="flex-1">{c.username}</span>
-                {selected.id === c.id && <Check size={12} className="text-gray-500" />}
+                <span className="truncate">{c.username}</span>
+                {selected.id === c.id && <Check size={11} className="text-gray-400 shrink-0" />}
               </button>
             ))}
           </div>
