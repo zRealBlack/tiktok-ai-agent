@@ -69,11 +69,15 @@ export default function TeamChatPage({ params }: { params: Promise<{ id: string 
   const [forwardingMsg, setForwardingMsg] = useState<string | null>(null);
   const [selectedForwards, setSelectedForwards] = useState<string[]>([]);
   const [contextMenu, setContextMenu] = useState<any>(null);
+  const [seenMsgIds, setSeenMsgIds] = useState<Set<string>>(() => {
+    try { return new Set(JSON.parse(localStorage.getItem('mas_seen_msg_ids') || '[]')); }
+    catch { return new Set(); }
+  });
   
   const bottomRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // 1-second polling for global team messages
+  // Polling — fetch messages every second
   useEffect(() => {
     let timeout: any;
     const fetchMsgs = async () => {
@@ -85,34 +89,68 @@ export default function TeamChatPage({ params }: { params: Promise<{ id: string 
             const reconstructed: Record<string, any[]> = {
               dina: [], yassin: [], hesham: [], shahd: [], sara: [], haitham: [], shahdm: [], yousef: []
             };
-            
+
+            const newSeenIds = new Set(seenMsgIds);
+            const notifications: { name: string; text: string }[] = [];
+
             data.messages.forEach((rawMsg: any) => {
               const msg = typeof rawMsg === 'string' ? JSON.parse(rawMsg) : rawMsg;
-              
+              const msgId = msg.id || `${msg.ts}-${msg.senderId}-${msg.receiverId}`;
+
               if (msg.senderId === currentUser.id) {
+                // Message I sent to someone
                 if (reconstructed[msg.receiverId]) {
                   reconstructed[msg.receiverId].push({
-                    id: msg.id, role: "user", content: msg.content, ts: msg.ts, status: "delivered", attachment: msg.attachment, isForwarded: msg.isForwarded, reactions: msg.reactions
+                    id: msgId, role: "user", content: msg.content, ts: msg.ts,
+                    status: "delivered", attachment: msg.attachment,
+                    isForwarded: msg.isForwarded, reactions: msg.reactions,
+                    serverTs: msg.serverTs,
                   });
                 }
               } else if (msg.receiverId === currentUser.id) {
+                // Message someone sent to me
                 if (reconstructed[msg.senderId]) {
                   reconstructed[msg.senderId].push({
-                    id: msg.id, role: "assistant", content: msg.content, ts: msg.ts, status: "seen", attachment: msg.attachment, isForwarded: msg.isForwarded, reactions: msg.reactions
+                    id: msgId, role: "assistant", content: msg.content, ts: msg.ts,
+                    status: "seen", attachment: msg.attachment,
+                    isForwarded: msg.isForwarded, reactions: msg.reactions,
+                    serverTs: msg.serverTs,
                   });
+                }
+                // Notification — only if not yet seen and not self-send
+                if (msg.senderId !== currentUser.id && !newSeenIds.has(msgId)) {
+                  const sender = INITIAL_CONVERSATIONS.find(c => c.id === msg.senderId);
+                  if (sender) notifications.push({ name: sender.name, text: msg.content || '📎 Attachment' });
+                  newSeenIds.add(msgId);
                 }
               }
             });
+
             setTeamMessages(reconstructed);
+
+            // Persist seen IDs
+            if (newSeenIds.size !== seenMsgIds.size) {
+              setSeenMsgIds(newSeenIds);
+              try { localStorage.setItem('mas_seen_msg_ids', JSON.stringify([...newSeenIds])); } catch {}
+            }
+
+            // Fire notifications for new messages
+            if (notifications.length > 0 && document.hidden) {
+              notifications.forEach(n => {
+                if (Notification.permission === 'granted') {
+                  new Notification(`${n.name}`, { body: n.text, icon: '/masmas.png' });
+                }
+              });
+            }
           }
         }
       } catch (err) {}
       timeout = setTimeout(fetchMsgs, 1000);
     };
-    
+
     fetchMsgs();
     return () => clearTimeout(timeout);
-  }, [currentUser]);
+  }, [currentUser, seenMsgIds]);
 
   const messages = teamMessages[activeId] || [];
 
@@ -495,18 +533,42 @@ export default function TeamChatPage({ params }: { params: Promise<{ id: string 
             <input className="w-full bg-[#fbfbfb] border border-gray-100 rounded-full py-2 pl-8 pr-4 text-xs font-medium focus:outline-none focus:ring-1 focus:ring-gray-200 shadow-sm placeholder-gray-400 text-gray-700" placeholder="Search team..." type="text"/>
           </div>
           <div className="space-y-2 mt-2">
-            {INITIAL_CONVERSATIONS.filter(c => !c.isAI).map(c => (
-              <Link key={c.id} href={`/team-chat/${c.id}`} className={`flex items-center gap-3 p-2 rounded-xl cursor-pointer transition-colors ${activeId === c.id ? 'bg-gray-100' : 'hover:bg-gray-50'}`}>
-                <AvatarCircle name={c.name} size={36} online={c.online} />
-                <div className="flex-1 min-w-0">
-                  <div className="flex justify-between items-baseline">
-                    <h4 className="text-xs font-bold text-gray-800 truncate">{c.name}</h4>
-                    <span className="text-[9px] text-gray-400">{c.time || '1h'}</span>
+            {INITIAL_CONVERSATIONS.filter(c => !c.isAI).map(c => {
+              const convoMsgs = teamMessages[c.id] || [];
+              const lastMsg = convoMsgs[convoMsgs.length - 1];
+              // Online = had activity in the last 5 minutes based on serverTs
+              const isOnline = lastMsg?.serverTs
+                ? Date.now() - lastMsg.serverTs < 5 * 60 * 1000
+                : false;
+              const isMe = lastMsg?.role === 'user';
+              const preview = lastMsg
+                ? (lastMsg.attachment ? '📎 Attachment' : lastMsg.content || '')
+                : '...';
+              const previewLabel = lastMsg
+                ? (isMe ? `You: ${preview}` : preview)
+                : '...';
+              // Count unread: messages from this person to me not yet seen
+              const unread = convoMsgs.filter(m => m.role === 'assistant' && m.id && !seenMsgIds.has(m.id)).length;
+              return (
+                <Link key={c.id} href={`/team-chat/${c.id}`} className={`flex items-center gap-3 p-2 rounded-xl cursor-pointer transition-colors ${activeId === c.id ? 'bg-gray-100' : 'hover:bg-gray-50'}`}>
+                  <AvatarCircle name={c.name} size={36} online={isOnline} />
+                  <div className="flex-1 min-w-0">
+                    <div className="flex justify-between items-baseline">
+                      <h4 className="text-xs font-bold text-gray-800 truncate">
+                        {c.name}{c.id === currentUser?.id ? ' (You)' : ''}
+                      </h4>
+                      <span className="text-[9px] text-gray-400">{lastMsg?.ts || ''}</span>
+                    </div>
+                    <div className="flex items-center justify-between gap-1">
+                      <p className="text-[10px] font-medium text-gray-500 truncate flex-1">{previewLabel}</p>
+                      {unread > 0 && activeId !== c.id && (
+                        <span className="bg-red-500 text-white text-[9px] font-bold rounded-full px-1.5 py-0.5 shrink-0">{unread}</span>
+                      )}
+                    </div>
                   </div>
-                  <p className="text-[10px] font-medium text-gray-500 truncate">{c.lastMessage || '...'}</p>
-                </div>
-              </Link>
-            ))}
+                </Link>
+              );
+            })}
           </div>
         </aside>
       </div>
