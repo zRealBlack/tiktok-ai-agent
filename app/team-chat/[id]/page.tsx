@@ -69,10 +69,16 @@ export default function TeamChatPage({ params }: { params: Promise<{ id: string 
   const [forwardingMsg, setForwardingMsg] = useState<string | null>(null);
   const [selectedForwards, setSelectedForwards] = useState<string[]>([]);
   const [contextMenu, setContextMenu] = useState<any>(null);
-  const [seenMsgIds, setSeenMsgIds] = useState<Set<string>>(() => {
-    try { return new Set(JSON.parse(localStorage.getItem('mas_seen_msg_ids') || '[]')); }
-    catch { return new Set(); }
-  });
+  // Use a ref for seenMsgIds — avoids restarting the polling loop on every new message
+  const seenMsgIdsRef = useRef<Set<string>>(new Set());
+
+  // Load seen IDs from localStorage once on mount
+  useEffect(() => {
+    try {
+      const stored = JSON.parse(localStorage.getItem('mas_seen_msg_ids') || '[]');
+      seenMsgIdsRef.current = new Set(stored);
+    } catch {}
+  }, []);
   
   const bottomRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -90,7 +96,6 @@ export default function TeamChatPage({ params }: { params: Promise<{ id: string 
               dina: [], yassin: [], hesham: [], shahd: [], sara: [], haitham: [], shahdm: [], yousef: []
             };
 
-            const newSeenIds = new Set(seenMsgIds);
             const notifications: { name: string; text: string }[] = [];
 
             data.messages.forEach((rawMsg: any) => {
@@ -118,10 +123,10 @@ export default function TeamChatPage({ params }: { params: Promise<{ id: string 
                   });
                 }
                 // Notification — only if not yet seen and not self-send
-                if (msg.senderId !== currentUser.id && !newSeenIds.has(msgId)) {
+                if (msg.senderId !== currentUser.id && !seenMsgIdsRef.current.has(msgId)) {
                   const sender = INITIAL_CONVERSATIONS.find(c => c.id === msg.senderId);
                   if (sender) notifications.push({ name: sender.name, text: msg.content || '📎 Attachment' });
-                  newSeenIds.add(msgId);
+                  seenMsgIdsRef.current.add(msgId);
                 }
               }
             });
@@ -129,18 +134,11 @@ export default function TeamChatPage({ params }: { params: Promise<{ id: string 
             setTeamMessages(reconstructed);
 
             // Persist seen IDs
-            if (newSeenIds.size !== seenMsgIds.size) {
-              setSeenMsgIds(newSeenIds);
-              try { localStorage.setItem('mas_seen_msg_ids', JSON.stringify([...newSeenIds])); } catch {}
-            }
+            try { localStorage.setItem('mas_seen_msg_ids', JSON.stringify([...seenMsgIdsRef.current])); } catch {}
 
-            // Fire notifications for new messages
-            if (notifications.length > 0 && document.hidden) {
-              notifications.forEach(n => {
-                if (Notification.permission === 'granted') {
-                  new Notification(`${n.name}`, { body: n.text, icon: '/masmas.png' });
-                }
-              });
+            // Fire notifications only when tab is hidden
+            if (notifications.length > 0 && document.hidden && Notification.permission === 'granted') {
+              notifications.forEach(n => new Notification(n.name, { body: n.text, icon: '/masmas.png' }));
             }
           }
         }
@@ -150,7 +148,7 @@ export default function TeamChatPage({ params }: { params: Promise<{ id: string 
 
     fetchMsgs();
     return () => clearTimeout(timeout);
-  }, [currentUser, seenMsgIds]);
+  }, [currentUser]);
 
   const messages = teamMessages[activeId] || [];
 
@@ -560,7 +558,7 @@ export default function TeamChatPage({ params }: { params: Promise<{ id: string 
                 ? (isMe ? `You: ${preview}` : preview)
                 : '...';
               // Count unread: messages from this person to me not yet seen
-              const unread = convoMsgs.filter(m => m.role === 'assistant' && m.id && !seenMsgIds.has(m.id)).length;
+              const unread = convoMsgs.filter(m => m.role === 'assistant' && m.id && !seenMsgIdsRef.current.has(m.id)).length;
               return (
                 <Link key={c.id} href={`/team-chat/${c.id}`} className={`flex items-center gap-3 p-2 rounded-xl cursor-pointer transition-colors ${activeId === c.id ? 'bg-gray-100' : 'hover:bg-gray-50'}`}>
                   <AvatarCircle name={c.name} size={36} online={isOnline} />
