@@ -3,9 +3,9 @@ import React, { useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useData } from "@/components/DataContext";
-import { ArrowLeft, ChevronDown, Check, Settings, LogOut } from 'lucide-react';
+import { ArrowLeft, ChevronDown, Check, Settings, LogOut, ChevronRight } from 'lucide-react';
 
-// ─── Clients ─────────────────────────────────────────────────────────────────
+// ─── Clients ──────────────────────────────────────────────────────────────────
 const CLIENTS = [
   { id: "rasayel", username: "@rasayel_podcast", name: "Rasayel Podcast", initial: "R", color: "#8b5cf6" },
 ];
@@ -18,23 +18,23 @@ function AccountDropdown() {
     <div className="relative">
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="w-full bg-white border border-gray-200 text-gray-700 text-xs flex items-center justify-center gap-2 py-2.5 px-4 shadow-sm rounded-full hover:border-gray-300 transition-colors"
+        className="w-full bg-white/80 text-gray-700 rounded-[20px] py-2 px-5 flex items-center justify-between text-[13px] font-medium hover:bg-white transition-colors shadow-sm w-full"
       >
-        <span className="font-semibold truncate">{selected.username}</span>
-        <ChevronDown size={12} className={`text-gray-400 transition-transform shrink-0 ${isOpen ? 'rotate-180' : ''}`} />
+        <span className="truncate">{selected.username}</span>
+        <ChevronDown size={13} className={`text-gray-400 transition-transform shrink-0 ml-2 ${isOpen ? 'rotate-180' : ''}`} />
       </button>
       {isOpen && (
         <>
           <div className="fixed inset-0 z-40" onClick={() => setIsOpen(false)} />
-          <div className="absolute top-full left-0 w-full mt-1.5 bg-white border border-gray-100 rounded-xl shadow-lg z-50 overflow-hidden py-1">
+          <div className="absolute top-full left-0 w-full mt-1.5 bg-white border border-gray-100 rounded-[16px] shadow-lg z-50 overflow-hidden py-1">
             {CLIENTS.map(c => (
               <button
                 key={c.id}
                 onClick={() => { setSelected(c); setIsOpen(false); }}
-                className={`w-full text-center px-4 py-2.5 text-[12px] flex items-center justify-center gap-2 hover:bg-gray-50 transition-colors ${selected.id === c.id ? 'bg-gray-50 text-gray-900 font-bold' : 'text-gray-600 font-medium'}`}
+                className={`w-full text-left px-4 py-2.5 text-[13px] flex items-center justify-between gap-2 hover:bg-gray-50 transition-colors ${selected.id === c.id ? 'text-gray-900 font-bold' : 'text-gray-600 font-medium'}`}
               >
                 <span className="truncate">{c.username}</span>
-                {selected.id === c.id && <Check size={11} className="text-gray-400 shrink-0" />}
+                {selected.id === c.id && <Check size={12} className="text-gray-400 shrink-0" />}
               </button>
             ))}
           </div>
@@ -55,11 +55,11 @@ function SubNav() {
   ];
 
   return (
-    <div className="flex bg-gray-100 p-1 rounded-full text-xs font-medium">
+    <div className="flex bg-gray-100 p-1 rounded-full text-[13px] font-medium">
       {links.map(l => {
         const isActive = pathname === l.href;
         return (
-          <Link key={l.name} href={l.href} className={`px-6 py-2 rounded-full transition-all ${isActive ? 'bg-white shadow-sm text-gray-800' : 'text-gray-500 hover:text-gray-700'}`}>
+          <Link key={l.name} href={l.href} className={`px-5 py-1.5 rounded-full transition-all ${isActive ? 'bg-white shadow-sm text-gray-800 font-semibold' : 'text-gray-500 hover:text-gray-700'}`}>
             {l.name}
           </Link>
         );
@@ -68,7 +68,7 @@ function SubNav() {
   );
 }
 
-// ─── Avatar helper (mirrors main page AvatarCircle) ──────────────────────────
+// ─── Avatar circle (identical to main page) ───────────────────────────────────
 function AvatarCircle({ name, size = 28 }: { name: string; size?: number }) {
   const colors = ["#ef4444", "#8b5cf6", "#3b82f6", "#22c55e", "#f59e0b", "#ec4899"];
   const color = colors[(name || "U").charCodeAt(0) % colors.length];
@@ -87,28 +87,33 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   return (
     <div className="h-screen w-full bg-white flex items-center justify-center p-8" style={{ fontFamily: "'Inter', sans-serif" }}>
 
-      {/*  BEGIN: MainContainer  */}
+      {/* BEGIN: MainContainer */}
       <div className="bg-[#f2f2f2] w-full max-w-[1600px] h-full rounded-[32px] shadow-2xl flex overflow-hidden relative text-[#2b2b2b] text-[14px]">
 
-        {/*  BEGIN: LeftSidebar  */}
+        {/* BEGIN: LeftSidebar */}
         <aside className="w-[200px] flex flex-col justify-between p-6 pl-8">
           <div className="space-y-4 pt-4 flex-1 flex flex-col h-full overflow-hidden">
-            <nav className="space-y-2 shrink-0">
-              <Link href="/" className="flex items-center gap-3 px-4 py-2.5 text-[#2b2b2b] font-medium bg-white rounded-full transition-all shadow-sm border border-gray-100 hover:shadow-md">
-                <ArrowLeft size={14} className="text-[#ef4444]" />
+
+            {/* Nav — matches main page exactly */}
+            <nav className="space-y-2.5 mt-2 shrink-0 flex flex-col items-start">
+              <Link
+                href="/"
+                className="bg-[#2b2b2b] text-white rounded-[20px] py-2 px-5 flex items-center gap-2 text-[13px] font-medium hover:bg-black transition-colors shadow-sm w-full"
+              >
+                <ArrowLeft size={14} className="text-gray-300" />
                 Back
               </Link>
             </nav>
-            <div className="space-y-6 mt-8 flex-1 overflow-y-auto pr-2">
-              {/*  Account Dropdown  */}
-              <div>
-                <h4 className="text-xs font-semibold text-gray-800 mb-3 uppercase tracking-wider">Client</h4>
-                <AccountDropdown />
-              </div>
+
+            {/* Client section */}
+            <div className="space-y-1 mt-6 flex-1 overflow-y-auto pr-1">
+              <h4 className="text-[10px] font-bold text-gray-400 uppercase tracking-wider px-1 mb-2">Client</h4>
+              <AccountDropdown />
             </div>
+
           </div>
 
-          {/* User Card — matches main page style */}
+          {/* User Card — identical to main page */}
           <div className="pb-4 shrink-0 mt-4 border-t border-gray-100 pt-4 relative">
             <div
               onClick={() => setShowUserMenu(!showUserMenu)}
@@ -120,7 +125,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                 <p className="text-[9px] text-gray-500 truncate">{currentUser?.role || "Team Member"}</p>
               </div>
               <button className="text-gray-400 hover:text-gray-600 transition-colors">
-                <i className="fa-solid fa-gear text-[10px]"></i>
+                <Settings size={12} />
               </button>
             </div>
 
@@ -144,37 +149,34 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             )}
           </div>
         </aside>
-        {/*  END: LeftSidebar  */}
+        {/* END: LeftSidebar */}
 
-        {/*  BEGIN: Main Dashboard Area  */}
-        <main className="flex-1 bg-[#fbfbfb] my-4 mr-4 rounded-[24px] shadow-sm flex flex-col relative overflow-hidden border border-gray-100">
-          {/*  Top Bar / Sub-navigation  */}
-          <div className="px-8 py-5 border-b border-gray-100 flex items-center justify-between z-10 bg-white">
-            <div className="flex items-center gap-2">
-              <span className="text-[#ef4444] font-bold text-sm tracking-wider">MAS</span>
-              <span className="text-gray-500 font-medium text-sm">AI Studio Workspace</span>
-              <i className="fa-solid fa-chevron-right text-[10px] text-gray-400 mx-2"></i>
-              <span className="text-gray-800 font-semibold text-sm">Dashboard</span>
+        {/* BEGIN: Main Dashboard Area */}
+        <main className="flex-1 bg-[#fbfbfb] my-4 mr-4 rounded-[24px] shadow-sm flex flex-col relative overflow-hidden">
+          {/* Top Bar */}
+          <div className="absolute top-0 w-full flex justify-between items-center py-4 px-8 bg-gradient-to-b from-[#fbfbfb] to-transparent z-10">
+            <div className="flex items-center gap-1.5 text-[13px]">
+              <span className="text-[#ef4444] font-bold tracking-wider">MAS</span>
+              <span className="text-gray-400 font-medium">AI Studio</span>
+              <ChevronRight size={12} className="text-gray-300 mx-0.5" />
+              <span className="text-gray-700 font-semibold">Dashboard</span>
             </div>
             <SubNav />
           </div>
 
-          <div className="flex-1 overflow-y-auto">
+          <div className="flex-1 overflow-y-auto pt-16">
             {children}
           </div>
         </main>
         {/* END: Main Dashboard Area */}
 
-        {/*  Assistant Avatar Floating Widget  */}
-        <div className="absolute bottom-8 right-8 flex items-end gap-3 z-20">
-          <div className="bg-black text-white text-xs px-4 py-2 rounded-2xl rounded-br-sm shadow-lg mb-4">
-            Hi, How can i help<br />you today?
-          </div>
-          <img alt="Robot Assistant" className="w-16 h-16 object-cover rounded-full drop-shadow-xl border-2 border-white bg-white" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBC8o0Dh-48odiXykGf9dXZ3HQkqIfgf9DTRu5eek1doIbEYtT3mV9F81Cy0qYDCLwiee969EF8rp7BbSKDfanY00VuM7fdfaI5ep1w21ALHKbPuxkPnI6gSjMFcyH-A_4CAA37vlxHFk2pGPo5LeOezJJbSGhBXzZ8pz6cZQkiCn-j75BUoOxkfoudEM5roWGn3ZNugRg5ryjuqujKC1VbF1_LKy_SrkhUusodJAw_WiJctH9uPZBHfrOrf070sDEU62d6PK_FUA"/>
+        {/* Floating Logo Widget — matches main page */}
+        <div className="absolute bottom-8 right-8 flex items-end z-20">
+          <img alt="Masaa Logo" className="w-20 object-contain drop-shadow-xl" src="/masmas.png" />
         </div>
 
       </div>
-      {/*  END: MainContainer  */}
+      {/* END: MainContainer */}
 
     </div>
   );
