@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { useState, useRef, useEffect, useCallback, Suspense } from "react";
 import Image from "next/image";
-import { Send, Plus, Loader2, Square, Search, Phone, Video, MoreVertical, Smile, Paperclip, Check, CheckCheck, X, FileText, Film, Copy, Trash2, Pencil, Forward, MoreHorizontal, ArrowLeft } from "lucide-react";
+import { Send, Plus, Search, Phone, Video, MoreVertical, Smile, Check, CheckCheck, X, FileText, Film, Copy, Trash2, Pencil, Forward, MoreHorizontal, ArrowLeft, Mail, Phone as PhoneIcon, Clock } from "lucide-react";
 import { useData } from "@/components/DataContext";
 import MarkdownMessage from "@/components/MarkdownMessage";
 
@@ -301,11 +301,14 @@ export default function TeamChatPage({ params }: { params: Promise<{ id: string 
     }}>
       <div className="w-full max-w-[1600px] h-full bg-[#f2f2f2] rounded-[32px] overflow-hidden shadow-2xl flex relative text-[#2b2b2b] text-[14px]">
         {/* LeftSidebar (User Info) */}
-        <aside className="w-[240px] flex flex-col justify-between p-6 pl-8">
+        <aside className="w-[200px] flex flex-col justify-between p-6 pl-8">
           <div className="space-y-4 pt-4 flex-1 flex flex-col h-full overflow-hidden">
-            <Link href="/" className="w-fit bg-white border border-gray-100 text-gray-800 rounded-full py-2 px-4 flex items-center justify-center gap-2 text-sm font-medium hover:bg-gray-50 transition-colors shadow-sm">
-              <i className="fa-solid fa-arrow-left text-xs"></i> Back
-            </Link>
+            <nav className="space-y-2.5 mt-2 shrink-0 flex flex-col items-start">
+              <Link href="/" className="bg-[#2b2b2b] text-white rounded-[20px] py-2 px-5 flex items-center gap-2 text-[13px] font-medium hover:bg-black transition-colors shadow-sm w-full">
+                <ArrowLeft size={14} className="text-gray-300" />
+                Back
+              </Link>
+            </nav>
             <div className="flex flex-col items-center mt-10">
               <div className="relative mb-4">
                 <AvatarCircle name={activeConvo.name} size={96} online={activeConvo.online} />
@@ -313,20 +316,19 @@ export default function TeamChatPage({ params }: { params: Promise<{ id: string 
               <h2 className="text-xl font-bold text-gray-800">{activeConvo.name}</h2>
               <p className="text-xs text-gray-500 mt-1 text-center">{activeConvo.role}</p>
               <div className="mt-3 px-3 py-1 bg-gray-100 rounded-full text-xs text-gray-500 flex items-center gap-2">
-                <i className="fa-regular fa-clock"></i> 09:42 AM (Local)
+                <Clock size={11} /> 09:42 AM (Local)
               </div>
             </div>
-            <div className="mt-8 space-y-6">
+            <div className="mt-6 space-y-5">
               <div>
                 <h3 className="text-[10px] text-gray-400 uppercase tracking-wider mb-2 font-bold">About</h3>
-                <p className="text-xs text-gray-600 leading-relaxed">Focusing on product messaging and user flows for the upcoming Q3 launch campaign.</p>
+                <p className="text-[11px] text-gray-500 leading-relaxed">Focusing on product messaging and user flows for the upcoming Q3 launch campaign.</p>
               </div>
               <div>
                 <h3 className="text-[10px] text-gray-400 uppercase tracking-wider mb-2 font-bold">Contact Info</h3>
                 <ul className="space-y-3">
-                  <li className="flex items-center gap-3 text-xs text-gray-600"><i className="fa-regular fa-envelope text-gray-400 w-4"></i> {activeConvo.id}@mas.ai</li>
-                  <li className="flex items-center gap-3 text-xs text-gray-600"><i className="fa-solid fa-phone text-gray-400 w-4"></i> +1 (555) 019-2834</li>
-                  <li className="flex items-center gap-3 text-xs text-gray-600"><i className="fa-brands fa-slack text-gray-400 w-4"></i> @{activeConvo.id}</li>
+                  <li className="flex items-center gap-2.5 text-[11px] text-gray-600"><Mail size={11} className="text-gray-400 shrink-0" /> {activeConvo.id}@mas.ai</li>
+                  <li className="flex items-center gap-2.5 text-[11px] text-gray-600"><PhoneIcon size={11} className="text-gray-400 shrink-0" /> +1 (555) 019-2834</li>
                 </ul>
               </div>
             </div>
@@ -449,15 +451,14 @@ export default function TeamChatPage({ params }: { params: Promise<{ id: string 
                 </div>
               )}
               <div className="bg-[#f5f5f5] rounded-[32px] flex items-end px-4 py-2 relative">
-                <button onClick={() => fileInputRef.current?.click()} className="text-gray-500 hover:text-gray-800 p-2 mb-1">
-                  <Plus size={20} />
+                <button onClick={() => fileInputRef.current?.click()} className="text-gray-400 hover:text-gray-700 p-2 mb-1 rounded-xl hover:bg-white/60 transition-colors">
+                  <Plus size={18} />
                 </button>
                 <input ref={fileInputRef} type="file" accept="image/*,video/*,.pdf,.doc,.docx,.txt" className="hidden" onChange={handleFile} />
-                <button onClick={() => setShowEmoji(!showEmoji)} className={`p-2 mb-1 ${showEmoji ? 'text-red-500' : 'text-gray-500 hover:text-gray-800'}`}><Smile size={20} /></button>
-                
-                <textarea 
-                  className="flex-1 border-none focus:outline-none outline-none focus:ring-0 bg-transparent text-[15px] text-gray-700 placeholder-gray-500 mx-4 resize-none py-2.5 max-h-[120px]" 
-                  placeholder="Type a message..." 
+                <button onClick={() => setShowEmoji(!showEmoji)} className={`p-2 mb-1 rounded-xl hover:bg-white/60 transition-colors ${showEmoji ? 'text-red-500' : 'text-gray-400 hover:text-gray-700'}`}><Smile size={18} /></button>
+                <textarea
+                  className="flex-1 border-none focus:outline-none outline-none focus:ring-0 bg-transparent text-[14px] text-gray-700 placeholder-gray-400 mx-3 resize-none py-2.5 max-h-[120px]"
+                  placeholder="Type a message..."
                   value={input}
                   onChange={e => {
                     setInput(e.target.value);
@@ -473,8 +474,8 @@ export default function TeamChatPage({ params }: { params: Promise<{ id: string 
                   rows={1}
                   style={{ minHeight: '40px' }}
                 />
-                <button onClick={handleSend} disabled={!input.trim() && !pendingAttachment} className="bg-[#2b2b2b] text-white rounded-full w-9 h-9 flex items-center justify-center hover:bg-black transition-colors disabled:opacity-50 mb-1 shrink-0">
-                  <Send size={16} className="-ml-0.5" />
+                <button onClick={handleSend} disabled={!input.trim() && !pendingAttachment} className="send-btn bg-[#2b2b2b] text-white rounded-full w-9 h-9 flex items-center justify-center hover:bg-black disabled:opacity-30 mb-1 shrink-0">
+                  <Send size={14} className="-ml-0.5" />
                 </button>
               </div>
             </div>
@@ -484,11 +485,9 @@ export default function TeamChatPage({ params }: { params: Promise<{ id: string 
         {/* RightSidebar (Team Chat List) */}
         <aside className="w-[280px] p-6 pr-8 flex flex-col gap-6 overflow-y-auto">
           <div className="flex justify-between items-center pt-2">
-            <h3 className="font-bold text-gray-800 text-sm flex items-center gap-2">
-              Team Chat
-            </h3>
-            <button className="text-gray-400 hover:text-gray-600 bg-gray-50 rounded-full w-6 h-6 flex items-center justify-center shadow-sm border border-gray-100">
-              <i className="fa-solid fa-plus text-[10px]"></i>
+            <h3 className="text-[13px] font-bold text-gray-800 flex items-center gap-2">Team Chat</h3>
+            <button className="text-gray-400 hover:text-gray-600 bg-white rounded-full w-6 h-6 flex items-center justify-center shadow-sm border border-gray-100">
+              <Plus size={10} />
             </button>
           </div>
           <div className="relative">
