@@ -15,6 +15,8 @@ const EMOJIS = ["😂","❤️","🔥","👏","😮","😢","🤔","💯","🚀"
 
 interface Attachment { name: string; url: string; type: "image" | "video" | "file"; }
 
+interface ActionCard { ok: boolean; summary: string; detail?: string; type: string; }
+
 interface ChatMessage {
   id?: string;
   role: "user" | "assistant";
@@ -25,6 +27,7 @@ interface ChatMessage {
   reactions?: string[];
   isForwarded?: boolean;
   status?: "sent" | "delivered" | "seen";
+  actionCard?: ActionCard;
 }
 
 interface Conversation {
@@ -361,10 +364,14 @@ function useSarieChat() {
           return u;
         });
       }
+      // ── Parse action block from response ──────────────────────────────────
+      const ACTION_RE = /\[SARIE_ACTION:(\{[\s\S]*?\})\]\s*$/;
+      const actionMatch = acc.match(ACTION_RE);
+      const cleanAcc = actionMatch ? acc.replace(ACTION_RE, "").trimEnd() : acc;
+
       setMessages(p => {
         const u = [...p];
-        u[u.length - 1] = { role: "assistant", content: acc, ts: now() };
-        // Cloud save (no localStorage)
+        u[u.length - 1] = { role: "assistant", content: cleanAcc, ts: now() };
         saveSession(u, sessId);
         // Reflection every 8 assistant messages
         if (currentUser?.id) {
@@ -383,6 +390,38 @@ function useSarieChat() {
         }
         return u;
       });
+
+      // ── Execute action if present ──────────────────────────────────────────
+      if (actionMatch && currentUser?.id) {
+        try {
+          const parsed = JSON.parse(actionMatch[1]);
+          const result = await fetch("/api/actions", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ userId: currentUser.id, type: parsed.type, data: parsed.data ?? {} }),
+          }).then(r => r.json());
+          // Append action card message
+          setMessages(p => [
+            ...p,
+            {
+              role: "assistant",
+              content: "",
+              ts: now(),
+              actionCard: {
+                ok: result.ok,
+                summary: result.summary || result.error || "Action executed",
+                detail: result.detail,
+                type: parsed.type,
+              },
+            },
+          ]);
+        } catch {
+          setMessages(p => [
+            ...p,
+            { role: "assistant", content: "", ts: now(), actionCard: { ok: false, summary: "Action failed — parse error", type: "UNKNOWN" } },
+          ]);
+        }
+      }
     } catch (e: any) {
       if (e?.name === "AbortError") return;
       setMessages(p => {
@@ -999,6 +1038,24 @@ body {
 {messages.map((m, i) => {
   const isUser = m.role === "user";
   const isNew  = i >= messages.length - 1;
+
+  // ── Action Card ────────────────────────────────────────────────────────────
+  if (m.actionCard) {
+    const { ok, summary, detail, type } = m.actionCard;
+    return (
+      <div key={i} className={`flex items-start gap-2 msg-enter`} dir="ltr">
+        <div className={`flex items-start gap-3 px-4 py-3 rounded-2xl border text-[12px] max-w-md ${ok ? "bg-emerald-50 border-emerald-100 text-emerald-800" : "bg-red-50 border-red-100 text-red-700"}`}>
+          <span className="mt-0.5 text-base shrink-0">{ok ? "⚡" : "⚠️"}</span>
+          <div>
+            <div className="font-bold mb-0.5" dangerouslySetInnerHTML={{ __html: summary.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>') }} />
+            {detail && <div className="text-[11px] opacity-70">{detail}</div>}
+            <div className="text-[10px] opacity-50 mt-1 font-mono">{type}</div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div key={i} className={`group flex flex-col gap-1 ${isUser ? "items-end" : "items-start"} ${isNew ? "msg-enter" : ""}`}>
       <div className={`px-6 py-3.5 max-w-xl ${isUser ? "bg-[#2b2b2b] text-white rounded-[28px] rounded-br-none shadow-sm" : "bg-white rounded-[28px] rounded-bl-none shadow-[0_2px_10px_-4px_rgba(0,0,0,0.05)] text-gray-800"}`} dir={!isUser ? "rtl" : "ltr"}>

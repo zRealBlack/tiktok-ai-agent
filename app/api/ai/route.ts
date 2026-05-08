@@ -6,8 +6,8 @@ export const runtime = "nodejs";
 
 // Use the same Redis SDK that /api/data uses — proven to handle encoding correctly
 const redis = new Redis({
-  url: "https://sure-shrew-104058.upstash.io",
-  token: "gQAAAAAAAZZ6AAIgcDE4OGQ5NzI3Y2NlMTI0MTk0OTA3NjhmMjZkY2RiYmRhOA",
+  url: process.env.KV_REST_API_URL!,
+  token: process.env.KV_REST_API_TOKEN!,
 });
 
 type SupportedMediaType = "image/jpeg" | "image/png" | "image/gif" | "image/webp";
@@ -48,7 +48,7 @@ export async function POST(req: Request) {
   try {
     const { messages, contextData } = await req.json();
 
-    const apiKey = "sk-ant-api03-" + "Ui8LaIXSljt7OpB-pzMuqznc4wRgEjXaurj_VPmzVWmIbLXJ_0KLhX-lNLUhy8f5uv1pZd_iFxie6HlAKumwfQ-" + "M7FpwQAA";
+    const apiKey = process.env.ANTHROPIC_API_KEY!;
     const client = new Anthropic({ apiKey });
 
     // ─── Read DIRECTLY from KV using @upstash/redis (same SDK as /api/data) ───
@@ -56,19 +56,27 @@ export async function POST(req: Request) {
     let kvAccountRaw: unknown = null;
     let kvCompetitorRaw: unknown = null;
     let kvInsightsRaw: unknown = null;
+    let kvPermissionsRaw: unknown = null;
     try {
-      [kvAccountRaw, kvCompetitorRaw, kvInsightsRaw] = await Promise.all([
+      [kvAccountRaw, kvCompetitorRaw, kvInsightsRaw, kvPermissionsRaw] = await Promise.all([
         redis.get("tiktok_data"),
         redis.get("competitor_data"),
         redis.get("sarie_memory:insights"),
+        redis.get("sarie_permissions"),
       ]);
     } catch (e) {
       console.error("KV read failed in AI route:", e);
     }
 
-    const kvAccountData   = parseKV(kvAccountRaw);
+    const kvAccountData    = parseKV(kvAccountRaw);
     const kvCompetitorData = parseKV(kvCompetitorRaw);
-    const episodicMemory  = parseKV(kvInsightsRaw);
+    const episodicMemory   = parseKV(kvInsightsRaw);
+    const allPermissions   = parseKV(kvPermissionsRaw) ?? {};
+
+    // Resolve current user's permissions (fall back to defaults)
+    const { DEFAULT_PERMISSIONS } = await import("@/app/api/permissions/route");
+    const userId       = contextData?.currentUser?.id ?? "unknown";
+    const userPerms    = { ...(DEFAULT_PERMISSIONS[userId] ?? {}), ...(allPermissions[userId] ?? {}) };
 
     // Debug log so we can verify on Vercel
     console.log("[AI] KV account:", kvAccountData?.account?.username, "followers:", kvAccountData?.account?.followers);
@@ -86,7 +94,7 @@ export async function POST(req: Request) {
     };
     // ──────────────────────────────────────────────────────────────
 
-    const context = buildAgentContext(mergedContext, episodicMemory);
+    const context = buildAgentContext(mergedContext, episodicMemory, userPerms);
     const systemPrompt = AGENT_SYSTEM_PROMPT.replace("{{CONTEXT}}", context);
 
     // Keep only the last 10 messages to limit token growth, but still benefit from prompt caching

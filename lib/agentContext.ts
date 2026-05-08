@@ -19,7 +19,45 @@ const CLIENT_PROFILE = {
   lastKnownTotalVideos: 30,
 };
 
-export function buildAgentContext(data: any, episodic?: any): string {
+export interface PermissionSet {
+  update_audit:  boolean;
+  send_messages: boolean;
+  send_email:    boolean;
+  update_memory: boolean;
+  trigger_sync:  boolean;
+}
+
+function buildActionsSection(perms: PermissionSet | null): string {
+  if (!perms) return "";
+  const actions: string[] = [];
+  if (perms.update_audit)  actions.push(`• UPDATE_VIDEO — تحديث أي field في الفيديو (suggestion, issue, score, hook, pacing, cta)
+  مثال: [SARIE_ACTION:{"type":"UPDATE_VIDEO","data":{"videoTitle":"اسم الفيديو","field":"suggestion","value":"النص الجديد"}}]`);
+  if (perms.send_messages) actions.push(`• SEND_MESSAGE — إرسال رسالة لعضو من الفريق (to: yassin/dina/haitham/shahd/sara/shahdm/yousef)
+  مثال: [SARIE_ACTION:{"type":"SEND_MESSAGE","data":{"to":"dina","content":"الرسالة هنا"}}]`);
+  if (perms.update_memory) actions.push(`• UPDATE_MEMORY — إضافة insight جديد لذاكرتك الدائمة
+  مثال: [SARIE_ACTION:{"type":"UPDATE_MEMORY","data":{"insight":"الـ hook القصير (أقل من 3 ثواني) بيحقق retention أعلى"}}]`);
+  if (perms.trigger_sync)  actions.push(`• TRIGGER_SYNC — تشغيل sync جديد لبيانات TikTok
+  مثال: [SARIE_ACTION:{"type":"TRIGGER_SYNC","data":{}}]`);
+  if (actions.length === 0) return "";
+  return `
+═══════════════════════════════════════════════════
+صلاحياتك في الداشبورد (Dashboard Control):
+═══════════════════════════════════════════════════
+إنتي مش بس بتحللي — إنتي بتتحكمي في الداشبورد مباشرة.
+لو طُلب منك تعمل حاجة أو قررتِ إنها ضرورية، نفذيها.
+
+الأكشنز المتاحة ليكِ:
+${actions.join("\n")}
+
+قواعد الأكشن:
+- حطي الأكشن في آخر ردك على سطر منفصل تماماً
+- سطر واحد فقط في كل رد — مش أكتر
+- لو الأكشن مش مناسب، ما تحطيهوش خالص
+- لو حد طلب منك حاجة مش عندك صلاحيتها، وضحيلهم كده بصراحة
+`;
+}
+
+export function buildAgentContext(data: any, episodic?: any, permissions?: PermissionSet | null): string {
   const account = data.account || {};
   const videos  = data.videos  || [];
   const gens    = data.generations || [];
@@ -50,9 +88,11 @@ ${(episodic.insights ?? []).slice(-5).map((i: string) => `• ${i}`).join("\n")}
 `
       : "";
 
+  const actionsSection = buildActionsSection(permissions ?? null);
+
   return `${episodicSection}=== اليوم والتوقيت ===
 التاريخ: ${dateStr} | اليوم: ${dayStr}
-
+${actionsSection}
 ${currentUser ? `=== CURRENT LOGGED-IN USER ===
 You are speaking with: ${currentUser.name}
 Role: ${currentUser.role}
