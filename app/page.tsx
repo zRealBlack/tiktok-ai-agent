@@ -108,7 +108,7 @@ const INITIAL_CONVERSATIONS: Conversation[] = [
     lastMessage: "",
     time: "",
     unread: 0,
-    online: true,
+    online: false,
     role: "CEO & Podcaster",
   },
   {
@@ -119,7 +119,7 @@ const INITIAL_CONVERSATIONS: Conversation[] = [
     lastMessage: "",
     time: "",
     unread: 0,
-    online: true,
+    online: false,
     role: "Developer / AI Specialist",
   },
   {
@@ -130,7 +130,7 @@ const INITIAL_CONVERSATIONS: Conversation[] = [
     lastMessage: "",
     time: "",
     unread: 0,
-    online: true,
+    online: false,
     role: "Director & Head of Production",
   },
   {
@@ -141,7 +141,7 @@ const INITIAL_CONVERSATIONS: Conversation[] = [
     lastMessage: "",
     time: "",
     unread: 0,
-    online: true,
+    online: false,
     role: "Ugc Creator",
   },
   {
@@ -152,7 +152,7 @@ const INITIAL_CONVERSATIONS: Conversation[] = [
     lastMessage: "",
     time: "",
     unread: 0,
-    online: true,
+    online: false,
     role: "Marketing & Operation Management",
   },
   {
@@ -163,7 +163,7 @@ const INITIAL_CONVERSATIONS: Conversation[] = [
     lastMessage: "",
     time: "",
     unread: 0,
-    online: true,
+    online: false,
     role: "Community Manager",
   },
   {
@@ -174,7 +174,7 @@ const INITIAL_CONVERSATIONS: Conversation[] = [
     lastMessage: "",
     time: "",
     unread: 0,
-    online: true,
+    online: false,
     role: "Ai Artist",
   },
 ];

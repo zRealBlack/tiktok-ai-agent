@@ -13,13 +13,13 @@ const now = () => new Date().toLocaleTimeString("en-US", { hour: "2-digit", minu
 
 const INITIAL_CONVERSATIONS = [
   { id: "sarie", name: "Sarie", isAI: true, lastMessage: "الأيجنت شغال! إيه اللي تحتاجه؟", time: "Now", unread: 0, online: true, role: "AI Content Strategist" },
-  { id: "dina", name: "Dina Amer", isAI: false, lastMessage: "", time: "", unread: 0, online: true, role: "CEO & Podcaster" },
-  { id: "yassin", name: "Yassin Gaml", isAI: false, lastMessage: "", time: "", unread: 0, online: true, role: "Developer / AI Specialist" },
-  { id: "haitham", name: "Haitham Abdel-aziz", isAI: false, lastMessage: "", time: "", unread: 0, online: true, role: "Director & Head of Production" },
-  { id: "shahd", name: "Shahd Sayed", isAI: false, lastMessage: "", time: "", unread: 0, online: true, role: "Ugc Creator" },
-  { id: "sara", name: "Sara Hatem", isAI: false, lastMessage: "", time: "", unread: 0, online: true, role: "Marketing & Operation Management" },
-  { id: "shahdm", name: "Shahd Mahmoud", isAI: false, lastMessage: "", time: "", unread: 0, online: true, role: "Community Manager" },
-  { id: "yousef", name: "Yousef Hatem", isAI: false, lastMessage: "", time: "", unread: 0, online: true, role: "Ai Artist" },
+  { id: "dina", name: "Dina Amer", isAI: false, lastMessage: "", time: "", unread: 0, online: false, role: "CEO & Podcaster" },
+  { id: "yassin", name: "Yassin Gaml", isAI: false, lastMessage: "", time: "", unread: 0, online: false, role: "Developer / AI Specialist" },
+  { id: "haitham", name: "Haitham Abdel-aziz", isAI: false, lastMessage: "", time: "", unread: 0, online: false, role: "Director & Head of Production" },
+  { id: "shahd", name: "Shahd Sayed", isAI: false, lastMessage: "", time: "", unread: 0, online: false, role: "Ugc Creator" },
+  { id: "sara", name: "Sara Hatem", isAI: false, lastMessage: "", time: "", unread: 0, online: false, role: "Marketing & Operation Management" },
+  { id: "shahdm", name: "Shahd Mahmoud", isAI: false, lastMessage: "", time: "", unread: 0, online: false, role: "Community Manager" },
+  { id: "yousef", name: "Yousef Hatem", isAI: false, lastMessage: "", time: "", unread: 0, online: false, role: "Ai Artist" },
 ];
 
 function AvatarCircle({ name, src, size = 40, online }: { name: string; src?: string | null; size?: number; online?: boolean }) {
@@ -377,10 +377,22 @@ export default function TeamChatPage({ params }: { params: Promise<{ id: string 
         <main className="flex-1 bg-[#fbfbfb] my-4 rounded-[24px] shadow-sm flex flex-col relative overflow-hidden">
           <div className="absolute top-0 w-full flex justify-between items-center px-8 py-4 bg-gradient-to-b from-[#fbfbfb] to-transparent z-10 border-none">
             <div className="flex items-center gap-3">
-              <AvatarCircle name={activeConvo.name} size={32} online={activeConvo.online} />
+              <AvatarCircle name={activeConvo.name} size={32} online={
+                (() => {
+                  const msgs = teamMessages[activeId] || [];
+                  const last = msgs[msgs.length - 1];
+                  return activeConvo.isAI || (last?.serverTs ? Date.now() - last.serverTs < 5 * 60 * 1000 : false);
+                })()
+              } />
               <div>
                 <h2 className="font-bold text-gray-800 text-base">{activeConvo.name}</h2>
-                <p className="text-xs text-gray-500 font-medium">{activeConvo.online ? "Active now" : "Offline"}</p>
+                <p className="text-xs text-gray-500 font-medium">
+                  {activeConvo.isAI ? 'Active now' : (() => {
+                    const msgs = teamMessages[activeId] || [];
+                    const last = msgs[msgs.length - 1];
+                    return last?.serverTs && Date.now() - last.serverTs < 5 * 60 * 1000 ? 'Active now' : 'Offline';
+                  })()}
+                </p>
               </div>
             </div>
             <div className="flex gap-4 text-gray-400">
