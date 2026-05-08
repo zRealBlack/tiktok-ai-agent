@@ -3,44 +3,46 @@ import React, { useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useData } from "@/components/DataContext";
-import { Settings } from 'lucide-react';
-import SettingsModal from "@/components/SettingsModal";
+import { ArrowLeft, ChevronDown, Check, Settings, LogOut } from 'lucide-react';
+
+// ─── Clients ─────────────────────────────────────────────────────────────────
+const CLIENTS = [
+  { id: "rasayel", username: "@rasayel_podcast", name: "Rasayel Podcast", initial: "R", color: "#8b5cf6" },
+];
 
 function AccountDropdown() {
   const [isOpen, setIsOpen] = useState(false);
-  const accounts = [
-    { name: "Rasayel Podcast", icon: "fa-solid fa-podcast", color: "text-purple-500" },
-    { name: "TikTok", icon: "fa-brands fa-tiktok", color: "text-black" },
-    { name: "YouTube", icon: "fa-brands fa-youtube", color: "text-red-500" },
-    { name: "Instagram", icon: "fa-brands fa-instagram", color: "text-pink-500" },
-    { name: "Facebook", icon: "fa-brands fa-facebook", color: "text-blue-500" },
-  ];
-  const [selected, setSelected] = useState(accounts[0]);
+  const [selected, setSelected] = useState(CLIENTS[0]);
 
   return (
     <div className="relative">
-      <button 
+      <button
         onClick={() => setIsOpen(!isOpen)}
         className="w-full bg-white border border-gray-200 text-gray-700 text-xs flex items-center justify-between p-2.5 shadow-sm rounded-full px-4 hover:border-gray-300 transition-colors"
       >
         <div className="flex items-center gap-2.5">
-          <i className={`${selected.icon} ${selected.color} w-3 text-center`}></i>
-          <span className="font-semibold truncate">{selected.name}</span>
+          <div style={{ width: 18, height: 18, borderRadius: '50%', background: selected.color, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 9, fontWeight: 800, color: '#fff', flexShrink: 0 }}>
+            {selected.initial}
+          </div>
+          <span className="font-semibold truncate">{selected.username}</span>
         </div>
-        <i className={`fa-solid fa-chevron-down text-[10px] text-gray-400 transition-transform ${isOpen ? 'rotate-180' : ''}`}></i>
+        <ChevronDown size={12} className={`text-gray-400 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
       </button>
       {isOpen && (
         <>
-          <div className="fixed inset-0 z-40" onClick={() => setIsOpen(false)}></div>
+          <div className="fixed inset-0 z-40" onClick={() => setIsOpen(false)} />
           <div className="absolute top-full left-0 w-full mt-1.5 bg-white border border-gray-100 rounded-xl shadow-lg z-50 overflow-hidden py-1">
-            {accounts.map(acc => (
-              <button 
-                key={acc.name}
-                onClick={() => { setSelected(acc); setIsOpen(false); }}
-                className={`w-full text-left px-4 py-2.5 text-[13px] flex items-center gap-3 hover:bg-gray-50 transition-colors ${selected.name === acc.name ? 'bg-gray-50 text-gray-900 font-bold' : 'text-gray-600 font-medium'}`}
+            {CLIENTS.map(c => (
+              <button
+                key={c.id}
+                onClick={() => { setSelected(c); setIsOpen(false); }}
+                className={`w-full text-left px-4 py-2.5 text-[13px] flex items-center gap-3 hover:bg-gray-50 transition-colors ${selected.id === c.id ? 'bg-gray-50 text-gray-900 font-bold' : 'text-gray-600 font-medium'}`}
               >
-                <i className={`${acc.icon} ${acc.color} w-4 text-center text-[14px]`}></i>
-                {acc.name}
+                <div style={{ width: 20, height: 20, borderRadius: '50%', background: c.color, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 9, fontWeight: 800, color: '#fff', flexShrink: 0 }}>
+                  {c.initial}
+                </div>
+                <span className="flex-1">{c.username}</span>
+                {selected.id === c.id && <Check size={12} className="text-gray-500" />}
               </button>
             ))}
           </div>
@@ -52,7 +54,7 @@ function AccountDropdown() {
 
 function SubNav() {
   const pathname = usePathname();
-  
+
   const links = [
     { name: 'Overview', href: '/dashboard' },
     { name: 'Audit', href: '/dashboard/audit' },
@@ -74,74 +76,84 @@ function SubNav() {
   );
 }
 
+// ─── Avatar helper (mirrors main page AvatarCircle) ──────────────────────────
+function AvatarCircle({ name, size = 28 }: { name: string; size?: number }) {
+  const colors = ["#ef4444", "#8b5cf6", "#3b82f6", "#22c55e", "#f59e0b", "#ec4899"];
+  const color = colors[(name || "U").charCodeAt(0) % colors.length];
+  const initial = (name || "U")[0].toUpperCase();
+  return (
+    <div style={{ width: size, height: size, borderRadius: "50%", background: color, display: "flex", alignItems: "center", justifyContent: "center", fontSize: size * 0.38, fontWeight: 800, color: "#fff", flexShrink: 0 }}>
+      {initial}
+    </div>
+  );
+}
+
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const { currentUser } = useData();
-  const [showSettings, setShowSettings] = useState(false);
+  const [showUserMenu, setShowUserMenu] = useState(false);
 
   return (
-    <div className="h-screen w-full bg-white flex items-center justify-center p-8" style={{
-      fontFamily: "'Inter', sans-serif"
-    }}>
-      
+    <div className="h-screen w-full bg-white flex items-center justify-center p-8" style={{ fontFamily: "'Inter', sans-serif" }}>
+
       {/*  BEGIN: MainContainer  */}
       <div className="bg-[#f2f2f2] w-full max-w-[1600px] h-full rounded-[32px] shadow-2xl flex overflow-hidden relative text-[#2b2b2b] text-[14px]">
-        
+
         {/*  BEGIN: LeftSidebar  */}
         <aside className="w-[200px] flex flex-col justify-between p-6 pl-8">
           <div className="space-y-4 pt-4 flex-1 flex flex-col h-full overflow-hidden">
             <nav className="space-y-2 shrink-0">
-              <Link href="/" className="flex items-center gap-3 px-4 py-2.5 text-[#2b2b2b] font-medium bg-white rounded-full transition-all shadow-sm border border-gray-100">
-                <i className="fa-solid fa-arrow-left text-[#ef4444]"></i>
+              <Link href="/" className="flex items-center gap-3 px-4 py-2.5 text-[#2b2b2b] font-medium bg-white rounded-full transition-all shadow-sm border border-gray-100 hover:shadow-md">
+                <ArrowLeft size={14} className="text-[#ef4444]" />
                 Back
               </Link>
             </nav>
             <div className="space-y-6 mt-8 flex-1 overflow-y-auto pr-2">
               {/*  Account Dropdown  */}
               <div>
-                <h4 className="text-xs font-semibold text-gray-800 mb-3 uppercase tracking-wider">Account</h4>
+                <h4 className="text-xs font-semibold text-gray-800 mb-3 uppercase tracking-wider">Client</h4>
                 <AccountDropdown />
-              </div>
-              
-              {/*  Platforms  */}
-              <div>
-                <h4 className="text-xs font-semibold text-gray-800 mb-3 mt-6 uppercase tracking-wider">Platforms</h4>
-                <ul className="space-y-2">
-                  <li className="flex items-center gap-3 px-3 py-2 text-gray-600 hover:text-gray-900 hover:bg-white cursor-pointer transition-colors text-xs font-medium shadow-sm border border-gray-100 text-gray-900 rounded-full bg-white/60">
-                    <i className="fa-brands fa-tiktok w-4 text-center"></i> TikTok
-                  </li>
-                  <li className="flex items-center gap-3 px-3 py-2 text-gray-600 hover:text-gray-900 hover:bg-white rounded-lg cursor-pointer transition-colors text-xs font-medium">
-                    <i className="fa-brands fa-youtube w-4 text-center text-red-500"></i> YouTube
-                  </li>
-                  <li className="flex items-center gap-3 px-3 py-2 text-gray-600 hover:text-gray-900 hover:bg-white rounded-lg cursor-pointer transition-colors text-xs font-medium">
-                    <i className="fa-brands fa-instagram w-4 text-center text-pink-600"></i> Instagram
-                  </li>
-                  <li className="flex items-center gap-3 px-3 py-2 text-gray-600 hover:text-gray-900 hover:bg-white rounded-lg cursor-pointer transition-colors text-xs font-medium">
-                    <i className="fa-brands fa-facebook w-4 text-center text-blue-600"></i> Facebook
-                  </li>
-                </ul>
               </div>
             </div>
           </div>
-          <div className="pb-4 shrink-0 mt-4">
-            <div className="flex items-center gap-3 px-3 py-2.5 bg-white border border-gray-100 rounded-2xl shadow-sm">
-              <div className="w-10 h-10 rounded-full bg-[#ef4444] flex items-center justify-center text-white font-bold text-sm flex-shrink-0 shadow-sm">
-                {currentUser ? currentUser.name[0].toUpperCase() : "U"}
+
+          {/* User Card — matches main page style */}
+          <div className="pb-4 shrink-0 mt-4 border-t border-gray-100 pt-4 relative">
+            <div
+              onClick={() => setShowUserMenu(!showUserMenu)}
+              className="flex items-center gap-2 w-full p-2 hover:bg-white rounded-xl cursor-pointer transition-colors"
+            >
+              <AvatarCircle name={currentUser?.name || "User"} size={28} />
+              <div className="flex-1 min-w-0">
+                <h4 className="text-[11px] font-bold text-gray-800 truncate leading-tight">{currentUser?.name || "User"}</h4>
+                <p className="text-[9px] text-gray-500 truncate">{currentUser?.role || "Team Member"}</p>
               </div>
-              <div className="flex flex-col overflow-hidden flex-1">
-                <span className="text-[13px] font-bold text-gray-800 truncate">{currentUser ? currentUser.name : "Admin User"}</span>
-                <span className="text-[10px] text-gray-500 truncate">{currentUser ? currentUser.email : "admin@mas.ai"}</span>
-              </div>
-              <button 
-                onClick={() => setShowSettings(true)}
-                className="text-gray-400 hover:text-gray-700 transition-colors p-1.5 hover:bg-gray-50 rounded-full"
-              >
-                <Settings size={16} strokeWidth={2} />
+              <button className="text-gray-400 hover:text-gray-600 transition-colors">
+                <i className="fa-solid fa-gear text-[10px]"></i>
               </button>
             </div>
+
+            {showUserMenu && (
+              <>
+                <div className="fixed inset-0 z-40" onClick={() => setShowUserMenu(false)} />
+                <div className="absolute bottom-full left-0 mb-2 w-full bg-white border border-gray-100 rounded-xl shadow-lg z-50 overflow-hidden py-1">
+                  <button onClick={() => setShowUserMenu(false)} className="w-full text-left px-4 py-2.5 text-xs flex items-center gap-2 hover:bg-gray-50 transition-colors text-gray-700 font-medium">
+                    <Settings size={12} className="text-gray-500" />
+                    Settings
+                  </button>
+                  <button
+                    onClick={() => { localStorage.removeItem('mas_ai_authenticated_user'); window.location.href = '/'; }}
+                    className="w-full text-left px-4 py-2.5 text-xs flex items-center gap-2 hover:bg-red-50 hover:text-red-600 transition-colors text-red-500 font-medium"
+                  >
+                    <LogOut size={12} />
+                    Sign Out
+                  </button>
+                </div>
+              </>
+            )}
           </div>
         </aside>
         {/*  END: LeftSidebar  */}
-        
+
         {/*  BEGIN: Main Dashboard Area  */}
         <main className="flex-1 bg-[#fbfbfb] my-4 mr-4 rounded-[24px] shadow-sm flex flex-col relative overflow-hidden border border-gray-100">
           {/*  Top Bar / Sub-navigation  */}
@@ -154,13 +166,13 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             </div>
             <SubNav />
           </div>
-          
+
           <div className="flex-1 overflow-y-auto">
             {children}
           </div>
         </main>
         {/* END: Main Dashboard Area */}
-        
+
         {/*  Assistant Avatar Floating Widget  */}
         <div className="absolute bottom-8 right-8 flex items-end gap-3 z-20">
           <div className="bg-black text-white text-xs px-4 py-2 rounded-2xl rounded-br-sm shadow-lg mb-4">
@@ -168,12 +180,10 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           </div>
           <img alt="Robot Assistant" className="w-16 h-16 object-cover rounded-full drop-shadow-xl border-2 border-white bg-white" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBC8o0Dh-48odiXykGf9dXZ3HQkqIfgf9DTRu5eek1doIbEYtT3mV9F81Cy0qYDCLwiee969EF8rp7BbSKDfanY00VuM7fdfaI5ep1w21ALHKbPuxkPnI6gSjMFcyH-A_4CAA37vlxHFk2pGPo5LeOezJJbSGhBXzZ8pz6cZQkiCn-j75BUoOxkfoudEM5roWGn3ZNugRg5ryjuqujKC1VbF1_LKy_SrkhUusodJAw_WiJctH9uPZBHfrOrf070sDEU62d6PK_FUA"/>
         </div>
-        
+
       </div>
       {/*  END: MainContainer  */}
 
-      {/* Settings Modal */}
-      {showSettings && <SettingsModal onClose={() => setShowSettings(false)} />}
     </div>
   );
 }
