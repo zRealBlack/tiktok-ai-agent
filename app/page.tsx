@@ -897,7 +897,7 @@ body {
   {sessions.length === 0 && historyLoaded && (
     <p className="text-[11px] text-gray-400 px-1 mt-4">No previous chats yet.</p>
   )}
-  {(() => {
+  {historyLoaded && (() => {
     const todayStr = new Date().toDateString();
     const yesterdayStr = new Date(Date.now() - 86400000).toDateString();
     const groups: { label: string; items: SessionMeta[] }[] = [];
@@ -996,7 +996,7 @@ body {
   const isUser = m.role === "user";
   const isNew  = i >= messages.length - 1;
   return (
-    <div key={i} className={`flex flex-col gap-1 ${isUser ? "items-end" : "items-start"} ${isNew ? "msg-enter" : ""}`}>
+    <div key={i} className={`group flex flex-col gap-1 ${isUser ? "items-end" : "items-start"} ${isNew ? "msg-enter" : ""}`}>
       <div className={`px-6 py-3.5 max-w-xl ${isUser ? "bg-[#2b2b2b] text-white rounded-[28px] rounded-br-none shadow-sm" : "bg-white rounded-[28px] rounded-bl-none shadow-[0_2px_10px_-4px_rgba(0,0,0,0.05)] text-gray-800"}`} dir={!isUser ? "rtl" : "ltr"}>
         {m.attachment && m.attachment.type === "image" && (
           <img src={m.attachment.url} alt={m.attachment.name} className="w-full max-w-[240px] rounded-xl block mb-2" />
@@ -1007,15 +1007,24 @@ body {
         )}
       </div>
 
-      {/* Timestamp + hover actions */}
-      <div className={`flex items-center gap-2 mt-0.5 group ${isUser ? "flex-row-reverse mr-2" : "ml-2"}`}>
+      {/* Timestamp + hover actions — visible when hovering anywhere on the message */}
+      <div className={`flex items-center gap-2 mt-0.5 ${isUser ? "flex-row-reverse mr-2" : "ml-2"}`}>
         <span className="text-[10px] text-gray-300">{m.ts}</span>
-        <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity duration-150">
-          <button onClick={() => handleCopy(m.content)} className="text-gray-300 hover:text-gray-500 p-1 rounded-lg hover:bg-gray-100 transition-colors"><Copy size={11}/></button>
+        <div className="flex gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity duration-150">
+          <button
+            onClick={() => handleCopy(m.content)}
+            title="Copy"
+            className="text-gray-400 hover:text-gray-700 p-1 rounded-lg hover:bg-gray-100 transition-colors"
+          ><Copy size={11}/></button>
+          <button
+            onClick={() => handleForward(m.content)}
+            title="Forward"
+            className="text-gray-400 hover:text-gray-700 p-1 rounded-lg hover:bg-gray-100 transition-colors"
+          ><Forward size={11}/></button>
           {!isUser && (
             <>
-              <button className="text-gray-300 hover:text-gray-500 p-1 rounded-lg hover:bg-gray-100 transition-colors"><i className="fa-regular fa-thumbs-up" style={{ fontSize: 10 }}></i></button>
-              <button className="text-gray-300 hover:text-gray-500 p-1 rounded-lg hover:bg-gray-100 transition-colors"><i className="fa-regular fa-thumbs-down" style={{ fontSize: 10 }}></i></button>
+              <button className="text-gray-400 hover:text-green-500 p-1 rounded-lg hover:bg-gray-100 transition-colors"><i className="fa-regular fa-thumbs-up" style={{ fontSize: 10 }}></i></button>
+              <button className="text-gray-400 hover:text-red-400 p-1 rounded-lg hover:bg-gray-100 transition-colors"><i className="fa-regular fa-thumbs-down" style={{ fontSize: 10 }}></i></button>
             </>
           )}
         </div>
@@ -1072,11 +1081,11 @@ body {
         style={{ minHeight: '40px', textAlign: input ? (isAI ? 'right' : 'left') : 'center' }}
       />
       <button
-        onClick={handleSend}
-        disabled={!input.trim() && !pendingAttachment}
+        onClick={isAI && streaming ? sarie.stop : handleSend}
+        disabled={!isAI && !streaming && !input.trim() && !pendingAttachment}
         className="send-btn bg-[#2b2b2b] text-white rounded-full w-9 h-9 flex items-center justify-center hover:bg-black disabled:opacity-30 mb-1 shrink-0"
       >
-        {streaming ? <Square size={12} fill="white" /> : <Send size={14} className="-ml-0.5" />}
+        {isAI && streaming ? <Square size={12} fill="white" /> : <Send size={14} className="-ml-0.5" />}
       </button>
     </div>
   </div>
