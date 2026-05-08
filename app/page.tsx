@@ -214,6 +214,7 @@ function useSarieChat() {
   const [sessions, setSessions]           = useState<SessionMeta[]>([]);
   const [currentSessionId, setCurrentSessionId] = useState<string>("");
   const [historyLoaded, setHistoryLoaded] = useState(false);
+  const [sessionKey, setSessionKey]       = useState(0);
   const abortRef        = useRef<AbortController | null>(null);
   const sessionIdRef    = useRef<string>("");
 
@@ -291,6 +292,7 @@ function useSarieChat() {
     const sid = makeSessionId();
     setCurrentSessionId(sid);
     sessionIdRef.current = sid;
+    setSessionKey(k => k + 1);
     const welcome = account?.username
       ? [makeWelcome(account.username, account.followers || 0)]
       : [];
@@ -302,6 +304,7 @@ function useSarieChat() {
     if (streaming || sessId === sessionIdRef.current) return;
     setCurrentSessionId(sessId);
     sessionIdRef.current = sessId;
+    setSessionKey(k => k + 1);
     setMessages([]);
     if (!currentUser?.id) return;
     const data = await fetch(`/api/chat-history?userId=${currentUser.id}&sessionId=${sessId}`)
@@ -401,7 +404,7 @@ function useSarieChat() {
     });
   };
 
-  return { messages, setMessages, streaming, send, stop, sessions, currentSessionId, historyLoaded, newChat, loadSession, deleteSession };
+  return { messages, setMessages, streaming, send, stop, sessions, currentSessionId, sessionKey, historyLoaded, newChat, loadSession, deleteSession };
 }
 
 // ─── Main Page ────────────────────────────────────────────────────────────────
@@ -432,7 +435,7 @@ function ChatPageInner() {
   const bottomRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const sarie = useSarieChat();
-  const { sessions, currentSessionId, historyLoaded, newChat, loadSession, deleteSession } = sarie;
+  const { sessions, currentSessionId, sessionKey, historyLoaded, newChat, loadSession, deleteSession } = sarie;
   const { currentUser } = useData();
   const searchParams = useSearchParams();
   const promptHandled = useRef(false);
@@ -768,88 +771,92 @@ function ChatPageInner() {
 
   return (
     <>
-      <style dangerouslySetInnerHTML={{__html: `@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap");
+      <style dangerouslySetInnerHTML={{__html: `
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap");
+
 body {
-    font-family: "Inter", sans-serif;
-    background-image: url(https://lh3.googleusercontent.com/aida/ADBb0uhCilLHmLfDhPMwiCs2nL08qwA6V4xXkJYQ4KtwbpzOH62ThNmDWsEtxzYscnGYjlnkSs9KqANozl3XsH_1co8MEq1TXxitKN8M_ZLcIfMUc-DYny0LMDOLM5Tt0mMigyTZCfAzzVB91vXKYlO7L7hsdofrt6vkvAAaiwsKoPmx8H-JHJyiR5sM-gNy-r6UYF4_Z61SW9RSycIBI7sRuqVXMtbvBMHknTg4V6fzeOS9J6BZeTdDTHgVCjdnfkDJv5uefwuLfcCg);
-    background-size: cover;
-    background-position: center;
-    min-height: 100vh;
-    display: flex;
-    align-items: center;
-    justify-content: center
-    }
-/* Scrollbar styling for a cleaner look */
-::-webkit-scrollbar {
-    width: 6px
-    }
-::-webkit-scrollbar-track {
-    background: transparent
-    }
-::-webkit-scrollbar-thumb {
-    background: #e5e7eb;
-    border-radius: 10px
-    }
-.rotated-images {
-    position: relative;
-    height: 250px;
-    width: 300px;
-    margin: 0 auto
-    }
-.rotated-img {
-    position: absolute;
-    border-radius: 12px;
-    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)
-    }
-.img-1 {
-    top: 0;
-    left: 20px;
-    z-index: 10;
-    width: 200px;
-    height: 140px;
-    object-fit: cover;
-    transform: rotate(-5deg)
-    }
-.img-2 {
-    top: 70px;
-    left: -20px;
-    z-index: 5;
-    width: 160px;
-    height: 120px;
-    object-fit: cover;
-    transform: rotate(-15deg)
-    }
-.img-3 {
-    top: 90px;
-    left: 60px;
-    z-index: 15;
-    width: 220px;
-    height: 150px;
-    object-fit: cover;
-    transform: rotate(5deg)
-    }
-.app-icon {
-    width: 16px;
-    height: 16px
-    }
-.avatar-img {
-    width: 32px;
-    height: 32px;
-    border-radius: 50%;
-    object-fit: cover;
+  font-family: "Inter", sans-serif;
+  background-image: url(https://lh3.googleusercontent.com/aida/ADBb0uhCilLHmLfDhPMwiCs2nL08qwA6V4xXkJYQ4KtwbpzOH62ThNmDWsEtxzYscnGYjlnkSs9KqANozl3XsH_1co8MEq1TXxitKN8M_ZLcIfMUc-DYny0LMDOLM5Tt0mMigyTZCfAzzVB91vXKYlO7L7hsdofrt6vkvAAaiwsKoPmx8H-JHJyiR5sM-gNy-r6UYF4_Z61SW9RSycIBI7sRuqVXMtbvBMHknTg4V6fzeOS9J6BZeTdDTHgVCjdnfkDJv5uefwuLfcCg);
+  background-size: cover;
+  background-position: center;
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
-.status-indicator {
-    position: absolute;
-    bottom: 0;
-    right: 0;
-    width: 10px;
-    height: 10px;
-    border-radius: 50%;
-    border: 2px solid white;
+
+/* ── Scrollbar ─────────────────────────────── */
+::-webkit-scrollbar { width: 4px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: #e5e7eb; border-radius: 10px; }
+::-webkit-scrollbar-thumb:hover { background: #d1d5db; }
+
+/* ── Message entrance ──────────────────────── */
+@keyframes msg-in {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
 }
+.msg-enter { animation: msg-in 0.22s cubic-bezier(0.16,1,0.3,1) both; }
+
+/* ── Chat area fade (session switch) ──────── */
+@keyframes chat-fade {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+.chat-fade { animation: chat-fade 0.2s ease both; }
+
+/* ── Thinking dots ─────────────────────────── */
+@keyframes dot-up {
+  0%, 60%, 100% { transform: translateY(0);   opacity: 0.35; }
+  30%            { transform: translateY(-5px); opacity: 1; }
+}
+.dot1 { animation: dot-up 1.1s ease infinite 0s;    width:6px; height:6px; border-radius:50%; background:#9ca3af; display:inline-block; }
+.dot2 { animation: dot-up 1.1s ease infinite 0.18s; width:6px; height:6px; border-radius:50%; background:#9ca3af; display:inline-block; }
+.dot3 { animation: dot-up 1.1s ease infinite 0.36s; width:6px; height:6px; border-radius:50%; background:#9ca3af; display:inline-block; }
+
+/* ── Skeleton shimmer (sidebar loading) ────── */
+@keyframes shimmer {
+  0%   { background-position: -200% 0; }
+  100% { background-position:  200% 0; }
+}
+.skeleton {
+  background: linear-gradient(90deg, #ebebeb 25%, #f5f5f5 50%, #ebebeb 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.4s ease infinite;
+  border-radius: 6px;
+}
+
+/* ── Empty state fade-in ───────────────────── */
+@keyframes empty-in {
+  from { opacity: 0; transform: translateY(6px) scale(0.98); }
+  to   { opacity: 1; transform: translateY(0)   scale(1); }
+}
+.empty-state { animation: empty-in 0.35s cubic-bezier(0.16,1,0.3,1) both; }
+
+/* ── Input bar focus ring ──────────────────── */
+.input-bar { transition: box-shadow 0.2s ease, background 0.2s ease; }
+.input-bar:focus-within {
+  background: #efefef !important;
+  box-shadow: 0 0 0 2px rgba(0,0,0,0.07), 0 6px 20px rgba(0,0,0,0.05);
+}
+
+/* ── Send button micro-press ───────────────── */
+.send-btn:active { transform: scale(0.92); }
+.send-btn { transition: transform 0.1s ease, background 0.15s ease; }
+
+/* ── New Chat button pulse on click ──────── */
+.new-chat-btn:active { transform: scale(0.97); }
+.new-chat-btn { transition: transform 0.1s ease, background 0.15s ease; }
+
+/* ── Sidebar session item ─────────────────── */
+.session-item { transition: background 0.15s ease, color 0.15s ease; }
+
+/* ── Right sidebar team link ──────────────── */
+.team-link { transition: background 0.15s ease; }
+
 .status-online { background-color: #22c55e; }
-.status-away { background-color: #eab308; }
-.status-busy { background-color: #ef4444; }
+.status-away   { background-color: #eab308; }
+.status-busy   { background-color: #ef4444; }
 `}} />
       <div className="flex items-center justify-center h-screen w-full bg-white p-8" style={{
          fontFamily: "'Inter', sans-serif"
@@ -863,7 +870,7 @@ body {
 <nav className="space-y-2.5 mt-2 shrink-0 flex flex-col items-start">
   <button
     onClick={newChat}
-    className="bg-[#2b2b2b] text-white rounded-[20px] py-2 px-5 flex items-center gap-2 text-[13px] font-medium hover:bg-black transition-colors shadow-sm w-full"
+    className="new-chat-btn bg-[#2b2b2b] text-white rounded-[20px] py-2 px-5 flex items-center gap-2 text-[13px] font-medium hover:bg-black shadow-sm w-full"
   >
     <Plus size={14} className="text-gray-300" />
     New Chat
@@ -876,6 +883,17 @@ body {
 
 {/* Live Chat History */}
 <div className="space-y-1 mt-6 flex-1 overflow-y-auto pr-1">
+  {/* Skeleton while loading */}
+  {!historyLoaded && (
+    <div className="space-y-3 px-1 mt-2">
+      {[55, 70, 45, 65, 50].map((w, i) => (
+        <div key={i} className="flex items-center gap-2">
+          <div className="skeleton w-3 h-3 rounded-full shrink-0" style={{ animationDelay: `${i * 0.1}s` }} />
+          <div className="skeleton h-3 rounded" style={{ width: `${w}%`, animationDelay: `${i * 0.1}s` }} />
+        </div>
+      ))}
+    </div>
+  )}
   {sessions.length === 0 && historyLoaded && (
     <p className="text-[11px] text-gray-400 px-1 mt-4">No previous chats yet.</p>
   )}
@@ -961,32 +979,43 @@ body {
 <span className="font-bold text-sm tracking-wider mr-1">Sarie 2.1</span> <i className="fa-solid fa-chevron-down text-[10px] ml-1 text-gray-500"></i>
 </button>
 </div>
-<div className="flex-1 overflow-y-auto px-10 pt-16 pb-32 flex flex-col gap-8">
+<div key={sessionKey} className="flex-1 overflow-y-auto px-10 pt-16 pb-32 flex flex-col gap-8 chat-fade">
+
+{/* Empty state */}
+{messages.length === 0 && historyLoaded && (
+  <div className="flex-1 flex flex-col items-center justify-center text-center px-8 empty-state" style={{ minHeight: 320 }}>
+    <div className="w-12 h-12 rounded-2xl bg-[#2b2b2b] flex items-center justify-center mb-4 shadow-md">
+      <span style={{ fontSize: 20 }}>✦</span>
+    </div>
+    <h2 className="text-sm font-bold text-gray-700 mb-1">ساري جاهزة</h2>
+    <p className="text-[11px] text-gray-400 leading-relaxed max-w-[180px]">اسأل عن أي فيديو، منافس، أو استراتيجية</p>
+  </div>
+)}
+
 {messages.map((m, i) => {
   const isUser = m.role === "user";
+  const isNew  = i >= messages.length - 1;
   return (
-    <div key={i} className={`flex flex-col gap-1 ${isUser ? "items-end" : "items-start"}`}>
+    <div key={i} className={`flex flex-col gap-1 ${isUser ? "items-end" : "items-start"} ${isNew ? "msg-enter" : ""}`}>
       <div className={`px-6 py-3.5 max-w-xl ${isUser ? "bg-[#2b2b2b] text-white rounded-[28px] rounded-br-none shadow-sm" : "bg-white rounded-[28px] rounded-bl-none shadow-[0_2px_10px_-4px_rgba(0,0,0,0.05)] text-gray-800"}`} dir={!isUser ? "rtl" : "ltr"}>
         {m.attachment && m.attachment.type === "image" && (
           <img src={m.attachment.url} alt={m.attachment.name} className="w-full max-w-[240px] rounded-xl block mb-2" />
         )}
         {m.content && <MarkdownMessage content={m.content} />}
         {m.streaming && (
-          <span className="inline-block w-1.5 h-3.5 ml-1 bg-gray-400 rounded-sm align-middle animate-pulse" />
+          <span className="inline-block w-1.5 h-3.5 ml-1 bg-gray-300 rounded-sm align-middle animate-pulse" />
         )}
       </div>
-      
-      {/* Actions & Timestamp */}
-      <div className={`flex items-center gap-3 mt-1 ${isUser ? "flex-row-reverse mr-2" : "ml-2"}`}>
-        <span className="text-[10px] text-gray-400">{m.ts}</span>
-        
-        {/* Simple actions */}
-        <div className="flex gap-2 opacity-0 hover:opacity-100 transition-opacity" style={{ opacity: 1 }}>
-          <button onClick={() => handleCopy(m.content)} className="text-gray-400 hover:text-gray-600 p-1"><Copy size={12}/></button>
+
+      {/* Timestamp + hover actions */}
+      <div className={`flex items-center gap-2 mt-0.5 group ${isUser ? "flex-row-reverse mr-2" : "ml-2"}`}>
+        <span className="text-[10px] text-gray-300">{m.ts}</span>
+        <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity duration-150">
+          <button onClick={() => handleCopy(m.content)} className="text-gray-300 hover:text-gray-500 p-1 rounded-lg hover:bg-gray-100 transition-colors"><Copy size={11}/></button>
           {!isUser && (
             <>
-              <button className="text-gray-400 hover:text-gray-600 p-1"><i className="fa-regular fa-thumbs-up text-[10px]"></i></button>
-              <button className="text-gray-400 hover:text-gray-600 p-1"><i className="fa-regular fa-thumbs-down text-[10px]"></i></button>
+              <button className="text-gray-300 hover:text-gray-500 p-1 rounded-lg hover:bg-gray-100 transition-colors"><i className="fa-regular fa-thumbs-up" style={{ fontSize: 10 }}></i></button>
+              <button className="text-gray-300 hover:text-gray-500 p-1 rounded-lg hover:bg-gray-100 transition-colors"><i className="fa-regular fa-thumbs-down" style={{ fontSize: 10 }}></i></button>
             </>
           )}
         </div>
@@ -994,14 +1023,18 @@ body {
     </div>
   );
 })}
-{streaming && (
-  <div className="flex flex-col items-start gap-1">
-    <div className="bg-white px-5 py-3 rounded-t-2xl rounded-br-2xl rounded-bl-md shadow-sm border border-gray-100 flex items-center gap-2">
-      <Loader2 size={14} className="animate-spin text-gray-400" />
-      <span className="text-sm text-gray-500">Thinking...</span>
+
+{/* Thinking indicator — three bouncing dots */}
+{streaming && messages[messages.length - 1]?.streaming !== true && (
+  <div className="flex items-start msg-enter">
+    <div className="bg-white px-5 py-4 rounded-[28px] rounded-bl-none shadow-[0_2px_10px_-4px_rgba(0,0,0,0.05)] flex items-center gap-1.5">
+      <span className="dot1" />
+      <span className="dot2" />
+      <span className="dot3" />
     </div>
   </div>
 )}
+
 <div ref={bottomRef} />
 </div>
 <div className="absolute bottom-6 left-0 right-0 px-10 flex flex-col items-center">
@@ -1013,15 +1046,15 @@ body {
         <button onClick={() => setPendingAttachment(null)} className="text-gray-400 hover:text-red-500 p-1"><X size={14}/></button>
       </div>
     )}
-    <div className="bg-[#f5f5f5] rounded-[32px] flex items-end px-4 py-2 relative">
-      <button onClick={() => fileInputRef.current?.click()} className="text-gray-500 hover:text-gray-800 p-2 mb-1">
-        <Plus size={20} />
+    <div className="input-bar bg-[#f5f5f5] rounded-[32px] flex items-end px-4 py-2 relative">
+      <button onClick={() => fileInputRef.current?.click()} className="text-gray-400 hover:text-gray-700 p-2 mb-1 rounded-xl hover:bg-white/60 transition-colors">
+        <Plus size={18} />
       </button>
       <input ref={fileInputRef} type="file" accept="image/*,video/*,.pdf,.doc,.docx,.txt" className="hidden" onChange={handleFile} />
-      
-      <textarea 
-        className="flex-1 border-none focus:outline-none outline-none focus:ring-0 bg-transparent text-[15px] text-gray-700 placeholder-gray-500 mx-4 resize-none py-2.5 max-h-[120px]" 
-        placeholder={isAI ? "اسأل ساري..." : "Type your prompt"} 
+
+      <textarea
+        className="flex-1 border-none focus:outline-none outline-none focus:ring-0 bg-transparent text-[14px] text-gray-700 placeholder-gray-400 mx-3 resize-none py-2.5 max-h-[120px]"
+        placeholder={isAI ? "اسأل ساري..." : "Type your prompt"}
         value={input}
         onChange={e => {
           setInput(e.target.value);
@@ -1038,8 +1071,12 @@ body {
         dir={isAI ? "rtl" : "ltr"}
         style={{ minHeight: '40px', textAlign: input ? (isAI ? 'right' : 'left') : 'center' }}
       />
-      <button onClick={handleSend} disabled={!input.trim() && !pendingAttachment} className="bg-[#2b2b2b] text-white rounded-full w-9 h-9 flex items-center justify-center hover:bg-black transition-colors disabled:opacity-50 mb-1 shrink-0">
-        <Send size={16} className="-ml-0.5" />
+      <button
+        onClick={handleSend}
+        disabled={!input.trim() && !pendingAttachment}
+        className="send-btn bg-[#2b2b2b] text-white rounded-full w-9 h-9 flex items-center justify-center hover:bg-black disabled:opacity-30 mb-1 shrink-0"
+      >
+        {streaming ? <Square size={12} fill="white" /> : <Send size={14} className="-ml-0.5" />}
       </button>
     </div>
   </div>
