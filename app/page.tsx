@@ -772,7 +772,7 @@ function ChatPageInner() {
   return (
     <>
       <style dangerouslySetInnerHTML={{__html: `
-@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Readex+Pro:wght@300;400;500;600;700&display=swap");
 
 body {
   font-family: "Inter", sans-serif;
@@ -783,6 +783,10 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
+}
+
+[dir="rtl"], .arabic-text {
+  font-family: "Readex Pro", sans-serif;
 }
 
 /* ── Scrollbar ─────────────────────────────── */
