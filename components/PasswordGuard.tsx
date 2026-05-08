@@ -23,6 +23,9 @@ export default function PasswordGuard({ children }: { children: React.ReactNode 
   const [adminPin, setAdminPin] = useState('');
   const [error, setError] = useState(false);
   const [isMounting, setIsMounting] = useState(true);
+  const [failCount, setFailCount] = useState(0);
+  const [lockUntil, setLockUntil] = useState<number | null>(null);
+  const [lockSecondsLeft, setLockSecondsLeft] = useState(0);
 
   useEffect(() => {
     setIsAdminAuthenticated(globalAdminVerified);
@@ -32,6 +35,23 @@ export default function PasswordGuard({ children }: { children: React.ReactNode 
       setLoginMode('team');
     }
   }, [pathname]);
+
+  // Countdown timer for lockout
+  useEffect(() => {
+    if (!lockUntil) return;
+    const interval = setInterval(() => {
+      const secs = Math.ceil((lockUntil - Date.now()) / 1000);
+      if (secs <= 0) {
+        setLockUntil(null);
+        setLockSecondsLeft(0);
+        setFailCount(0);
+        clearInterval(interval);
+      } else {
+        setLockSecondsLeft(secs);
+      }
+    }, 500);
+    return () => clearInterval(interval);
+  }, [lockUntil]);
 
   useEffect(() => {
     const authUserStr = localStorage.getItem(SESSION_KEY);
@@ -67,6 +87,7 @@ export default function PasswordGuard({ children }: { children: React.ReactNode 
   };
 
   const handleAdminPinChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (lockUntil && Date.now() < lockUntil) return; // locked out
     const val = e.target.value.replace(/\D/g, '').slice(0, 6);
     setAdminPin(val);
     if (error) setError(false);
@@ -75,10 +96,21 @@ export default function PasswordGuard({ children }: { children: React.ReactNode 
       if (val === '272008') {
         globalAdminVerified = true;
         setIsAdminAuthenticated(true);
+        setFailCount(0);
+        setLockUntil(null);
         router.push('/developer');
       } else {
+        const newFail = failCount + 1;
+        setFailCount(newFail);
         setError(true);
         setTimeout(() => setAdminPin(''), 600);
+        // Lockout tiers: 3 fails → 30s, 5 fails → 60s, 7+ fails → 120s
+        if (newFail >= 3) {
+          const waitMs = newFail >= 7 ? 120000 : newFail >= 5 ? 60000 : 30000;
+          const until = Date.now() + waitMs;
+          setLockUntil(until);
+          setLockSecondsLeft(Math.ceil(waitMs / 1000));
+        }
       }
     }
   };
@@ -202,7 +234,8 @@ export default function PasswordGuard({ children }: { children: React.ReactNode 
                     type="tel"
                     value={adminPin}
                     onChange={handleAdminPinChange}
-                    className="absolute inset-0 opacity-0 cursor-pointer w-full h-full z-10"
+                    disabled={!!(lockUntil && Date.now() < lockUntil)}
+                    className="absolute inset-0 opacity-0 cursor-pointer w-full h-full z-10 disabled:cursor-not-allowed"
                     autoFocus
                   />
                   <div className={`flex justify-between w-full gap-2 ${error ? 'animate-pulse' : ''}`}>
@@ -216,12 +249,17 @@ export default function PasswordGuard({ children }: { children: React.ReactNode 
                     })}
                   </div>
                 </div>
-                {error && (
+                {lockUntil && lockSecondsLeft > 0 ? (
+                  <div className="flex items-center gap-1.5 text-orange-500 bg-orange-50 px-4 py-2 rounded-full mt-2">
+                    <AlertCircle size={14} />
+                    <span className="text-[11px] font-bold">Too many attempts — wait {lockSecondsLeft}s</span>
+                  </div>
+                ) : error ? (
                   <div className="flex items-center gap-1.5 text-[#ef4444] animate-in fade-in bg-red-50 px-3 py-1.5 rounded-full mt-2">
                     <AlertCircle size={14} />
                     <span className="text-[10px] font-bold uppercase tracking-widest">Incorrect PIN</span>
                   </div>
-                )}
+                ) : null}
               </div>
             )}
             
@@ -236,17 +274,35 @@ export default function PasswordGuard({ children }: { children: React.ReactNode 
             )}
 
             <div className="flex justify-center mt-6">
-              <button
-                type="button"
-                onClick={() => {
-                  setLoginMode(loginMode === 'team' ? 'admin' : 'team');
-                  setError(false);
-                  setAdminPin('');
-                }}
-                className="text-[12px] font-semibold text-gray-400 hover:text-gray-800 transition-colors"
-              >
-                {loginMode === 'team' ? 'Login in to admin panel' : 'Back to Team Login'}
-              </button>
+              {loginMode === 'admin' ? (
+                isTeamAuthenticated ? (
+                  // Already logged in as team → go back to studio
+                  <button
+                    type="button"
+                    onClick={() => router.push('/')}
+                    className="text-[12px] font-semibold text-gray-400 hover:text-gray-800 transition-colors"
+                  >
+                    ← Back to Studio
+                  </button>
+                ) : (
+                  // Not logged in → go back to team login
+                  <button
+                    type="button"
+                    onClick={() => { setLoginMode('team'); setError(false); setAdminPin(''); }}
+                    className="text-[12px] font-semibold text-gray-400 hover:text-gray-800 transition-colors"
+                  >
+                    Back to Team Login
+                  </button>
+                )
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => { setLoginMode('admin'); setError(false); setAdminPin(''); }}
+                  className="text-[12px] font-semibold text-gray-400 hover:text-gray-800 transition-colors"
+                >
+                  Login in to admin panel
+                </button>
+              )}
             </div>
           </form>
         </div>
