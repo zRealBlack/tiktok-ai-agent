@@ -156,8 +156,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           {/* Top Bar */}
           <div className="absolute top-0 w-full flex justify-between items-center py-4 px-8 bg-gradient-to-b from-[#fbfbfb] to-transparent z-10">
             <div className="flex items-center gap-1.5 text-[13px]">
-              <span className="text-[#ef4444] font-bold tracking-wider">MAS</span>
-              <span className="text-gray-400 font-medium">AI Studio</span>
+              <span className="text-gray-700 font-medium">MAS AI Studio</span>
               <ChevronRight size={12} className="text-gray-300 mx-0.5" />
               <span className="text-gray-700 font-semibold">Dashboard</span>
             </div>
