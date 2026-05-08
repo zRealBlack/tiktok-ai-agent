@@ -1,9 +1,8 @@
 'use client';
-import React, { useState } from 'react';
+import React from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { useData } from "@/components/DataContext";
-import { ArrowLeft, ChevronDown, Check, Settings, LogOut, ChevronRight } from 'lucide-react';
+import { ArrowLeft, ChevronRight, ShieldAlert } from 'lucide-react';
 
 function SubNav() {
   const pathname = usePathname();
@@ -25,20 +24,7 @@ function SubNav() {
   );
 }
 
-function AvatarCircle({ name, size = 28 }: { name: string; size?: number }) {
-  const colors = ["#ef4444", "#8b5cf6", "#3b82f6", "#22c55e", "#f59e0b", "#ec4899"];
-  const color = colors[(name || "U").charCodeAt(0) % colors.length];
-  const initial = (name || "U")[0].toUpperCase();
-  return (
-    <div style={{ width: size, height: size, borderRadius: "50%", background: color, display: "flex", alignItems: "center", justifyContent: "center", fontSize: size * 0.38, fontWeight: 800, color: "#fff", flexShrink: 0 }}>
-      {initial}
-    </div>
-  );
-}
-
 export default function DeveloperLayout({ children }: { children: React.ReactNode }) {
-  const { currentUser } = useData();
-  const [showUserMenu, setShowUserMenu] = useState(false);
 
   return (
     <div className="h-screen w-full bg-white flex items-center justify-center p-8" style={{ fontFamily: "'Inter', sans-serif" }}>
@@ -69,31 +55,17 @@ export default function DeveloperLayout({ children }: { children: React.ReactNod
             </div>
           </div>
 
-          {/* User Card */}
-          <div className="pb-4 shrink-0 mt-4 border-t border-gray-100 pt-4 relative">
-            <div onClick={() => setShowUserMenu(!showUserMenu)} className="flex items-center gap-2 w-full p-2 hover:bg-white rounded-xl cursor-pointer transition-colors">
-              <AvatarCircle name={currentUser?.name || "User"} size={28} />
-              <div className="flex-1 min-w-0">
-                <h4 className="text-[11px] font-bold text-gray-800 truncate leading-tight">{currentUser?.name || "User"}</h4>
-                <p className="text-[9px] text-gray-500 truncate">{currentUser?.role || "Team Member"}</p>
+          {/* Admin indicator — no user card needed, access is PIN-gated */}
+          <div className="pb-4 shrink-0 mt-4 border-t border-gray-100 pt-4">
+            <div className="flex items-center gap-2 px-2 py-2">
+              <div className="w-7 h-7 rounded-full bg-red-50 border border-red-100 flex items-center justify-center shrink-0">
+                <ShieldAlert size={13} className="text-red-400" />
               </div>
-              <button className="text-gray-400 hover:text-gray-600 transition-colors">
-                <Settings size={12} />
-              </button>
+              <div className="flex-1 min-w-0">
+                <p className="text-[11px] font-bold text-gray-700 truncate leading-tight">Admin Access</p>
+                <p className="text-[9px] text-gray-400 truncate">PIN authenticated</p>
+              </div>
             </div>
-            {showUserMenu && (
-              <>
-                <div className="fixed inset-0 z-40" onClick={() => setShowUserMenu(false)} />
-                <div className="absolute bottom-full left-0 mb-2 w-full bg-white border border-gray-100 rounded-xl shadow-lg z-50 overflow-hidden py-1">
-                  <button onClick={() => setShowUserMenu(false)} className="w-full text-left px-4 py-2.5 text-xs flex items-center gap-2 hover:bg-gray-50 transition-colors text-gray-700 font-medium">
-                    <Settings size={12} className="text-gray-500" /> Settings
-                  </button>
-                  <button onClick={() => { localStorage.removeItem('mas_ai_authenticated_user'); window.location.href = '/'; }} className="w-full text-left px-4 py-2.5 text-xs flex items-center gap-2 hover:bg-red-50 hover:text-red-600 transition-colors text-red-500 font-medium">
-                    <LogOut size={12} /> Sign Out
-                  </button>
-                </div>
-              </>
-            )}
           </div>
         </aside>
 

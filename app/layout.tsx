@@ -5,6 +5,7 @@ import { ThemeProvider } from "@/components/ThemeProvider";
 import { DataProvider } from "@/components/DataContext";
 import PasswordGuard from "@/components/PasswordGuard";
 import PwaRegister from "@/components/PwaRegister";
+import DevButton from "@/components/DevButton";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -54,6 +55,7 @@ export default function RootLayout({
                 }}
               />
               <PwaRegister />
+              <DevButton />
               {children}
             </PasswordGuard>
           </DataProvider>
