@@ -461,10 +461,20 @@ function ChatPageInner() {
   const [longPressSess, setLongPressSess] = useState<SessionMeta | null>(null);
   const [renamingSess, setRenamingSess] = useState(false);
   const [renameValue, setRenameValue] = useState("");
+  const [inlineRenameId, setInlineRenameId] = useState<string | null>(null);
+  const [inlineRenameVal, setInlineRenameVal] = useState("");
   const bottomRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const lpTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const lpSessTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const seenMsgIdsRef = useRef<Set<string>>(new Set());
+
+  useEffect(() => {
+    try {
+      const stored = JSON.parse(localStorage.getItem('mas_seen_msg_ids') || '[]');
+      seenMsgIdsRef.current = new Set(stored);
+    } catch {}
+  }, []);
   const sarie = useSarieChat();
   const { sessions, currentSessionId, sessionKey, historyLoaded, newChat, loadSession, deleteSession, renameSession } = sarie;
   const { currentUser } = useData();
@@ -474,7 +484,7 @@ function ChatPageInner() {
   sarieSendRef.current = sarie.send;
 
 
-  // 1-second polling for global team messages
+  // 1-second polling for global team messages + notifications
   useEffect(() => {
     let timeout: NodeJS.Timeout;
     const fetchMsgs = async () => {
@@ -486,27 +496,39 @@ function ChatPageInner() {
             const reconstructed: Record<string, ChatMessage[]> = {
               dina: [], yassin: [], hesham: [], shahd: [], sara: [], haitham: [], shahdm: [], yousef: []
             };
-            
+            const notifications: { name: string; text: string }[] = [];
+
             data.messages.forEach((rawMsg: any) => {
               const msg = typeof rawMsg === 'string' ? JSON.parse(rawMsg) : rawMsg;
-              
+              const msgId = msg.id || `${msg.ts}-${msg.senderId}-${msg.receiverId}`;
+
               if (msg.senderId === currentUser.id) {
-                // Sent by me
                 if (reconstructed[msg.receiverId]) {
                   reconstructed[msg.receiverId].push({
-                    id: msg.id, role: "user", content: msg.content, ts: msg.ts, status: "delivered", attachment: msg.attachment, isForwarded: msg.isForwarded, reactions: msg.reactions
+                    id: msgId, role: "user", content: msg.content, ts: msg.ts, status: "delivered", attachment: msg.attachment, isForwarded: msg.isForwarded, reactions: msg.reactions
                   });
                 }
               } else if (msg.receiverId === currentUser.id) {
-                // Sent to me
                 if (reconstructed[msg.senderId]) {
                   reconstructed[msg.senderId].push({
-                    id: msg.id, role: "assistant", content: msg.content, ts: msg.ts, status: "seen", attachment: msg.attachment, isForwarded: msg.isForwarded, reactions: msg.reactions
+                    id: msgId, role: "assistant", content: msg.content, ts: msg.ts, status: "seen", attachment: msg.attachment, isForwarded: msg.isForwarded, reactions: msg.reactions
                   });
+                }
+                if (!seenMsgIdsRef.current.has(msgId)) {
+                  const sender = INITIAL_CONVERSATIONS.find(c => c.id === msg.senderId);
+                  if (sender) notifications.push({ name: sender.name, text: msg.content || '📎 Attachment' });
+                  seenMsgIdsRef.current.add(msgId);
                 }
               }
             });
+
             setTeamMessages(reconstructed);
+
+            try { localStorage.setItem('mas_seen_msg_ids', JSON.stringify([...seenMsgIdsRef.current])); } catch {}
+
+            if (notifications.length > 0 && document.hidden && Notification.permission === 'granted') {
+              notifications.forEach(n => new Notification(n.name, { body: n.text, icon: '/masmas.png' }));
+            }
           }
         }
       } catch (err) {}
@@ -982,20 +1004,41 @@ body {
         <ul className="space-y-0.5">
           {g.items.map(s => (
             <li key={s.id} className="group relative">
-              <button
-                onClick={() => loadSession(s.id)}
-                className={`w-full text-left flex items-start gap-2 px-2 py-1.5 rounded-xl transition-colors text-[12px] ${s.id === currentSessionId ? 'bg-white text-gray-900 font-semibold shadow-sm' : 'text-gray-600 hover:bg-white/60 hover:text-gray-900'}`}
-              >
-                <MessageCircle size={13} className="text-gray-400 mt-0.5 shrink-0" />
-                <span className="truncate">{s.title || "محادثة جديدة"}</span>
-              </button>
-              <button
-                onClick={(e) => { e.stopPropagation(); deleteSession(s.id); }}
-                className="absolute right-1 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 p-1 text-gray-300 hover:text-red-400 transition-all"
-                title="Delete"
-              >
-                <X size={11} />
-              </button>
+              {inlineRenameId === s.id ? (
+                <div className="flex items-center gap-1.5 px-2 py-1">
+                  <MessageCircle size={13} className="text-gray-400 shrink-0" />
+                  <input
+                    autoFocus
+                    value={inlineRenameVal}
+                    onChange={e => setInlineRenameVal(e.target.value)}
+                    onKeyDown={e => {
+                      if (e.key === "Enter") { renameSession(s.id, inlineRenameVal); setInlineRenameId(null); }
+                      if (e.key === "Escape") setInlineRenameId(null);
+                    }}
+                    onBlur={() => { if (inlineRenameVal.trim()) renameSession(s.id, inlineRenameVal); setInlineRenameId(null); }}
+                    className="flex-1 min-w-0 text-[12px] text-gray-800 bg-white border border-gray-200 rounded-lg px-2 py-0.5 focus:outline-none focus:ring-1 focus:ring-gray-300"
+                  />
+                </div>
+              ) : (
+                <>
+                  <button
+                    onClick={() => loadSession(s.id)}
+                    className={`w-full text-left flex items-start gap-2 px-2 py-1.5 rounded-xl transition-colors text-[12px] ${s.id === currentSessionId ? 'bg-white text-gray-900 font-semibold shadow-sm' : 'text-gray-600 hover:bg-white/60 hover:text-gray-900'}`}
+                  >
+                    <MessageCircle size={13} className="text-gray-400 mt-0.5 shrink-0" />
+                    <span
+                      className="truncate flex-1"
+                      onDoubleClick={e => { e.stopPropagation(); setInlineRenameId(s.id); setInlineRenameVal(s.title || ""); }}
+                      title="Double-click to rename"
+                    >{s.title || "محادثة جديدة"}</span>
+                  </button>
+                  <button
+                    onClick={e => { e.stopPropagation(); deleteSession(s.id); }}
+                    className="absolute right-1 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 p-1 text-gray-300 hover:text-red-400 transition-all"
+                    title="Delete"
+                  ><X size={11} /></button>
+                </>
+              )}
             </li>
           ))}
         </ul>
@@ -1077,9 +1120,8 @@ body {
 {/* Empty state */}
 {messages.length === 0 && historyLoaded && (
   <div className="flex-1 flex flex-col items-center justify-center text-center px-8 empty-state" style={{ minHeight: 320 }}>
-    <img src="/Sarielogo.png" alt="Sarie" className="w-20 h-20 object-contain mb-5" />
-    <p className="text-[13px] text-gray-400 font-medium">Sarie is ready to support you,</p>
-    <h2 className="text-base font-bold text-gray-700 mt-0.5">{currentUser?.name?.split(" ")[0] || "there"}</h2>
+    <h2 className="text-xl font-bold text-gray-800 mb-1">{currentUser?.name?.split(" ")[0] || "there"}</h2>
+    <p className="text-[13px] text-gray-400 font-medium">Sarie is ready to support you</p>
   </div>
 )}
 
