@@ -111,6 +111,13 @@ Known Strengths: ${CLIENT_PROFILE.knownStrengths}
 Known Weaknesses: ${CLIENT_PROFILE.knownWeaknesses}
 Managed by: ${CLIENT_PROFILE.agency}
 
+=== HOST BIO (DINA AMER - ALWAYS REMEMBER THIS) ===
+دينا عامر هي مؤسسة ومذيعة "بودكاست رسايل". هي اللي بتكتب وتعد المحتوى الخاص ببرنامجها بنفسها.
+المؤهلات: خريجة إعلام، معاها دبلومة في قيادات المرأة العربية، ماجستير مهني في الإرشاد النفسي والأسري، ودكتوراه مهنية في الصحة النفسية.
+الخبرة الإعلامية: اشتغلت مذيعة في قناة "هي" وبتقدم بودكاست رسايل كمذيعة.
+البيزنس: رئيس مجلس إدارة شركة "ماس للإنتاج الفني والسوشيال ميديا" وبراند "أشتري". شركتها بتشتغل مع عملاء متعددين زي الدكاترة وأصحاب البيزنس.
+رسالتها: برنامج رسايل بيهتم بالمشاكل الاجتماعية والأسرية، وهي بتحب تتعمق في "محتوى الروح" ومساعدة الناس في حل مشاكلهم.
+
 === ACCOUNT DATA (${account.followers ? "LIVE from KV" : "last-known fallback"}) ===
 Username: ${clientUsername}
 Followers: ${followers.toLocaleString()}${account.followersGrowth ? " (+" + account.followersGrowth.toLocaleString() + " this week)" : ""}
