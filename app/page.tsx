@@ -1,7 +1,7 @@
 'use client';
 import Link from 'next/link';
 
-import { useState, useRef, useEffect, useCallback, Suspense } from "react";
+import { useState, useRef, useEffect, useCallback, Suspense, useMemo } from "react";
 import { useSearchParams } from "next/navigation";
 import Image from "next/image";
 import { Send, Plus, Loader2, Square, Search, Phone, Video, MoreVertical, Smile, Paperclip, Check, CheckCheck, X, FileText, Film, Copy, Trash2, Pencil, Forward, MoreHorizontal, ArrowLeft, Compass, LayoutGrid, History, MessageCircle, Settings, LogOut, Menu, Users } from "lucide-react";
