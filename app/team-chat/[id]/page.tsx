@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { useState, useRef, useEffect, useCallback, Suspense } from "react";
 import Image from "next/image";
-import { Send, Plus, Search, Phone, Video, MoreVertical, Smile, Check, CheckCheck, X, FileText, Film, Copy, Trash2, Pencil, Forward, MoreHorizontal, ArrowLeft, Mail, Phone as PhoneIcon, Clock } from "lucide-react";
+import { Send, Plus, Search, Phone, Video, MoreVertical, Smile, Check, CheckCheck, X, FileText, Film, Copy, Trash2, Pencil, Forward, MoreHorizontal, ArrowLeft, Mail, Phone as PhoneIcon, Clock, Users, Info } from "lucide-react";
 import { useData } from "@/components/DataContext";
 import MarkdownMessage from "@/components/MarkdownMessage";
 
@@ -69,21 +69,20 @@ export default function TeamChatPage({ params }: { params: Promise<{ id: string 
   const [forwardingMsg, setForwardingMsg] = useState<string | null>(null);
   const [selectedForwards, setSelectedForwards] = useState<string[]>([]);
   const [contextMenu, setContextMenu] = useState<any>(null);
-  // Use a ref for seenMsgIds — avoids restarting the polling loop on every new message
+  const [showTeamDrawer, setShowTeamDrawer] = useState(false);
+  const [showInfoDrawer, setShowInfoDrawer] = useState(false);
   const seenMsgIdsRef = useRef<Set<string>>(new Set());
 
-  // Load seen IDs from localStorage once on mount
   useEffect(() => {
     try {
       const stored = JSON.parse(localStorage.getItem('mas_seen_msg_ids') || '[]');
       seenMsgIdsRef.current = new Set(stored);
     } catch {}
   }, []);
-  
+
   const bottomRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Polling — fetch messages every second
   useEffect(() => {
     let timeout: any;
     const fetchMsgs = async () => {
@@ -103,7 +102,6 @@ export default function TeamChatPage({ params }: { params: Promise<{ id: string 
               const msgId = msg.id || `${msg.ts}-${msg.senderId}-${msg.receiverId}`;
 
               if (msg.senderId === currentUser.id) {
-                // Message I sent to someone
                 if (reconstructed[msg.receiverId]) {
                   reconstructed[msg.receiverId].push({
                     id: msgId, role: "user", content: msg.content, ts: msg.ts,
@@ -113,7 +111,6 @@ export default function TeamChatPage({ params }: { params: Promise<{ id: string 
                   });
                 }
               } else if (msg.receiverId === currentUser.id) {
-                // Message someone sent to me
                 if (reconstructed[msg.senderId]) {
                   reconstructed[msg.senderId].push({
                     id: msgId, role: "assistant", content: msg.content, ts: msg.ts,
@@ -122,7 +119,6 @@ export default function TeamChatPage({ params }: { params: Promise<{ id: string 
                     serverTs: msg.serverTs,
                   });
                 }
-                // Notification — only if not yet seen and not self-send
                 if (msg.senderId !== currentUser.id && !seenMsgIdsRef.current.has(msgId)) {
                   const sender = INITIAL_CONVERSATIONS.find(c => c.id === msg.senderId);
                   if (sender) notifications.push({ name: sender.name, text: msg.content || '📎 Attachment' });
@@ -133,10 +129,8 @@ export default function TeamChatPage({ params }: { params: Promise<{ id: string 
 
             setTeamMessages(reconstructed);
 
-            // Persist seen IDs
             try { localStorage.setItem('mas_seen_msg_ids', JSON.stringify([...seenMsgIdsRef.current])); } catch {}
 
-            // Fire notifications only when tab is hidden
             if (notifications.length > 0 && document.hidden && Notification.permission === 'granted') {
               notifications.forEach(n => new Notification(n.name, { body: n.text, icon: '/masmas.png' }));
             }
@@ -159,7 +153,7 @@ export default function TeamChatPage({ params }: { params: Promise<{ id: string 
   const handleDelete = (index: number) => {
     const msgs = teamMessages[activeId as keyof typeof teamMessages] || [];
     const msgToDelete = msgs[index];
-    
+
     setTeamMessages(prev => {
       const u = [...(prev[activeId as keyof typeof teamMessages] || [])];
       u.splice(index, 1);
@@ -170,10 +164,10 @@ export default function TeamChatPage({ params }: { params: Promise<{ id: string 
       fetch("/api/messages", {
         method: "DELETE",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ 
+        body: JSON.stringify({
           id: msgToDelete.id,
           content: msgToDelete.content,
-          ts: msgToDelete.ts 
+          ts: msgToDelete.ts
         })
       }).catch(console.error);
     }
@@ -198,12 +192,12 @@ export default function TeamChatPage({ params }: { params: Promise<{ id: string 
 
   const confirmForward = (targetIds: string[]) => {
     if (!forwardingMsg || !currentUser) return;
-    
+
     targetIds.forEach(targetId => {
       const msgId = Date.now().toString() + "-" + Math.random().toString(36).substr(2, 9);
       const msg = { id: msgId, role: "user", content: forwardingMsg, ts: now(), isForwarded: true, status: "sent" };
       setTeamMessages(prev => ({ ...prev, [targetId]: [...(prev[targetId] || []), msg] }));
-      
+
       fetch("/api/messages", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -225,11 +219,11 @@ export default function TeamChatPage({ params }: { params: Promise<{ id: string 
   const handleSend = () => {
     const text = input.trim();
     if (!text && !pendingAttachment) return;
-    
+
     const msgId = Date.now().toString() + "-" + Math.random().toString(36).substr(2, 9);
     const msg = { id: msgId, role: "user", content: text || "", ts: now(), status: "sent", ...(pendingAttachment ? { attachment: pendingAttachment } : {}) };
     setTeamMessages(prev => ({ ...prev, [activeId]: [...(prev[activeId] || []), msg] }));
-    
+
     if (currentUser) {
       fetch("/api/messages", {
         method: "POST",
@@ -244,7 +238,7 @@ export default function TeamChatPage({ params }: { params: Promise<{ id: string 
         })
       }).catch(console.error);
     }
-    
+
     setTimeout(() => {
       setTeamMessages(prev => {
         const arr = [...(prev[activeId] || [])];
@@ -252,7 +246,7 @@ export default function TeamChatPage({ params }: { params: Promise<{ id: string 
         return { ...prev, [activeId]: arr };
       });
     }, 600);
-    
+
     setInput("");
     setPendingAttachment(null);
   };
@@ -321,23 +315,64 @@ export default function TeamChatPage({ params }: { params: Promise<{ id: string 
       fetch("/api/messages", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ 
-          id: targetMsg.id, 
+        body: JSON.stringify({
+          id: targetMsg.id,
           content: targetMsg.content,
           ts: targetMsg.ts,
-          emoji 
+          emoji
         })
       }).catch(console.error);
     }
   };
 
+  const isOnlineNow = (() => {
+    const msgs = teamMessages[activeId] || [];
+    const last = msgs[msgs.length - 1];
+    return activeConvo.isAI || (last?.serverTs ? Date.now() - last.serverTs < 5 * 60 * 1000 : false);
+  })();
+
+  // Shared team list component used in both right sidebar and mobile drawer
+  const TeamList = ({ onNav }: { onNav?: () => void }) => (
+    <div className="space-y-2">
+      {INITIAL_CONVERSATIONS.filter(c => !c.isAI).map(c => {
+        const convoMsgs = teamMessages[c.id] || [];
+        const lastMsg = convoMsgs[convoMsgs.length - 1];
+        const isOnline = lastMsg?.serverTs ? Date.now() - lastMsg.serverTs < 5 * 60 * 1000 : false;
+        const isMe = lastMsg?.role === 'user';
+        const preview = lastMsg ? (lastMsg.attachment ? '📎 Attachment' : lastMsg.content || '') : '...';
+        const previewLabel = lastMsg ? (isMe ? `You: ${preview}` : preview) : '...';
+        const unread = convoMsgs.filter(m => m.role === 'assistant' && m.id && !seenMsgIdsRef.current.has(m.id)).length;
+        return (
+          <Link key={c.id} href={`/team-chat/${c.id}`} onClick={onNav}
+            className={`flex items-center gap-3 p-2 rounded-xl cursor-pointer transition-colors ${activeId === c.id ? 'bg-gray-100' : 'hover:bg-gray-50'}`}
+          >
+            <AvatarCircle name={c.name} size={36} online={isOnline} />
+            <div className="flex-1 min-w-0">
+              <div className="flex justify-between items-baseline">
+                <h4 className="text-xs font-bold text-gray-800 truncate">
+                  {c.name}{c.id === currentUser?.id ? ' (You)' : ''}
+                </h4>
+                <span className="text-[9px] text-gray-400">{lastMsg?.ts || ''}</span>
+              </div>
+              <div className="flex items-center justify-between gap-1">
+                <p className="text-[10px] font-medium text-gray-500 truncate flex-1">{previewLabel}</p>
+                {unread > 0 && activeId !== c.id && (
+                  <span className="bg-red-500 text-white text-[9px] font-bold rounded-full px-1.5 py-0.5 shrink-0">{unread}</span>
+                )}
+              </div>
+            </div>
+          </Link>
+        );
+      })}
+    </div>
+  );
+
   return (
-    <div className="h-screen w-full bg-white flex items-center justify-center p-8" style={{
-      fontFamily: "'Inter', sans-serif"
-    }}>
-      <div className="w-full max-w-[1600px] h-full bg-[#f2f2f2] rounded-[32px] overflow-hidden shadow-2xl flex relative text-[#2b2b2b] text-[14px]">
-        {/* LeftSidebar (User Info) */}
-        <aside className="w-[200px] flex flex-col justify-between p-6 pl-8">
+    <div className="fixed inset-0 flex items-center justify-center bg-white md:p-8" style={{ fontFamily: "'Inter', sans-serif" }}>
+      <div className="w-full max-w-[1600px] h-full bg-[#f2f2f2] md:rounded-[32px] overflow-hidden shadow-2xl flex relative text-[#2b2b2b] text-[14px]">
+
+        {/* ── Desktop Left Sidebar (User Info) ── */}
+        <aside className="hidden md:flex w-[200px] flex-col justify-between p-6 pl-8">
           <div className="space-y-4 pt-4 flex-1 flex flex-col h-full overflow-hidden">
             <nav className="space-y-2.5 mt-2 shrink-0 flex flex-col items-start">
               <Link href="/" className="bg-[#2b2b2b] text-white rounded-[20px] py-2 px-5 flex items-center gap-2 text-[13px] font-medium hover:bg-black transition-colors shadow-sm w-full">
@@ -371,25 +406,17 @@ export default function TeamChatPage({ params }: { params: Promise<{ id: string 
           </div>
         </aside>
 
-        {/* MainChatArea */}
-        <main className="flex-1 bg-[#fbfbfb] my-4 rounded-[24px] shadow-sm flex flex-col relative overflow-hidden">
-          <div className="absolute top-0 w-full flex justify-between items-center px-8 py-4 bg-gradient-to-b from-[#fbfbfb] to-transparent z-10 border-none">
+        {/* ── Main Chat Area ── */}
+        <main className="flex-1 bg-[#fbfbfb] md:my-4 md:rounded-[24px] shadow-sm flex flex-col relative overflow-hidden">
+
+          {/* Desktop top bar */}
+          <div className="hidden md:flex absolute top-0 w-full justify-between items-center px-8 py-4 bg-gradient-to-b from-[#fbfbfb] to-transparent z-10">
             <div className="flex items-center gap-3">
-              <AvatarCircle name={activeConvo.name} size={32} online={
-                (() => {
-                  const msgs = teamMessages[activeId] || [];
-                  const last = msgs[msgs.length - 1];
-                  return activeConvo.isAI || (last?.serverTs ? Date.now() - last.serverTs < 5 * 60 * 1000 : false);
-                })()
-              } />
+              <AvatarCircle name={activeConvo.name} size={32} online={isOnlineNow} />
               <div>
                 <h2 className="font-bold text-gray-800 text-base">{activeConvo.name}</h2>
                 <p className="text-xs text-gray-500 font-medium">
-                  {activeConvo.isAI ? 'Active now' : (() => {
-                    const msgs = teamMessages[activeId] || [];
-                    const last = msgs[msgs.length - 1];
-                    return last?.serverTs && Date.now() - last.serverTs < 5 * 60 * 1000 ? 'Active now' : 'Offline';
-                  })()}
+                  {activeConvo.isAI ? 'Active now' : (isOnlineNow ? 'Active now' : 'Offline')}
                 </p>
               </div>
             </div>
@@ -400,10 +427,33 @@ export default function TeamChatPage({ params }: { params: Promise<{ id: string 
             </div>
           </div>
 
-          <div className="flex-1 overflow-y-auto px-10 pt-24 pb-32 flex flex-col gap-6">
+          {/* Mobile top bar */}
+          <div className="md:hidden flex items-center gap-3 px-4 pt-12 pb-3 bg-gradient-to-b from-[#fbfbfb] via-[#fbfbfb]/90 to-transparent z-10">
+            <Link href="/"
+              className="w-9 h-9 flex items-center justify-center rounded-2xl bg-white border border-gray-100 shadow-sm active:scale-95 transition-transform shrink-0"
+            ><ArrowLeft size={16} className="text-gray-600" /></Link>
+            <div className="flex-1 flex items-center gap-2.5 min-w-0">
+              <AvatarCircle name={activeConvo.name} size={32} online={isOnlineNow} />
+              <div className="min-w-0">
+                <p className="text-[13px] font-bold text-gray-800 truncate leading-tight">{activeConvo.name}</p>
+                <p className="text-[10px] text-gray-500">{isOnlineNow ? 'Active now' : 'Offline'}</p>
+              </div>
+            </div>
+            <button
+              onClick={() => setShowInfoDrawer(true)}
+              className="w-9 h-9 flex items-center justify-center rounded-2xl bg-white border border-gray-100 shadow-sm active:scale-95 transition-transform shrink-0"
+            ><Info size={16} className="text-gray-600" /></button>
+            <button
+              onClick={() => setShowTeamDrawer(true)}
+              className="w-9 h-9 flex items-center justify-center rounded-2xl bg-white border border-gray-100 shadow-sm active:scale-95 transition-transform shrink-0"
+            ><Users size={16} className="text-gray-600" /></button>
+          </div>
+
+          {/* Message area */}
+          <div className="flex-1 overflow-y-auto px-4 md:px-10 pt-6 md:pt-24 pb-32 flex flex-col gap-5 md:gap-6">
             <div className="text-center text-xs text-gray-400 my-2 font-medium">Today, 10:45 AM</div>
             {messages.length === 0 && <div className="text-center text-gray-400 text-sm mt-10">No messages yet. Send a message to start the conversation!</div>}
-            
+
             {messages.map((m, i) => {
               const isUser = m.role === "user";
               return (
@@ -411,13 +461,13 @@ export default function TeamChatPage({ params }: { params: Promise<{ id: string 
                   onMouseEnter={() => setHoverMsg(i)}
                   onMouseLeave={() => setHoverMsg(null)}
                 >
-                  <div 
+                  <div
                     onContextMenu={(e) => { e.preventDefault(); setContextMenu({ msgIdx: i }); }}
                     className="relative group flex items-end gap-2"
                     style={{ flexDirection: isUser ? "row-reverse" : "row", maxWidth: "100%" }}
                   >
                     {!isUser && <AvatarCircle name={activeConvo.name} size={24} />}
-                    <div className={`${isUser ? 'bg-[#2b2b2b] text-white rounded-[28px] rounded-br-none shadow-sm' : 'bg-white rounded-[28px] rounded-bl-none shadow-[0_2px_10px_-4px_rgba(0,0,0,0.05)] text-gray-800'} px-6 py-3.5 max-w-xl relative`}>
+                    <div className={`${isUser ? 'bg-[#2b2b2b] text-white rounded-[28px] rounded-br-none shadow-sm' : 'bg-white rounded-[28px] rounded-bl-none shadow-[0_2px_10px_-4px_rgba(0,0,0,0.05)] text-gray-800'} px-5 py-3 max-w-[85vw] md:max-w-xl relative`}>
                       {m.attachment && m.attachment.type === "image" && <img src={m.attachment.url} alt="" className="w-full max-w-[240px] rounded-xl block mb-2" />}
                       {m.attachment && m.attachment.type === "video" && <video src={m.attachment.url} controls className="w-full max-w-[240px] rounded-xl block mb-2" />}
                       {m.attachment && m.attachment.type === "file" && (
@@ -427,7 +477,7 @@ export default function TeamChatPage({ params }: { params: Promise<{ id: string 
                         </div>
                       )}
                       {m.isForwarded && <div className={`text-[10px] ${isUser ? "text-white/70" : "text-gray-400"} mb-1 italic flex items-center gap-1`}><Forward size={10} /> Forwarded</div>}
-                      
+
                       {m.content && <MarkdownMessage content={m.content} />}
 
                       {/* Action Menu */}
@@ -465,8 +515,9 @@ export default function TeamChatPage({ params }: { params: Promise<{ id: string 
             <div ref={bottomRef} />
           </div>
 
-          <div className="absolute bottom-6 left-0 right-0 px-10 flex flex-col items-center">
-            <div className="w-full max-w-2xl flex flex-col gap-2 relative">
+          {/* Input bar */}
+          <div className="absolute bottom-3 md:bottom-6 left-0 right-0 px-3 md:px-10 flex flex-col items-center">
+            <div className="w-full md:max-w-2xl flex flex-col gap-2 relative">
               {pendingAttachment && (
                 <div className="bg-white rounded-2xl flex items-center gap-3 p-3 shadow-md border border-gray-100 max-w-sm self-end">
                   {pendingAttachment.type === "image" && <img src={pendingAttachment.url} alt="" className="w-10 h-10 object-cover rounded-lg" />}
@@ -498,14 +549,14 @@ export default function TeamChatPage({ params }: { params: Promise<{ id: string 
                   <button className="w-full bg-red-500 text-white rounded-xl py-2 text-sm font-bold disabled:opacity-50" disabled={selectedForwards.length === 0} onClick={() => confirmForward(selectedForwards)}>Send</button>
                 </div>
               )}
-              <div className="bg-[#f5f5f5] rounded-[32px] flex items-end px-4 py-2 relative">
+              <div className="bg-[#f5f5f5] rounded-[32px] flex items-end px-3 md:px-4 py-2 relative">
                 <button onClick={() => fileInputRef.current?.click()} className="text-gray-400 hover:text-gray-700 p-2 mb-1 rounded-xl hover:bg-white/60 transition-colors">
                   <Plus size={18} />
                 </button>
                 <input ref={fileInputRef} type="file" accept="image/*,video/*,.pdf,.doc,.docx,.txt" className="hidden" onChange={handleFile} />
                 <button onClick={() => setShowEmoji(!showEmoji)} className={`p-2 mb-1 rounded-xl hover:bg-white/60 transition-colors ${showEmoji ? 'text-red-500' : 'text-gray-400 hover:text-gray-700'}`}><Smile size={18} /></button>
                 <textarea
-                  className="flex-1 border-none focus:outline-none outline-none focus:ring-0 bg-transparent text-[14px] text-gray-700 placeholder-gray-400 mx-3 resize-none py-2.5 max-h-[120px]"
+                  className="flex-1 border-none focus:outline-none outline-none focus:ring-0 bg-transparent text-[14px] text-gray-700 placeholder-gray-400 mx-2 md:mx-3 resize-none py-2.5 max-h-[120px]"
                   placeholder="Type a message..."
                   value={input}
                   onChange={e => {
@@ -530,10 +581,10 @@ export default function TeamChatPage({ params }: { params: Promise<{ id: string 
           </div>
         </main>
 
-        {/* RightSidebar (Team Chat List) */}
-        <aside className="w-[280px] p-6 pr-8 flex flex-col gap-6 overflow-y-auto">
+        {/* ── Desktop Right Sidebar (Team Chat List) ── */}
+        <aside className="hidden md:flex w-[280px] flex-col p-6 pr-8 gap-6 overflow-y-auto">
           <div className="flex justify-between items-center pt-2">
-            <h3 className="text-[13px] font-bold text-gray-800 flex items-center gap-2">Team Chat</h3>
+            <h3 className="text-[13px] font-bold text-gray-800">Team Chat</h3>
             <button className="text-gray-400 hover:text-gray-600 bg-white rounded-full w-6 h-6 flex items-center justify-center shadow-sm border border-gray-100">
               <Plus size={10} />
             </button>
@@ -542,45 +593,73 @@ export default function TeamChatPage({ params }: { params: Promise<{ id: string 
             <Search size={14} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
             <input className="w-full bg-[#fbfbfb] border border-gray-100 rounded-full py-2 pl-8 pr-4 text-xs font-medium focus:outline-none focus:ring-1 focus:ring-gray-200 shadow-sm placeholder-gray-400 text-gray-700" placeholder="Search team..." type="text"/>
           </div>
-          <div className="space-y-2 mt-2">
-            {INITIAL_CONVERSATIONS.filter(c => !c.isAI).map(c => {
-              const convoMsgs = teamMessages[c.id] || [];
-              const lastMsg = convoMsgs[convoMsgs.length - 1];
-              // Online = had activity in the last 5 minutes based on serverTs
-              const isOnline = lastMsg?.serverTs
-                ? Date.now() - lastMsg.serverTs < 5 * 60 * 1000
-                : false;
-              const isMe = lastMsg?.role === 'user';
-              const preview = lastMsg
-                ? (lastMsg.attachment ? '📎 Attachment' : lastMsg.content || '')
-                : '...';
-              const previewLabel = lastMsg
-                ? (isMe ? `You: ${preview}` : preview)
-                : '...';
-              // Count unread: messages from this person to me not yet seen
-              const unread = convoMsgs.filter(m => m.role === 'assistant' && m.id && !seenMsgIdsRef.current.has(m.id)).length;
-              return (
-                <Link key={c.id} href={`/team-chat/${c.id}`} className={`flex items-center gap-3 p-2 rounded-xl cursor-pointer transition-colors ${activeId === c.id ? 'bg-gray-100' : 'hover:bg-gray-50'}`}>
-                  <AvatarCircle name={c.name} size={36} online={isOnline} />
-                  <div className="flex-1 min-w-0">
-                    <div className="flex justify-between items-baseline">
-                      <h4 className="text-xs font-bold text-gray-800 truncate">
-                        {c.name}{c.id === currentUser?.id ? ' (You)' : ''}
-                      </h4>
-                      <span className="text-[9px] text-gray-400">{lastMsg?.ts || ''}</span>
-                    </div>
-                    <div className="flex items-center justify-between gap-1">
-                      <p className="text-[10px] font-medium text-gray-500 truncate flex-1">{previewLabel}</p>
-                      {unread > 0 && activeId !== c.id && (
-                        <span className="bg-red-500 text-white text-[9px] font-bold rounded-full px-1.5 py-0.5 shrink-0">{unread}</span>
-                      )}
-                    </div>
-                  </div>
-                </Link>
-              );
-            })}
+          <div className="mt-2">
+            <TeamList />
           </div>
         </aside>
+
+        {/* ── Mobile: Info Drawer (left slide-in with user info) ── */}
+        {showInfoDrawer && (
+          <div className="md:hidden fixed inset-0 z-[60] flex" onPointerDown={() => setShowInfoDrawer(false)}>
+            <div className="absolute inset-0 bg-black/30" style={{ animation: 'backdrop-in 0.2s ease both' }} />
+            <div
+              className="relative w-[72vw] max-w-[260px] h-full bg-[#f2f2f2] flex flex-col shadow-2xl overflow-y-auto"
+              style={{ animation: 'drawer-left 0.28s cubic-bezier(0.16,1,0.3,1) both' }}
+              onPointerDown={e => e.stopPropagation()}
+            >
+              <div className="flex items-center justify-between px-5 pt-12 pb-4 border-b border-gray-100">
+                <span className="font-black text-[17px] text-gray-800">Profile</span>
+                <button onClick={() => setShowInfoDrawer(false)} className="w-8 h-8 flex items-center justify-center rounded-full bg-white border border-gray-100">
+                  <X size={14} className="text-gray-500" />
+                </button>
+              </div>
+              <div className="flex flex-col items-center px-5 pt-8 pb-6">
+                <AvatarCircle name={activeConvo.name} size={80} online={isOnlineNow} />
+                <h2 className="text-base font-bold text-gray-800 mt-4">{activeConvo.name}</h2>
+                <p className="text-xs text-gray-500 mt-1 text-center">{activeConvo.role}</p>
+                <div className="mt-3 px-3 py-1 bg-gray-100 rounded-full text-xs text-gray-500 flex items-center gap-2">
+                  <Clock size={11} /> 09:42 AM (Local)
+                </div>
+              </div>
+              <div className="px-5 space-y-5 pb-8">
+                <div>
+                  <h3 className="text-[10px] text-gray-400 uppercase tracking-wider mb-2 font-bold">About</h3>
+                  <p className="text-[11px] text-gray-500 leading-relaxed">Focusing on product messaging and user flows for the upcoming Q3 launch campaign.</p>
+                </div>
+                <div>
+                  <h3 className="text-[10px] text-gray-400 uppercase tracking-wider mb-2 font-bold">Contact Info</h3>
+                  <ul className="space-y-3">
+                    <li className="flex items-center gap-2.5 text-[11px] text-gray-600"><Mail size={11} className="text-gray-400 shrink-0" /> {activeConvo.id}@mas.ai</li>
+                    <li className="flex items-center gap-2.5 text-[11px] text-gray-600"><PhoneIcon size={11} className="text-gray-400 shrink-0" /> +1 (555) 019-2834</li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ── Mobile: Team Drawer (right slide-in with team list) ── */}
+        {showTeamDrawer && (
+          <div className="md:hidden fixed inset-0 z-[60] flex justify-end" onPointerDown={() => setShowTeamDrawer(false)}>
+            <div className="absolute inset-0 bg-black/30" style={{ animation: 'backdrop-in 0.2s ease both' }} />
+            <div
+              className="relative w-[72vw] max-w-[280px] h-full bg-[#f2f2f2] flex flex-col shadow-2xl"
+              style={{ animation: 'drawer-right 0.28s cubic-bezier(0.16,1,0.3,1) both' }}
+              onPointerDown={e => e.stopPropagation()}
+            >
+              <div className="flex items-center justify-between px-5 pt-12 pb-4 border-b border-gray-100">
+                <span className="font-black text-[17px] text-gray-800">Team</span>
+                <button onClick={() => setShowTeamDrawer(false)} className="w-8 h-8 flex items-center justify-center rounded-full bg-white border border-gray-100">
+                  <X size={14} className="text-gray-500" />
+                </button>
+              </div>
+              <div className="flex-1 overflow-y-auto px-4 pt-4 pb-8">
+                <TeamList onNav={() => setShowTeamDrawer(false)} />
+              </div>
+            </div>
+          </div>
+        )}
+
       </div>
     </div>
   );
