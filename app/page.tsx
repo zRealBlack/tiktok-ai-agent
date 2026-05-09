@@ -300,9 +300,19 @@ function useSarieChat() {
       body: JSON.stringify({ userId: currentUser.id, sessionId: sessId }),
     }).catch(() => {});
     setSessions(prev => prev.filter(s => s.id !== sessId));
-    // If deleting current session, start a new one
     if (sessId === sessionIdRef.current) newChat();
   }, [currentUser?.id, newChat]);
+
+  // Rename a session (optimistic — updates list immediately, then persists)
+  const renameSession = useCallback((sessId: string, newTitle: string) => {
+    if (!currentUser?.id || !newTitle.trim()) return;
+    setSessions(prev => prev.map(s => s.id === sessId ? { ...s, title: newTitle.trim() } : s));
+    fetch("/api/chat-history", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ userId: currentUser.id, sessionId: sessId, title: newTitle.trim(), renameOnly: true }),
+    }).catch(() => {});
+  }, [currentUser?.id]);
 
   const send = useCallback(async (text: string) => {
     if (!text.trim() || streaming) return;
@@ -417,7 +427,7 @@ function useSarieChat() {
     });
   };
 
-  return { messages, setMessages, streaming, send, stop, sessions, currentSessionId, sessionKey, historyLoaded, newChat, loadSession, deleteSession };
+  return { messages, setMessages, streaming, send, stop, sessions, currentSessionId, sessionKey, historyLoaded, newChat, loadSession, deleteSession, renameSession };
 }
 
 // ─── Main Page ────────────────────────────────────────────────────────────────
@@ -448,11 +458,15 @@ function ChatPageInner() {
   const [showTeamDrawer, setShowTeamDrawer]       = useState(false);
   const [readReceipts, setReadReceipts] = useState<Record<string, number>>({});
   const [longPressMsg, setLongPressMsg] = useState<number | null>(null);
+  const [longPressSess, setLongPressSess] = useState<SessionMeta | null>(null);
+  const [renamingSess, setRenamingSess] = useState(false);
+  const [renameValue, setRenameValue] = useState("");
   const bottomRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const lpTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const lpSessTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const sarie = useSarieChat();
-  const { sessions, currentSessionId, sessionKey, historyLoaded, newChat, loadSession, deleteSession } = sarie;
+  const { sessions, currentSessionId, sessionKey, historyLoaded, newChat, loadSession, deleteSession, renameSession } = sarie;
   const { currentUser } = useData();
   const searchParams = useSearchParams();
   const promptHandled = useRef(false);
@@ -899,6 +913,12 @@ body {
 @media (hover: none) {
   .msg-actions { opacity: 1 !important; }
 }
+/* ── Prevent text selection & iOS callout on long-press ─────── */
+.no-select {
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+}
 @keyframes drawer-up {
   from { transform: translateY(100%); }
   to   { transform: translateY(0); }
@@ -1089,7 +1109,7 @@ body {
   return (
     <div key={i} className={`group flex flex-col gap-1 ${isUser ? "items-end" : "items-start"} ${isNew ? "msg-enter" : ""}`}>
       <div
-        className={`px-5 py-3 md:px-6 md:py-3.5 max-w-[82vw] md:max-w-xl ${isUser ? "bg-[#2b2b2b] text-white rounded-[22px] md:rounded-[28px] rounded-br-none shadow-sm" : "bg-white rounded-[22px] md:rounded-[28px] rounded-bl-none shadow-[0_2px_10px_-4px_rgba(0,0,0,0.05)] text-gray-800"}`}
+        className={`no-select px-5 py-3 md:px-6 md:py-3.5 max-w-[82vw] md:max-w-xl ${isUser ? "bg-[#2b2b2b] text-white rounded-[22px] md:rounded-[28px] rounded-br-none shadow-sm" : "bg-white rounded-[22px] md:rounded-[28px] rounded-bl-none shadow-[0_2px_10px_-4px_rgba(0,0,0,0.05)] text-gray-800"}`}
         dir={!isUser ? "rtl" : "ltr"}
         onTouchStart={() => { lpTimer.current = setTimeout(() => setLongPressMsg(i), 480); }}
         onTouchEnd={() => { if (lpTimer.current) clearTimeout(lpTimer.current); }}
@@ -1274,6 +1294,55 @@ body {
   );
 })()}
 
+{/* ── Session long-press action sheet ── */}
+{longPressSess && (
+  <div className="fixed inset-0 z-[80] flex flex-col justify-end" onPointerDown={() => { setLongPressSess(null); setRenamingSess(false); }}>
+    <div className="absolute inset-0 bg-black/25" style={{ animation: 'backdrop-in 0.15s ease both' }} />
+    <div
+      className="relative bg-white rounded-t-[28px] pb-10 pt-2 shadow-2xl"
+      style={{ animation: 'drawer-up 0.22s cubic-bezier(0.16,1,0.3,1) both' }}
+      onPointerDown={e => e.stopPropagation()}
+    >
+      <div className="w-10 h-1 bg-gray-200 rounded-full mx-auto mb-3 mt-2" />
+      {/* Session title preview */}
+      <p className="text-[11px] text-gray-400 font-medium text-center px-6 mb-3 truncate">{longPressSess.title || "محادثة جديدة"}</p>
+      {renamingSess ? (
+        <div className="px-5 mb-2">
+          <input
+            autoFocus
+            value={renameValue}
+            onChange={e => setRenameValue(e.target.value)}
+            onKeyDown={e => {
+              if (e.key === "Enter") {
+                renameSession(longPressSess.id, renameValue);
+                setLongPressSess(null);
+                setRenamingSess(false);
+              }
+            }}
+            className="w-full border border-gray-200 rounded-2xl px-4 py-2.5 text-[13px] text-gray-700 focus:outline-none focus:ring-2 focus:ring-gray-300 bg-gray-50"
+            placeholder="Chat name..."
+          />
+          <button
+            onClick={() => { renameSession(longPressSess.id, renameValue); setLongPressSess(null); setRenamingSess(false); }}
+            className="mt-2 w-full bg-[#2b2b2b] text-white rounded-2xl py-2.5 text-[13px] font-semibold"
+          >Save</button>
+        </div>
+      ) : (
+        <div className="px-4 space-y-0.5">
+          <button
+            onClick={() => setRenamingSess(true)}
+            className="w-full flex items-center gap-4 px-4 py-3.5 text-[14px] font-medium text-gray-700 active:bg-gray-50 rounded-2xl"
+          ><Pencil size={17} className="text-gray-400" /> Rename</button>
+          <button
+            onClick={() => { deleteSession(longPressSess.id); setLongPressSess(null); }}
+            className="w-full flex items-center gap-4 px-4 py-3.5 text-[14px] font-medium text-red-500 active:bg-red-50 rounded-2xl"
+          ><Trash2 size={17} className="text-red-400" /> Delete</button>
+        </div>
+      )}
+    </div>
+  </div>
+)}
+
 {/* ═══════════════════════════════════════════════════════════
     MOBILE DRAWERS — rendered inside the container so they
     respect the rounded corners on md+
@@ -1348,7 +1417,10 @@ body {
                 <button
                   key={s.id}
                   onClick={() => { loadSession(s.id); setShowHistoryDrawer(false); }}
-                  className={`w-full text-left flex items-start gap-2 px-2 py-2 rounded-xl text-[12px] transition-colors ${s.id === currentSessionId ? 'bg-white text-gray-900 font-semibold shadow-sm' : 'text-gray-600 hover:bg-white/60'}`}
+                  className={`no-select w-full text-left flex items-start gap-2 px-2 py-2 rounded-xl text-[12px] transition-colors ${s.id === currentSessionId ? 'bg-white text-gray-900 font-semibold shadow-sm' : 'text-gray-600 hover:bg-white/60'}`}
+                  onTouchStart={() => { lpSessTimer.current = setTimeout(() => { setLongPressSess(s); setRenamingSess(false); setRenameValue(s.title || ""); }, 500); }}
+                  onTouchEnd={() => { if (lpSessTimer.current) clearTimeout(lpSessTimer.current); }}
+                  onTouchMove={() => { if (lpSessTimer.current) clearTimeout(lpSessTimer.current); }}
                 >
                   <MessageCircle size={12} className="text-gray-400 mt-0.5 shrink-0" />
                   <span className="truncate">{s.title || "محادثة جديدة"}</span>

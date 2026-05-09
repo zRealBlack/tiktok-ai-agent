@@ -32,21 +32,28 @@ export async function GET(req: NextRequest) {
 
 // POST /api/chat-history
 // body: { userId, sessionId, messages, title, lastMessage, ts }
+// body: { userId, sessionId, title, renameOnly: true }  ← rename without touching messages
 export async function POST(req: NextRequest) {
   try {
-    const { userId, sessionId, messages, title, lastMessage, ts } = await req.json();
-    if (!userId || userId === "unknown" || !sessionId || !Array.isArray(messages)) {
-      return Response.json({ ok: false });
-    }
+    const { userId, sessionId, messages, title, lastMessage, ts, renameOnly } = await req.json();
+    if (!userId || userId === "unknown" || !sessionId) return Response.json({ ok: false });
 
-    const trimmed = messages.slice(-MAX_MESSAGES);
-
-    // Save messages for this session
-    await redis.set(`chat_session:${userId}:${sessionId}`, JSON.stringify(trimmed));
-
-    // Update the session index
     const rawIndex = await redis.get(`chat_sessions:${userId}`);
     const existing: any[] = Array.isArray(parseKV(rawIndex)) ? parseKV(rawIndex) : [];
+
+    if (renameOnly) {
+      // Only update the title in the index — don't touch message data
+      const updated = existing.map((s: any) =>
+        s.id === sessionId ? { ...s, title: (title || s.title || "محادثة جديدة").slice(0, 50) } : s
+      );
+      await redis.set(`chat_sessions:${userId}`, JSON.stringify(updated));
+      return Response.json({ ok: true });
+    }
+
+    if (!Array.isArray(messages)) return Response.json({ ok: false });
+
+    const trimmed = messages.slice(-MAX_MESSAGES);
+    await redis.set(`chat_session:${userId}:${sessionId}`, JSON.stringify(trimmed));
 
     const sessionMeta = {
       id: sessionId,
@@ -56,7 +63,6 @@ export async function POST(req: NextRequest) {
       messageCount: trimmed.length,
     };
 
-    // Put updated session at top, deduplicate by id
     const updated = [sessionMeta, ...existing.filter((s: any) => s.id !== sessionId)]
       .slice(0, MAX_SESSIONS);
 
