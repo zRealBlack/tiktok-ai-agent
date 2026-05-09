@@ -202,13 +202,6 @@ function makeSessionId() {
   return `sess_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
 }
 
-function makeWelcome(username: string, followers: number): ChatMessage {
-  return {
-    role: "assistant",
-    content: `الأيجنت شغال! عندي كل البيانات بتاعة ${username} (${followers.toLocaleString()} متابع). إيه اللي تحتاجه؟`,
-    ts: now(),
-  };
-}
 
 function useSarieChat() {
   const { account, videos, competitors, ideas, trends, generations, currentUser } = useData();
@@ -224,26 +217,17 @@ function useSarieChat() {
   // Keep ref in sync so callbacks always see the latest session id
   useEffect(() => { sessionIdRef.current = currentSessionId; }, [currentSessionId]);
 
-  // On mount: load session index, then load most recent session's messages
+  // On mount: load session index only — always start a fresh chat
   useEffect(() => {
     if (!currentUser?.id) { setHistoryLoaded(true); return; }
     fetch(`/api/chat-history?userId=${currentUser.id}`)
       .then(r => r.json())
-      .then(async data => {
+      .then(data => {
         const list: SessionMeta[] = Array.isArray(data.sessions) ? data.sessions : [];
         setSessions(list);
-        if (list.length > 0) {
-          const latest = list[0];
-          setCurrentSessionId(latest.id);
-          sessionIdRef.current = latest.id;
-          const d = await fetch(`/api/chat-history?userId=${currentUser.id}&sessionId=${latest.id}`)
-            .then(r => r.json()).catch(() => ({ messages: [] }));
-          if (Array.isArray(d.messages) && d.messages.length > 0) setMessages(d.messages);
-        } else {
-          const sid = makeSessionId();
-          setCurrentSessionId(sid);
-          sessionIdRef.current = sid;
-        }
+        const sid = makeSessionId();
+        setCurrentSessionId(sid);
+        sessionIdRef.current = sid;
       })
       .catch(() => {
         const sid = makeSessionId();
@@ -253,13 +237,6 @@ function useSarieChat() {
       .finally(() => setHistoryLoaded(true));
   }, [currentUser?.id]);
 
-  // Welcome message — only after history load confirms empty session
-  useEffect(() => {
-    if (!historyLoaded) return;
-    if (messages.length === 0 && account?.username) {
-      setMessages([makeWelcome(account.username, account.followers || 0)]);
-    }
-  }, [account?.username, historyLoaded]);
 
   // Save messages + update session index in KV
   const saveSession = useCallback((msgs: ChatMessage[], sessId: string) => {
@@ -296,11 +273,8 @@ function useSarieChat() {
     setCurrentSessionId(sid);
     sessionIdRef.current = sid;
     setSessionKey(k => k + 1);
-    const welcome = account?.username
-      ? [makeWelcome(account.username, account.followers || 0)]
-      : [];
-    setMessages(welcome);
-  }, [streaming, account]);
+    setMessages([]);
+  }, [streaming]);
 
   // Switch to an existing session
   const loadSession = useCallback(async (sessId: string) => {
@@ -1072,16 +1046,16 @@ body {
   <div className="hidden md:block w-9" />
 </div>
 
-<div key={sessionKey} className="flex-1 overflow-y-auto px-4 md:px-10 pt-16 pb-28 md:pb-32 flex flex-col gap-5 md:gap-8 chat-fade" style={{ overscrollBehavior: 'contain', WebkitOverflowScrolling: 'touch' } as React.CSSProperties}>
+<div key={sessionKey} className="flex-1 overflow-y-auto px-4 md:px-10 pt-16 pb-36 md:pb-32 flex flex-col gap-5 md:gap-8 chat-fade" style={{ overscrollBehavior: 'contain', WebkitOverflowScrolling: 'touch' } as React.CSSProperties}>
 
 {/* Empty state */}
 {messages.length === 0 && historyLoaded && (
   <div className="flex-1 flex flex-col items-center justify-center text-center px-8 empty-state" style={{ minHeight: 320 }}>
-    <div className="w-12 h-12 rounded-2xl bg-[#2b2b2b] flex items-center justify-center mb-4 shadow-md">
+    <div className="w-12 h-12 rounded-2xl bg-[#2b2b2b] flex items-center justify-center mb-5 shadow-md">
       <span style={{ fontSize: 20 }}>✦</span>
     </div>
-    <h2 className="text-sm font-bold text-gray-700 mb-1">ساري جاهزة</h2>
-    <p className="text-[11px] text-gray-400 leading-relaxed max-w-[180px]">اسأل عن أي فيديو، منافس، أو استراتيجية</p>
+    <p className="text-[13px] text-gray-400 font-medium">Sarie is ready to support you,</p>
+    <h2 className="text-base font-bold text-gray-700 mt-0.5">{currentUser?.name?.split(" ")[0] || "there"}</h2>
   </div>
 )}
 
@@ -1159,7 +1133,7 @@ body {
 
 <div ref={bottomRef} />
 </div>
-<div className="absolute bottom-3 md:bottom-6 left-0 right-0 px-3 md:px-10 flex flex-col items-center">
+<div className="absolute bottom-10 md:bottom-6 left-0 right-0 px-3 md:px-10 flex flex-col items-center">
   <div className="w-full md:max-w-2xl">
     {pendingAttachment && (
       <div className="bg-white rounded-2xl p-2 mb-2 shadow-sm border border-gray-100 flex items-center gap-3">
