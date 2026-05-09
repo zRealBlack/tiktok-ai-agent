@@ -1279,6 +1279,13 @@ body {
         >
           <Plus size={14} className="text-gray-300" /> New Chat
         </button>
+        <Link
+          href="/dashboard"
+          onClick={() => setShowHistoryDrawer(false)}
+          className="bg-white/80 text-gray-700 rounded-[18px] py-3 px-5 flex items-center gap-2.5 text-[13px] font-medium hover:bg-white transition-colors w-full"
+        >
+          <LayoutGrid size={14} className="text-gray-500" /> Dashboard
+        </Link>
       </div>
 
       {/* Session list */}

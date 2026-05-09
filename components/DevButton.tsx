@@ -13,6 +13,7 @@ export default function DevButton() {
     <Link
       href="/developer"
       title="Developer Panel"
+      className="hidden md:flex"
       style={{
         position: 'fixed',
         top: 16,
@@ -25,7 +26,6 @@ export default function DevButton() {
         border: '1px solid rgba(0,0,0,0.08)',
         backdropFilter: 'blur(12px)',
         WebkitBackdropFilter: 'blur(12px)',
-        display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
         boxShadow: '0 2px 8px rgba(0,0,0,0.08)',
