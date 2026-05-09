@@ -447,8 +447,10 @@ function ChatPageInner() {
   const [showHistoryDrawer, setShowHistoryDrawer] = useState(false);
   const [showTeamDrawer, setShowTeamDrawer]       = useState(false);
   const [readReceipts, setReadReceipts] = useState<Record<string, number>>({});
+  const [longPressMsg, setLongPressMsg] = useState<number | null>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const lpTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const sarie = useSarieChat();
   const { sessions, currentSessionId, sessionKey, historyLoaded, newChat, loadSession, deleteSession } = sarie;
   const { currentUser } = useData();
@@ -897,6 +899,10 @@ body {
 @media (hover: none) {
   .msg-actions { opacity: 1 !important; }
 }
+@keyframes drawer-up {
+  from { transform: translateY(100%); }
+  to   { transform: translateY(0); }
+}
 `}} />
       <div className="fixed inset-0 flex items-center justify-center w-full bg-white md:p-8" style={{
          fontFamily: "'Inter', sans-serif"
@@ -1051,9 +1057,7 @@ body {
 {/* Empty state */}
 {messages.length === 0 && historyLoaded && (
   <div className="flex-1 flex flex-col items-center justify-center text-center px-8 empty-state" style={{ minHeight: 320 }}>
-    <div className="w-12 h-12 rounded-2xl bg-[#2b2b2b] flex items-center justify-center mb-5 shadow-md">
-      <span style={{ fontSize: 20 }}>✦</span>
-    </div>
+    <img src="/Sarielogo.png" alt="Sarie" className="w-20 h-20 object-contain mb-5" />
     <p className="text-[13px] text-gray-400 font-medium">Sarie is ready to support you,</p>
     <h2 className="text-base font-bold text-gray-700 mt-0.5">{currentUser?.name?.split(" ")[0] || "there"}</h2>
   </div>
@@ -1084,7 +1088,13 @@ body {
 
   return (
     <div key={i} className={`group flex flex-col gap-1 ${isUser ? "items-end" : "items-start"} ${isNew ? "msg-enter" : ""}`}>
-      <div className={`px-5 py-3 md:px-6 md:py-3.5 max-w-[82vw] md:max-w-xl ${isUser ? "bg-[#2b2b2b] text-white rounded-[22px] md:rounded-[28px] rounded-br-none shadow-sm" : "bg-white rounded-[22px] md:rounded-[28px] rounded-bl-none shadow-[0_2px_10px_-4px_rgba(0,0,0,0.05)] text-gray-800"}`} dir={!isUser ? "rtl" : "ltr"}>
+      <div
+        className={`px-5 py-3 md:px-6 md:py-3.5 max-w-[82vw] md:max-w-xl ${isUser ? "bg-[#2b2b2b] text-white rounded-[22px] md:rounded-[28px] rounded-br-none shadow-sm" : "bg-white rounded-[22px] md:rounded-[28px] rounded-bl-none shadow-[0_2px_10px_-4px_rgba(0,0,0,0.05)] text-gray-800"}`}
+        dir={!isUser ? "rtl" : "ltr"}
+        onTouchStart={() => { lpTimer.current = setTimeout(() => setLongPressMsg(i), 480); }}
+        onTouchEnd={() => { if (lpTimer.current) clearTimeout(lpTimer.current); }}
+        onTouchMove={() => { if (lpTimer.current) clearTimeout(lpTimer.current); }}
+      >
         {m.attachment && m.attachment.type === "image" && (
           <img src={m.attachment.url} alt={m.attachment.name} className="w-full max-w-[240px] rounded-xl block mb-2" />
         )}
@@ -1094,10 +1104,10 @@ body {
         )}
       </div>
 
-      {/* Timestamp + hover actions — visible when hovering anywhere on the message */}
+      {/* Timestamp + actions — always visible on touch, hover-only on desktop */}
       <div className={`flex items-center gap-2 mt-0.5 ${isUser ? "flex-row-reverse mr-2" : "ml-2"}`}>
         <span className="text-[10px] text-gray-300">{m.ts}</span>
-        <div className="flex gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity duration-150">
+        <div className="msg-actions flex gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity duration-150">
           <button
             onClick={() => handleCopy(m.content)}
             title="Copy"
@@ -1222,6 +1232,47 @@ body {
 <div className="hidden md:flex absolute bottom-8 right-8 items-end z-20">
   <img alt="Masaa Logo" className="w-20 object-contain drop-shadow-xl" src="/masmas.png" />
 </div>
+
+{/* ── Long-press message action sheet (mobile only) ── */}
+{longPressMsg !== null && (() => {
+  const m = messages[longPressMsg];
+  if (!m) return null;
+  const isUser = m.role === "user";
+  return (
+    <div className="md:hidden fixed inset-0 z-[70] flex flex-col justify-end" onPointerDown={() => setLongPressMsg(null)}>
+      <div className="absolute inset-0 bg-black/25" style={{ animation: 'backdrop-in 0.15s ease both' }} />
+      <div
+        className="relative bg-white rounded-t-[28px] pb-8 pt-2 shadow-2xl"
+        style={{ animation: 'drawer-up 0.22s cubic-bezier(0.16,1,0.3,1) both' }}
+        onPointerDown={e => e.stopPropagation()}
+      >
+        <div className="w-10 h-1 bg-gray-200 rounded-full mx-auto mb-4 mt-2" />
+        <div className="px-4 space-y-0.5">
+          <button
+            onClick={() => { handleCopy(m.content); setLongPressMsg(null); }}
+            className="w-full flex items-center gap-4 px-4 py-3.5 text-[14px] font-medium text-gray-700 active:bg-gray-50 rounded-2xl transition-colors"
+          ><Copy size={17} className="text-gray-400" /> Copy</button>
+          <button
+            onClick={() => { handleForward(m.content); setLongPressMsg(null); }}
+            className="w-full flex items-center gap-4 px-4 py-3.5 text-[14px] font-medium text-gray-700 active:bg-gray-50 rounded-2xl transition-colors"
+          ><Forward size={17} className="text-gray-400" /> Forward</button>
+          {isUser && (
+            <>
+              <button
+                onClick={() => { handleEdit(longPressMsg, m.content); setLongPressMsg(null); }}
+                className="w-full flex items-center gap-4 px-4 py-3.5 text-[14px] font-medium text-gray-700 active:bg-gray-50 rounded-2xl transition-colors"
+              ><Pencil size={17} className="text-gray-400" /> Edit</button>
+              <button
+                onClick={() => { handleDelete(longPressMsg); setLongPressMsg(null); }}
+                className="w-full flex items-center gap-4 px-4 py-3.5 text-[14px] font-medium text-red-500 active:bg-red-50 rounded-2xl transition-colors"
+              ><Trash2 size={17} className="text-red-400" /> Delete</button>
+            </>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+})()}
 
 {/* ═══════════════════════════════════════════════════════════
     MOBILE DRAWERS — rendered inside the container so they
