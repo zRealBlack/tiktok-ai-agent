@@ -538,8 +538,7 @@ function ChatPageInner() {
     return () => window.removeEventListener("click", clickHandler);
   }, [contextMenu]);
 
-  // Compute conversations dynamically
-  const computedConversations = conversations.map(c => {
+  const computedConversations = useMemo(() => conversations.map(c => {
     if (c.isAI) return c;
     const msgs = teamMessages[c.id] || [];
     if (msgs.length === 0) return c;
@@ -552,7 +551,7 @@ function ChatPageInner() {
       time: lastMsg.ts || c.time,
       unread: c.id === activeId ? 0 : unread
     };
-  });
+  }), [conversations, teamMessages, readReceipts, activeId]);
 
   useEffect(() => {
     const prompt = searchParams.get("prompt");
@@ -1088,14 +1087,15 @@ body {
 
 {messages.map((m, i) => {
   const isUser = m.role === "user";
-  // Only animate the last message when it's a completed message, never during active streaming
-  const isNew = i >= messages.length - 1 && !m.streaming;
+  // Only animate user messages — they appear instantly and benefit from the slide-in.
+  // Sarie's messages grow during streaming and are already visible, so no entrance animation.
+  const isNew = m.role === "user" && i >= messages.length - 2;
 
   // ── Action Card ────────────────────────────────────────────────────────────
   if (m.actionCard) {
     const { ok, summary, detail, type } = m.actionCard;
     return (
-      <div key={i} className={`flex items-start gap-2 msg-enter`} dir="ltr">
+      <div key={i} className={`flex items-start gap-2 ${i >= messages.length - 1 ? "msg-enter" : ""}`} dir="ltr">
         <div className={`flex items-start gap-3 px-4 py-3 rounded-2xl border text-[12px] max-w-md ${ok ? "bg-emerald-50 border-emerald-100 text-emerald-800" : "bg-red-50 border-red-100 text-red-700"}`}>
           <span className="mt-0.5 text-base shrink-0">{ok ? "⚡" : "⚠️"}</span>
           <div>
@@ -1177,6 +1177,10 @@ body {
       <textarea
         className="flex-1 border-none focus:outline-none outline-none focus:ring-0 bg-transparent text-[14px] text-gray-700 placeholder-gray-400 mx-3 resize-none py-2.5 max-h-[120px]"
         placeholder={isAI ? "اسأل ساري..." : "Type your prompt"}
+        autoComplete="off"
+        autoCorrect="off"
+        spellCheck={false}
+        autoCapitalize="none"
         value={input}
         onChange={e => {
           setInput(e.target.value);

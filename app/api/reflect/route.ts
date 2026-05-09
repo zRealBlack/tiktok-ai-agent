@@ -1,23 +1,10 @@
 import Anthropic from "@anthropic-ai/sdk";
-import { Redis } from "@upstash/redis";
-
-const redis = new Redis({
-  url: "https://sure-shrew-104058.upstash.io",
-  token: "gQAAAAAAAZZ6AAIgcDE4OGQ5NzI3Y2NlMTI0MTk0OTA3NjhmMjZkY2RiYmRhOA",
-});
+import { redis } from "@/lib/redis";
+import { parseKV } from "@/lib/kv";
 
 const MAX_INSIGHTS  = 20;
 const MAX_DECISIONS = 20;
 const MAX_SESSIONS  = 30;
-
-function parseKV(raw: unknown): any {
-  if (!raw) return null;
-  let result = raw;
-  for (let i = 0; i < 5 && typeof result === "string"; i++) {
-    try { result = JSON.parse(result); } catch { return null; }
-  }
-  return typeof result === "object" ? result : null;
-}
 
 export async function POST(req: Request) {
   try {

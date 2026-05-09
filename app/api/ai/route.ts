@@ -1,14 +1,10 @@
 import Anthropic from "@anthropic-ai/sdk";
-import { Redis } from "@upstash/redis";
 import { buildAgentContext, AGENT_SYSTEM_PROMPT } from "@/lib/agentContext";
+import { redis } from "@/lib/redis";
+import { parseKV } from "@/lib/kv";
+import { DEFAULT_PERMISSIONS } from "@/lib/permissions";
 
 export const runtime = "nodejs";
-
-// Use the same Redis SDK that /api/data uses — proven to handle encoding correctly
-const redis = new Redis({
-  url: process.env.KV_REST_API_URL!,
-  token: process.env.KV_REST_API_TOKEN!,
-});
 
 type SupportedMediaType = "image/jpeg" | "image/png" | "image/gif" | "image/webp";
 
@@ -27,22 +23,6 @@ async function fetchImageAsBase64(url: string): Promise<{ data: string; mediaTyp
   }
 }
 
-// Parse KV result — handles multi-level encoding from sync.js
-// sync.js does kvSet(key, JSON.stringify(payload)) and kvSet does body: JSON.stringify(value)
-// So data is double-stringified. @upstash/redis auto-parses once. We need to keep parsing.
-function parseKV(raw: unknown): any {
-  if (!raw) return null;
-  let result = raw;
-  // Keep parsing until we have an object (handles any level of string-encoding)
-  for (let i = 0; i < 5 && typeof result === "string"; i++) {
-    try {
-      result = JSON.parse(result);
-    } catch {
-      return null;
-    }
-  }
-  return typeof result === "object" ? result : null;
-}
 
 export async function POST(req: Request) {
   try {
@@ -73,10 +53,8 @@ export async function POST(req: Request) {
     const episodicMemory   = parseKV(kvInsightsRaw);
     const allPermissions   = parseKV(kvPermissionsRaw) ?? {};
 
-    // Resolve current user's permissions (fall back to defaults)
-    const { DEFAULT_PERMISSIONS } = await import("@/app/api/permissions/route");
-    const userId       = contextData?.currentUser?.id ?? "unknown";
-    const userPerms    = { ...(DEFAULT_PERMISSIONS[userId] ?? {}), ...(allPermissions[userId] ?? {}) };
+    const userId    = contextData?.currentUser?.id ?? "unknown";
+    const userPerms = { ...(DEFAULT_PERMISSIONS[userId] ?? {}), ...(allPermissions[userId] ?? {}) };
 
     // Debug log so we can verify on Vercel
     console.log("[AI] KV account:", kvAccountData?.account?.username, "followers:", kvAccountData?.account?.followers);

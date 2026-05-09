@@ -4,6 +4,16 @@
 const KV_URL = "https://sure-shrew-104058.upstash.io";
 const KV_TOKEN = "gQAAAAAAAZZ6AAIgcDE4OGQ5NzI3Y2NlMTI0MTk0OTA3NjhmMjZkY2RiYmRhOA==";
 
+// Multi-level JSON parser shared by all API routes (handles sync.js double-encoding)
+export function parseKV(raw: unknown): any {
+  if (!raw) return null;
+  let r = raw;
+  for (let i = 0; i < 5 && typeof r === "string"; i++) {
+    try { r = JSON.parse(r); } catch { return null; }
+  }
+  return r ?? null;
+}
+
 export async function kvGet(key: string): Promise<any> {
   const res = await fetch(`${KV_URL}/get/${encodeURIComponent(key)}`, {
     headers: { Authorization: `Bearer ${KV_TOKEN}` },

@@ -19,13 +19,7 @@ const CLIENT_PROFILE = {
   lastKnownTotalVideos: 30,
 };
 
-export interface PermissionSet {
-  update_audit:  boolean;
-  send_messages: boolean;
-  send_email:    boolean;
-  update_memory: boolean;
-  trigger_sync:  boolean;
-}
+import { PermissionSet } from "@/lib/permissions";
 
 function buildActionsSection(perms: PermissionSet | null): string {
   if (!perms) return "";

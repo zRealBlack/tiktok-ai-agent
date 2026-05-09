@@ -1,22 +1,9 @@
-import { Redis } from "@upstash/redis";
 import { NextRequest } from "next/server";
+import { redis } from "@/lib/redis";
+import { parseKV } from "@/lib/kv";
 
-const redis = new Redis({
-  url: "https://sure-shrew-104058.upstash.io",
-  token: "gQAAAAAAAZZ6AAIgcDE4OGQ5NzI3Y2NlMTI0MTk0OTA3NjhmMjZkY2RiYmRhOA",
-});
-
-const MAX_MESSAGES  = 120;
-const MAX_SESSIONS  = 50;
-
-function parseKV(raw: unknown): any {
-  if (!raw) return null;
-  let result = raw;
-  for (let i = 0; i < 5 && typeof result === "string"; i++) {
-    try { result = JSON.parse(result); } catch { return null; }
-  }
-  return result ?? null;
-}
+const MAX_MESSAGES = 120;
+const MAX_SESSIONS = 50;
 
 // GET /api/chat-history?userId=X             → { sessions: SessionMeta[] }
 // GET /api/chat-history?userId=X&sessionId=Y → { messages: ChatMessage[] }

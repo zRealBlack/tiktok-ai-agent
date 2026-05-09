@@ -221,16 +221,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       </div>
       {/* END: MainContainer */}
 
-      <style dangerouslySetInnerHTML={{ __html: `
-        @keyframes drawer-left {
-          from { transform: translateX(-100%); }
-          to   { transform: translateX(0); }
-        }
-        @keyframes backdrop-in {
-          from { opacity: 0; }
-          to   { opacity: 1; }
-        }
-      `}} />
     </div>
   );
 }
