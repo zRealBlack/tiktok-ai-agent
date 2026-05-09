@@ -925,7 +925,7 @@ body {
   .msg-actions { opacity: 1 !important; }
 }
 `}} />
-      <div className="flex items-center justify-center h-[100dvh] w-full bg-white md:p-8" style={{
+      <div className="fixed inset-0 flex items-center justify-center w-full bg-white md:p-8" style={{
          fontFamily: "'Inter', sans-serif"
       }}>
 
@@ -1073,7 +1073,7 @@ body {
   <div className="hidden md:block w-9" />
 </div>
 
-<div key={sessionKey} className="flex-1 overflow-y-auto px-4 md:px-10 pt-16 pb-28 md:pb-32 flex flex-col gap-5 md:gap-8 chat-fade">
+<div key={sessionKey} className="flex-1 overflow-y-auto px-4 md:px-10 pt-16 pb-28 md:pb-32 flex flex-col gap-5 md:gap-8 chat-fade" style={{ overscrollBehavior: 'contain', WebkitOverflowScrolling: 'touch' } as React.CSSProperties}>
 
 {/* Empty state */}
 {messages.length === 0 && historyLoaded && (
@@ -1088,7 +1088,8 @@ body {
 
 {messages.map((m, i) => {
   const isUser = m.role === "user";
-  const isNew  = i >= messages.length - 1;
+  // Only animate the last message when it's a completed message, never during active streaming
+  const isNew = i >= messages.length - 1 && !m.streaming;
 
   // ── Action Card ────────────────────────────────────────────────────────────
   if (m.actionCard) {

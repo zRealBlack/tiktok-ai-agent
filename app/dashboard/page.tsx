@@ -7,9 +7,9 @@ export default function DashboardPage() {
   const { account, videos } = useData();
 
   return (
-    <div className="flex-1 overflow-y-auto p-8 flex flex-col gap-8 bg-[#fbfbfb]">
+    <div className="flex-1 overflow-y-auto p-4 md:p-8 flex flex-col gap-4 md:gap-8 bg-[#fbfbfb]">
       {/* Top Cards */}
-      <div className="grid grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 md:gap-6">
         {/* Performance */}
         <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 flex flex-col gap-4 transition-transform hover:-translate-y-1 duration-200">
           <div className="flex justify-between items-center">
@@ -72,11 +72,11 @@ export default function DashboardPage() {
           <table className="w-full text-left text-sm">
             <thead className="bg-gray-50 text-gray-500 border-b border-gray-100">
               <tr>
-                <th className="px-6 py-4 font-medium text-xs uppercase tracking-wider">Date</th>
-                <th className="px-6 py-4 font-medium text-xs uppercase tracking-wider">Video Title</th>
-                <th className="px-6 py-4 font-medium text-xs uppercase tracking-wider">Score</th>
-                <th className="px-6 py-4 font-medium text-xs uppercase tracking-wider">Status</th>
-                <th className="px-6 py-4 font-medium text-xs uppercase tracking-wider text-right">Action</th>
+                <th className="px-4 md:px-6 py-3 md:py-4 font-medium text-xs uppercase tracking-wider">Date</th>
+                <th className="px-4 md:px-6 py-3 md:py-4 font-medium text-xs uppercase tracking-wider">Video Title</th>
+                <th className="px-4 md:px-6 py-3 md:py-4 font-medium text-xs uppercase tracking-wider">Score</th>
+                <th className="hidden sm:table-cell px-4 md:px-6 py-3 md:py-4 font-medium text-xs uppercase tracking-wider">Status</th>
+                <th className="hidden sm:table-cell px-4 md:px-6 py-3 md:py-4 font-medium text-xs uppercase tracking-wider text-right">Action</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-50 text-gray-700">
@@ -88,11 +88,11 @@ export default function DashboardPage() {
                 const statusBg = sc >= 70 ? 'bg-green-50' : 'bg-yellow-50';
                 return (
                   <tr key={v.id} className="hover:bg-gray-50/50 transition-colors group cursor-pointer" onClick={() => window.location.href = `/dashboard/audit/${v.id}`}>
-                    <td className="px-6 py-4 text-gray-500 text-xs">{v.posted || 'Recent'}</td>
-                    <td className="px-6 py-4 font-medium text-gray-800" style={{ direction: 'rtl' }}>{v.title || 'Video'}</td>
-                    <td className="px-6 py-4"><span className={`${scBg} ${scClr} px-2.5 py-1 rounded-md text-xs font-bold`}>{sc}</span></td>
-                    <td className="px-6 py-4"><span className={`inline-flex items-center gap-1.5 ${statusClr} ${statusBg} px-2.5 py-1 rounded-full text-xs font-medium`}><i className="fa-solid fa-circle text-[8px]"></i> {sc >= 70 ? 'Completed' : 'Needs Review'}</span></td>
-                    <td className="px-6 py-4 text-right"><button className="text-gray-400 hover:text-gray-800 opacity-0 group-hover:opacity-100 transition-opacity"><i className="fa-solid fa-play px-2"></i></button></td>
+                    <td className="px-4 md:px-6 py-3 md:py-4 text-gray-500 text-xs whitespace-nowrap">{v.posted || 'Recent'}</td>
+                    <td className="px-4 md:px-6 py-3 md:py-4 font-medium text-gray-800 max-w-[140px] md:max-w-none truncate" style={{ direction: 'rtl' }}>{v.title || 'Video'}</td>
+                    <td className="px-4 md:px-6 py-3 md:py-4"><span className={`${scBg} ${scClr} px-2.5 py-1 rounded-md text-xs font-bold`}>{sc}</span></td>
+                    <td className="hidden sm:table-cell px-4 md:px-6 py-3 md:py-4"><span className={`inline-flex items-center gap-1.5 ${statusClr} ${statusBg} px-2.5 py-1 rounded-full text-xs font-medium`}><i className="fa-solid fa-circle text-[8px]"></i> {sc >= 70 ? 'Done' : 'Review'}</span></td>
+                    <td className="hidden sm:table-cell px-4 md:px-6 py-3 md:py-4 text-right"><button className="text-gray-400 hover:text-gray-800 opacity-0 group-hover:opacity-100 transition-opacity"><i className="fa-solid fa-play px-2"></i></button></td>
                   </tr>
                 );
               })}
