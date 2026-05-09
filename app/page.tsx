@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { useState, useRef, useEffect, useCallback, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import Image from "next/image";
-import { Send, Plus, Loader2, Square, Search, Phone, Video, MoreVertical, Smile, Paperclip, Check, CheckCheck, X, FileText, Film, Copy, Trash2, Pencil, Forward, MoreHorizontal, ArrowLeft, Compass, LayoutGrid, History, MessageCircle, Settings, LogOut } from "lucide-react";
+import { Send, Plus, Loader2, Square, Search, Phone, Video, MoreVertical, Smile, Paperclip, Check, CheckCheck, X, FileText, Film, Copy, Trash2, Pencil, Forward, MoreHorizontal, ArrowLeft, Compass, LayoutGrid, History, MessageCircle, Settings, LogOut, Menu, Users } from "lucide-react";
 import { useData } from "@/components/DataContext";
 import MarkdownMessage from "@/components/MarkdownMessage";
 import SarieAvatar from "@/public/sarie_generated.png";
@@ -469,7 +469,9 @@ function ChatPageInner() {
   const [selectedForwards, setSelectedForwards] = useState<string[]>([]);
   const [contextMenu, setContextMenu] = useState<{ msgIdx: number } | null>(null);
   const [showChatOnMobile, setShowChatOnMobile] = useState(false);
-  const [showUserMenu, setShowUserMenu] = useState(false);
+  const [showUserMenu, setShowUserMenu]         = useState(false);
+  const [showHistoryDrawer, setShowHistoryDrawer] = useState(false);
+  const [showTeamDrawer, setShowTeamDrawer]       = useState(false);
   const [readReceipts, setReadReceipts] = useState<Record<string, number>>({});
   const bottomRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -900,15 +902,37 @@ body {
 .status-online { background-color: #22c55e; }
 .status-away   { background-color: #eab308; }
 .status-busy   { background-color: #ef4444; }
+
+/* ── Mobile drawers ────────────────────────────────────────── */
+@keyframes drawer-left {
+  from { transform: translateX(-100%); }
+  to   { transform: translateX(0); }
+}
+@keyframes drawer-right {
+  from { transform: translateX(100%); }
+  to   { transform: translateX(0); }
+}
+@keyframes backdrop-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+.drawer-left    { animation: drawer-left  0.28s cubic-bezier(0.16,1,0.3,1) both; }
+.drawer-right   { animation: drawer-right 0.28s cubic-bezier(0.16,1,0.3,1) both; }
+.drawer-backdrop { animation: backdrop-in 0.2s ease both; }
+
+/* ── Mobile message actions — always show on touch ─────────── */
+@media (hover: none) {
+  .msg-actions { opacity: 1 !important; }
+}
 `}} />
-      <div className="flex items-center justify-center h-screen w-full bg-white p-8" style={{
+      <div className="flex items-center justify-center h-[100dvh] w-full bg-white md:p-8" style={{
          fontFamily: "'Inter', sans-serif"
       }}>
-        
+
 {/*  BEGIN: MainContainer  */}
-<div className="bg-[#f2f2f2] w-full max-w-[1600px] h-full rounded-[32px] overflow-hidden shadow-2xl flex relative text-[#2b2b2b] text-[14px]">
-{/*  BEGIN: LeftSidebar  */}
-<aside className="w-[200px] flex flex-col justify-between p-6 pl-8">
+<div className="bg-[#f2f2f2] w-full max-w-[1600px] h-full md:rounded-[32px] overflow-hidden shadow-2xl flex relative text-[#2b2b2b] text-[14px]">
+{/*  BEGIN: LeftSidebar — hidden on mobile  */}
+<aside className="hidden md:flex w-[200px] flex-col justify-between p-6 pl-8">
 <div className="space-y-4 pt-4 flex-1 flex flex-col h-full overflow-hidden">
 <nav className="space-y-2.5 mt-2 shrink-0 flex flex-col items-start">
   <button
@@ -1015,14 +1039,41 @@ body {
 </aside>
 {/*  END: LeftSidebar  */}
 {/*  BEGIN: MainChatArea  */}
-<main className="flex-1 bg-[#fbfbfb] my-4 rounded-[24px] shadow-sm flex flex-col relative overflow-hidden">
-{/*  Top Bar  */}
-<div className="absolute top-0 w-full flex justify-center py-4 bg-gradient-to-b from-[#fbfbfb] to-transparent z-10">
-<button className="text-xs text-gray-800 font-semibold flex items-center gap-1 hover:text-black">
-<span className="font-bold text-sm tracking-wider mr-1">Sarie 2.1</span> <i className="fa-solid fa-chevron-down text-[10px] ml-1 text-gray-500"></i>
-</button>
+<main className="flex-1 bg-[#fbfbfb] md:my-4 md:rounded-[24px] shadow-sm flex flex-col relative overflow-hidden">
+
+{/*  Top Bar — desktop centers title; mobile shows drawer toggles  */}
+<div className="absolute top-0 w-full flex items-center justify-between md:justify-center px-4 md:px-0 py-3 md:py-4 bg-gradient-to-b from-[#fbfbfb] via-[#fbfbfb]/90 to-transparent z-10">
+  {/* Mobile: history drawer button */}
+  <button
+    onClick={() => setShowHistoryDrawer(true)}
+    className="md:hidden w-9 h-9 flex items-center justify-center rounded-2xl bg-white border border-gray-100 shadow-sm active:scale-95 transition-transform"
+    aria-label="Chat history"
+  >
+    <Menu size={17} className="text-gray-600" />
+  </button>
+
+  {/* Title */}
+  <button className="text-xs text-gray-800 font-semibold flex items-center gap-1">
+    <span className="font-bold text-sm tracking-wider mr-1">Sarie 2.1</span>
+    <i className="fa-solid fa-chevron-down text-[10px] ml-1 text-gray-500"></i>
+  </button>
+
+  {/* Mobile: team drawer button */}
+  <button
+    onClick={() => setShowTeamDrawer(true)}
+    className="md:hidden w-9 h-9 flex items-center justify-center rounded-2xl bg-white border border-gray-100 shadow-sm active:scale-95 transition-transform relative"
+    aria-label="Team chat"
+  >
+    <Users size={17} className="text-gray-600" />
+    {computedConversations.filter(c => !c.isAI && c.unread > 0).length > 0 && (
+      <span className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full bg-red-500 border border-white" />
+    )}
+  </button>
+  {/* Desktop: invisible balance spacer */}
+  <div className="hidden md:block w-9" />
 </div>
-<div key={sessionKey} className="flex-1 overflow-y-auto px-10 pt-16 pb-32 flex flex-col gap-8 chat-fade">
+
+<div key={sessionKey} className="flex-1 overflow-y-auto px-4 md:px-10 pt-16 pb-28 md:pb-32 flex flex-col gap-5 md:gap-8 chat-fade">
 
 {/* Empty state */}
 {messages.length === 0 && historyLoaded && (
@@ -1058,7 +1109,7 @@ body {
 
   return (
     <div key={i} className={`group flex flex-col gap-1 ${isUser ? "items-end" : "items-start"} ${isNew ? "msg-enter" : ""}`}>
-      <div className={`px-6 py-3.5 max-w-xl ${isUser ? "bg-[#2b2b2b] text-white rounded-[28px] rounded-br-none shadow-sm" : "bg-white rounded-[28px] rounded-bl-none shadow-[0_2px_10px_-4px_rgba(0,0,0,0.05)] text-gray-800"}`} dir={!isUser ? "rtl" : "ltr"}>
+      <div className={`px-5 py-3 md:px-6 md:py-3.5 max-w-[82vw] md:max-w-xl ${isUser ? "bg-[#2b2b2b] text-white rounded-[22px] md:rounded-[28px] rounded-br-none shadow-sm" : "bg-white rounded-[22px] md:rounded-[28px] rounded-bl-none shadow-[0_2px_10px_-4px_rgba(0,0,0,0.05)] text-gray-800"}`} dir={!isUser ? "rtl" : "ltr"}>
         {m.attachment && m.attachment.type === "image" && (
           <img src={m.attachment.url} alt={m.attachment.name} className="w-full max-w-[240px] rounded-xl block mb-2" />
         )}
@@ -1107,8 +1158,8 @@ body {
 
 <div ref={bottomRef} />
 </div>
-<div className="absolute bottom-6 left-0 right-0 px-10 flex flex-col items-center">
-  <div className="w-full max-w-2xl">
+<div className="absolute bottom-3 md:bottom-6 left-0 right-0 px-3 md:px-10 flex flex-col items-center">
+  <div className="w-full md:max-w-2xl">
     {pendingAttachment && (
       <div className="bg-white rounded-2xl p-2 mb-2 shadow-sm border border-gray-100 flex items-center gap-3">
         {pendingAttachment.type === "image" && <img src={pendingAttachment.url} className="w-10 h-10 object-cover rounded-lg" />}
@@ -1153,8 +1204,8 @@ body {
 </div>
 </main>
 {/*  END: MainChatArea  */}
-{/*  BEGIN: RightSidebar  */}
-<aside className="w-[280px] p-6 pr-8 flex flex-col gap-6 overflow-y-auto">
+{/*  BEGIN: RightSidebar — hidden on mobile  */}
+<aside className="hidden md:flex w-[280px] p-6 pr-8 flex-col gap-6 overflow-y-auto">
 {/*  Team Chat Header  */}
 <div className="flex justify-between items-center pt-2">
 <h3 className="text-sm font-semibold text-gray-800 flex items-center gap-2">
@@ -1188,10 +1239,163 @@ body {
 </div>
 </aside>
 {/*  END: RightSidebar  */}
-{/*  Logo Floating Widget  */}
-<div className="absolute bottom-8 right-8 flex items-end z-20">
+{/*  Logo Floating Widget — desktop only  */}
+<div className="hidden md:flex absolute bottom-8 right-8 items-end z-20">
   <img alt="Masaa Logo" className="w-20 object-contain drop-shadow-xl" src="/masmas.png" />
 </div>
+
+{/* ═══════════════════════════════════════════════════════════
+    MOBILE DRAWERS — rendered inside the container so they
+    respect the rounded corners on md+
+    ═══════════════════════════════════════════════════════════ */}
+
+{/* ── History Drawer (left) ── */}
+{showHistoryDrawer && (
+  <div className="md:hidden fixed inset-0 z-[60] flex" onPointerDown={() => setShowHistoryDrawer(false)}>
+    <div className="drawer-backdrop absolute inset-0 bg-black/30" />
+    <div
+      className="drawer-left relative w-[78vw] max-w-[300px] h-full bg-[#f2f2f2] flex flex-col shadow-2xl"
+      onPointerDown={e => e.stopPropagation()}
+    >
+      {/* Header */}
+      <div className="flex items-center justify-between px-5 pt-12 pb-4 border-b border-gray-100">
+        <span className="font-black text-[17px] text-gray-800">Chats</span>
+        <button
+          onClick={() => setShowHistoryDrawer(false)}
+          className="w-8 h-8 flex items-center justify-center rounded-full bg-white border border-gray-100 active:scale-90 transition-transform"
+        ><X size={14} className="text-gray-500" /></button>
+      </div>
+
+      {/* Nav buttons */}
+      <div className="px-4 pt-4 pb-2 space-y-2">
+        <button
+          onClick={() => { newChat(); setShowHistoryDrawer(false); }}
+          className="new-chat-btn bg-[#2b2b2b] text-white rounded-[18px] py-3 px-5 flex items-center gap-2 text-[13px] font-medium w-full"
+        >
+          <Plus size={14} className="text-gray-300" /> New Chat
+        </button>
+        <Link
+          href="/dashboard"
+          onClick={() => setShowHistoryDrawer(false)}
+          className="bg-white/80 text-gray-700 rounded-[18px] py-3 px-5 flex items-center gap-2.5 text-[13px] font-medium hover:bg-white transition-colors w-full"
+        >
+          <LayoutGrid size={14} className="text-gray-500" /> Dashboard
+        </Link>
+      </div>
+
+      {/* Session list */}
+      <div className="flex-1 overflow-y-auto px-4 pb-4 space-y-1">
+        {!historyLoaded && (
+          <div className="space-y-3 mt-4">
+            {[55, 70, 45, 65, 50].map((w, i) => (
+              <div key={i} className="flex items-center gap-2">
+                <div className="skeleton w-3 h-3 rounded-full shrink-0" />
+                <div className="skeleton h-3 rounded" style={{ width: `${w}%` }} />
+              </div>
+            ))}
+          </div>
+        )}
+        {sessions.length === 0 && historyLoaded && (
+          <p className="text-[11px] text-gray-400 px-1 mt-4">No previous chats yet.</p>
+        )}
+        {historyLoaded && (() => {
+          const todayStr = new Date().toDateString();
+          const yesterdayStr = new Date(Date.now() - 86400000).toDateString();
+          const groups: { label: string; items: SessionMeta[] }[] = [];
+          const seen = new Map<string, SessionMeta[]>();
+          sessions.forEach(s => {
+            const d = new Date(s.ts);
+            const label = d.toDateString() === todayStr ? "Today"
+              : d.toDateString() === yesterdayStr ? "Yesterday"
+              : d.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" });
+            if (!seen.has(label)) { seen.set(label, []); groups.push({ label, items: seen.get(label)! }); }
+            seen.get(label)!.push(s);
+          });
+          return groups.map(g => (
+            <div key={g.label} className="mt-3">
+              <h4 className="text-[10px] font-bold text-gray-400 uppercase tracking-wider px-1 mb-1">{g.label}</h4>
+              {g.items.map(s => (
+                <button
+                  key={s.id}
+                  onClick={() => { loadSession(s.id); setShowHistoryDrawer(false); }}
+                  className={`w-full text-left flex items-start gap-2 px-2 py-2 rounded-xl text-[12px] transition-colors ${s.id === currentSessionId ? 'bg-white text-gray-900 font-semibold shadow-sm' : 'text-gray-600 hover:bg-white/60'}`}
+                >
+                  <MessageCircle size={12} className="text-gray-400 mt-0.5 shrink-0" />
+                  <span className="truncate">{s.title || "محادثة جديدة"}</span>
+                </button>
+              ))}
+            </div>
+          ));
+        })()}
+      </div>
+
+      {/* User profile */}
+      <div className="px-4 pb-6 pt-3 border-t border-gray-100">
+        <div className="flex items-center gap-3 p-2 rounded-xl bg-white/60">
+          <AvatarCircle name={currentUser?.name || "U"} size={32} online />
+          <div className="flex-1 min-w-0">
+            <div className="text-[12px] font-bold text-gray-800 truncate">{currentUser?.name}</div>
+            <div className="text-[10px] text-gray-500 truncate">{currentUser?.role}</div>
+          </div>
+          <button
+            onClick={() => { localStorage.removeItem('mas_ai_authenticated_user'); window.location.href = '/'; }}
+            className="p-1.5 rounded-lg text-gray-400 hover:text-red-500 transition-colors"
+          ><LogOut size={13} /></button>
+        </div>
+      </div>
+    </div>
+  </div>
+)}
+
+{/* ── Team Drawer (right) ── */}
+{showTeamDrawer && (
+  <div className="md:hidden fixed inset-0 z-[60] flex justify-end" onPointerDown={() => setShowTeamDrawer(false)}>
+    <div className="drawer-backdrop absolute inset-0 bg-black/30" />
+    <div
+      className="drawer-right relative w-[78vw] max-w-[300px] h-full bg-[#f2f2f2] flex flex-col shadow-2xl"
+      onPointerDown={e => e.stopPropagation()}
+    >
+      {/* Header */}
+      <div className="flex items-center justify-between px-5 pt-12 pb-4 border-b border-gray-100">
+        <span className="font-black text-[17px] text-gray-800">Team</span>
+        <button
+          onClick={() => setShowTeamDrawer(false)}
+          className="w-8 h-8 flex items-center justify-center rounded-full bg-white border border-gray-100 active:scale-90 transition-transform"
+        ><X size={14} className="text-gray-500" /></button>
+      </div>
+
+      {/* Team list */}
+      <div className="flex-1 overflow-y-auto px-4 py-4 space-y-1">
+        {computedConversations.filter(c => !c.isAI).map(c => (
+          <Link
+            href={`/team-chat/${c.id}`}
+            key={c.id}
+            onClick={() => setShowTeamDrawer(false)}
+            className="flex items-center gap-3 p-3 hover:bg-white rounded-2xl transition-colors"
+          >
+            <AvatarCircle name={c.name} src={c.avatar} size={40} online={c.online} />
+            <div className="flex-1 min-w-0">
+              <div className="flex justify-between items-baseline">
+                <h4 className="text-[13px] font-bold text-gray-800 truncate">{c.name}</h4>
+                {c.time && <span className="text-[10px] text-gray-400 shrink-0 ml-2">{c.time}</span>}
+              </div>
+              <p className="text-[11px] text-gray-500 truncate">{c.lastMessage || c.role}</p>
+            </div>
+            {c.unread > 0 && (
+              <span className="bg-[#2b2b2b] text-white text-[10px] font-bold w-5 h-5 rounded-full flex items-center justify-center shrink-0">{c.unread}</span>
+            )}
+          </Link>
+        ))}
+      </div>
+
+      {/* Footer note */}
+      <div className="px-5 pb-8 pt-2">
+        <p className="text-[10px] text-gray-400 text-center">Tap a member to open direct chat</p>
+      </div>
+    </div>
+  </div>
+)}
+
 </div>
 {/*  END: MainContainer  */}
 
