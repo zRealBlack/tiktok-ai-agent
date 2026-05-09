@@ -1119,9 +1119,10 @@ body {
 
 {/* Empty state */}
 {messages.length === 0 && historyLoaded && (
-  <div className="flex-1 flex flex-col items-center justify-center text-center px-8 empty-state" style={{ minHeight: 320 }}>
-    <h2 className="text-xl font-bold text-gray-800 mb-1">{currentUser?.name?.split(" ")[0] || "there"}</h2>
-    <p className="text-[13px] text-gray-400 font-medium">Sarie is ready to support you</p>
+  <div className="flex-1 flex flex-col items-center justify-center text-center px-8 empty-state relative" style={{ minHeight: 320 }}>
+    <img src="/Sarielogo.png" alt="" aria-hidden className="absolute w-52 h-52 object-contain pointer-events-none select-none" style={{ opacity: 0.07 }} />
+    <h2 className="text-xl font-bold text-gray-800 mb-1 relative z-10">{currentUser?.name?.split(" ")[0] || "there"}</h2>
+    <p className="text-[13px] text-gray-400 font-medium relative z-10">Sarie is ready to support you</p>
   </div>
 )}
 
@@ -1149,10 +1150,11 @@ body {
   }
 
   return (
-    <div key={i} className={`group flex flex-col gap-1 ${isUser ? "items-end" : "items-start"} ${isNew ? "msg-enter" : ""}`}>
+    <div key={i} className={`no-select group flex flex-col gap-1 ${isUser ? "items-end" : "items-start"} ${isNew ? "msg-enter" : ""}`}>
       <div
-        className={`no-select px-5 py-3 md:px-6 md:py-3.5 max-w-[82vw] md:max-w-xl ${isUser ? "bg-[#2b2b2b] text-white rounded-[22px] md:rounded-[28px] rounded-br-none shadow-sm" : "bg-white rounded-[22px] md:rounded-[28px] rounded-bl-none shadow-[0_2px_10px_-4px_rgba(0,0,0,0.05)] text-gray-800"}`}
+        className={`px-5 py-3 md:px-6 md:py-3.5 max-w-[82vw] md:max-w-xl ${isUser ? "bg-[#2b2b2b] text-white rounded-[22px] md:rounded-[28px] rounded-br-none shadow-sm" : "bg-white rounded-[22px] md:rounded-[28px] rounded-bl-none shadow-[0_2px_10px_-4px_rgba(0,0,0,0.05)] text-gray-800"}`}
         dir={!isUser ? "rtl" : "ltr"}
+        onContextMenu={e => e.preventDefault()}
         onTouchStart={() => { lpTimer.current = setTimeout(() => setLongPressMsg(i), 480); }}
         onTouchEnd={() => { if (lpTimer.current) clearTimeout(lpTimer.current); }}
         onTouchMove={() => { if (lpTimer.current) clearTimeout(lpTimer.current); }}
