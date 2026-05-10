@@ -70,7 +70,7 @@ export const TEAM_MEMBERS: TeamMember[] = [
     password: "Ahmed@7788",
     name: "Ahmed Gaml",
     role: "CEO",
-    bio: "CEO of Mas Agency. Oversees overall company operations, business strategy, and growth."
+    bio: "CEO of Mas Agency. Main focus is the Ashtry brand — its growth, strategy, and business performance."
   }
 ];
 
