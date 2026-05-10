@@ -13,9 +13,9 @@ import SarieAvatar from "@/public/sarie_generated.png";
 
 const EMOJIS = ["😂","❤️","🔥","👏","😮","😢","🤔","💯","🚀","✅","👍","🎉","💪","😍","🙏","⚡","🎯","💡","🤣","😎"];
 
-interface Attachment { name: string; url: string; type: "image" | "video" | "file"; }
+interface Attachment { name: string; url: string; type: "image" | "video" | "file"; mimeType?: string; }
 
-interface ActionCard { ok: boolean; summary: string; detail?: string; type: string; }
+interface ActionCard { ok: boolean; summary: string; detail?: string; type: string; images?: string[]; specs?: string; colors?: string; cleanName?: string; }
 
 interface ChatMessage {
   id?: string;
@@ -314,10 +314,10 @@ function useSarieChat() {
     }).catch(() => {});
   }, [currentUser?.id]);
 
-  const send = useCallback(async (text: string) => {
-    if (!text.trim() || streaming) return;
+  const send = useCallback(async (text: string, attachment?: Attachment | null) => {
+    if (!text.trim() && !attachment) return;
     const sessId  = sessionIdRef.current;
-    const userMsg: ChatMessage = { role: "user", content: text, ts: now() };
+    const userMsg: ChatMessage = { role: "user", content: text, ts: now(), ...(attachment ? { attachment } : {}) };
     const next = [...messages, userMsg];
     setMessages(next);
     setStreaming(true);
@@ -329,7 +329,7 @@ function useSarieChat() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          messages: next.map(m => ({ role: m.role, content: m.content })),
+          messages: next.map(m => ({ role: m.role, content: m.content, attachment: m.attachment })),
           contextData: { account, videos, competitors, ideas, trends, generations, currentUser },
         }),
         signal: ctrl.signal,
@@ -456,7 +456,7 @@ function ChatPageInner() {
   const [showUserMenu, setShowUserMenu]         = useState(false);
   const [showHistoryDrawer, setShowHistoryDrawer] = useState(false);
   const [showTeamDrawer, setShowTeamDrawer]       = useState(false);
-  const [readReceipts, setReadReceipts] = useState<Record<string, number>>({});
+  const [seenTick, setSeenTick] = useState(0);
   const [longPressMsg, setLongPressMsg] = useState<number | null>(null);
   const [longPressSess, setLongPressSess] = useState<SessionMeta | null>(null);
   const [renamingSess, setRenamingSess] = useState(false);
@@ -467,12 +467,15 @@ function ChatPageInner() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const lpTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const lpSessTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const activeIdRef = useRef(activeId);
+  useEffect(() => { activeIdRef.current = activeId; }, [activeId]);
   const seenMsgIdsRef = useRef<Set<string>>(new Set());
 
   useEffect(() => {
     try {
       const stored = JSON.parse(localStorage.getItem('mas_seen_msg_ids') || '[]');
       seenMsgIdsRef.current = new Set(stored);
+      setSeenTick(t => t + 1);
     } catch {}
   }, []);
   const sarie = useSarieChat();
@@ -515,9 +518,15 @@ function ChatPageInner() {
                   });
                 }
                 if (!seenMsgIdsRef.current.has(msgId)) {
-                  const sender = INITIAL_CONVERSATIONS.find(c => c.id === msg.senderId);
-                  if (sender) notifications.push({ name: sender.name, text: msg.content || '📎 Attachment' });
-                  seenMsgIdsRef.current.add(msgId);
+                  // If this conversation is currently open, mark as seen silently
+                  if (msg.senderId === activeIdRef.current) {
+                    seenMsgIdsRef.current.add(msgId);
+                  } else {
+                    const sender = INITIAL_CONVERSATIONS.find(c => c.id === msg.senderId);
+                    if (sender) notifications.push({ name: sender.name, text: msg.content || '📎 Attachment' });
+                    seenMsgIdsRef.current.add(msgId);
+                  }
+                  setSeenTick(t => t + 1);
                 }
               }
             });
@@ -538,9 +547,21 @@ function ChatPageInner() {
     fetchMsgs();
     return () => clearTimeout(timeout);
   }, [currentUser]);
-  // Auto-send prompt from URL (e.g. from "Fix with AI" button on audit page)
+  // Mark conversation as fully read when switching to it
   useEffect(() => {
-    setReadReceipts(prev => ({ ...prev, [activeId]: (teamMessages[activeId] || []).length }));
+    if (activeId === 'sarie') return;
+    const msgs = teamMessages[activeId] || [];
+    let changed = false;
+    msgs.forEach(m => {
+      if (m.role === 'assistant' && m.id && !seenMsgIdsRef.current.has(m.id)) {
+        seenMsgIdsRef.current.add(m.id);
+        changed = true;
+      }
+    });
+    if (changed) {
+      try { localStorage.setItem('mas_seen_msg_ids', JSON.stringify([...seenMsgIdsRef.current])); } catch {}
+      setSeenTick(t => t + 1);
+    }
   }, [activeId, teamMessages]);
 
   useEffect(() => {
@@ -555,15 +576,18 @@ function ChatPageInner() {
     const msgs = teamMessages[c.id] || [];
     if (msgs.length === 0) return c;
     const lastMsg = msgs[msgs.length - 1];
-    const readLen = readReceipts[c.id] || 0;
-    const unread = Math.max(0, msgs.length - readLen);
+    const unread = c.id === activeId
+      ? 0
+      : msgs.filter(m => m.role === 'assistant' && m.id && !seenMsgIdsRef.current.has(m.id)).length;
     return {
       ...c,
       lastMessage: lastMsg.content || (lastMsg.attachment ? `[${lastMsg.attachment.type}]` : ""),
       time: lastMsg.ts || c.time,
-      unread: c.id === activeId ? 0 : unread
+      unread,
     };
-  }), [conversations, teamMessages, readReceipts, activeId]);
+  // seenTick is the dependency that fires when seenMsgIdsRef changes
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }), [conversations, teamMessages, seenTick, activeId]);
 
   useEffect(() => {
     const prompt = searchParams.get("prompt");
@@ -689,7 +713,7 @@ function ChatPageInner() {
     const text = input.trim();
     if (!text && !pendingAttachment) return;
     if (isAI) {
-      sarie.send(text || (pendingAttachment ? `[Sent: ${pendingAttachment.name}]` : ""));
+      sarie.send(text, pendingAttachment);
     } else {
       const msgId = Date.now().toString() + "-" + Math.random().toString(36).substr(2, 9);
       const msg: ChatMessage = { id: msgId, role: "user", content: text || "", ts: now(), status: "sent", ...(pendingAttachment ? { attachment: pendingAttachment } : {}) };
@@ -736,51 +760,46 @@ function ChatPageInner() {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    const isImage = file.type.startsWith("image");
-
-    if (file.size > 800 * 1024 && !isImage) {
-      alert("⚠️ File is too large! Since you don't have a storage bucket set up yet, please upload files under 800KB.");
+    const MAX_BYTES = 20 * 1024 * 1024; // 20 MB
+    if (file.size > MAX_BYTES) {
+      alert("⚠️ File is too large (max 20 MB).");
       e.target.value = "";
       return;
     }
 
+    const isImage = file.type.startsWith("image/");
+
     if (isImage) {
-      // Compress image
       const reader = new FileReader();
-      reader.onload = (e) => {
+      reader.onload = (ev) => {
         const img = new window.Image();
         img.onload = () => {
           const canvas = document.createElement("canvas");
-          let width = img.width;
-          let height = img.height;
-          const MAX = 1200;
-          if (width > height && width > MAX) {
-            height *= MAX / width;
-            width = MAX;
-          } else if (height > MAX) {
-            width *= MAX / height;
-            height = MAX;
+          let { width, height } = img;
+          const MAX = 1568; // Claude's recommended max
+          if (width > MAX || height > MAX) {
+            if (width > height) { height = Math.round(height * MAX / width); width = MAX; }
+            else { width = Math.round(width * MAX / height); height = MAX; }
           }
           canvas.width = width;
           canvas.height = height;
-          const ctx = canvas.getContext("2d");
-          ctx?.drawImage(img, 0, 0, width, height);
-          const compressedBase64 = canvas.toDataURL("image/jpeg", 0.7);
-          setPendingAttachment({ name: file.name, url: compressedBase64, type: "image" });
+          canvas.getContext("2d")?.drawImage(img, 0, 0, width, height);
+          const url = canvas.toDataURL("image/jpeg", 0.82);
+          setPendingAttachment({ name: file.name, url, type: "image", mimeType: "image/jpeg" });
         };
-        img.src = e.target?.result as string;
+        img.src = ev.target?.result as string;
       };
       reader.readAsDataURL(file);
     } else {
       const reader = new FileReader();
       reader.onloadend = () => {
-        const base64Url = reader.result as string;
-        const type: Attachment["type"] = file.type.startsWith("video") ? "video" : "file";
-        setPendingAttachment({ name: file.name, url: base64Url, type });
+        const url = reader.result as string;
+        const type: Attachment["type"] = file.type.startsWith("video/") ? "video" : "file";
+        setPendingAttachment({ name: file.name, url, type, mimeType: file.type || "application/octet-stream" });
       };
       reader.readAsDataURL(file);
     }
-    
+
     e.target.value = "";
   };
 
@@ -1134,7 +1153,47 @@ body {
 
   // ── Action Card ────────────────────────────────────────────────────────────
   if (m.actionCard) {
-    const { ok, summary, detail, type } = m.actionCard;
+    const { ok, summary, detail, type, images, specs, colors, cleanName } = m.actionCard;
+
+    // ── Product Search Gallery Card ─────────────────────────────────────────
+    if (type === "SEARCH_PRODUCT" && ok && images && images.length > 0) {
+      return (
+        <div key={i} className={`flex flex-col gap-3 max-w-md ${i >= messages.length - 1 ? "msg-enter" : ""}`} dir="ltr">
+          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+            {/* Header */}
+            <div className="flex items-center gap-2 px-4 py-3 border-b border-gray-50 bg-gradient-to-r from-violet-50 to-white">
+              <span className="text-lg">🔍</span>
+              <div>
+                <div className="font-bold text-[13px] text-gray-800" dangerouslySetInnerHTML={{ __html: summary.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>') }} />
+                {colors && colors !== "N/A" && <div className="text-[11px] text-gray-400 mt-0.5">🎨 {colors}</div>}
+              </div>
+            </div>
+            {/* Image Grid */}
+            <div className="grid grid-cols-3 gap-0.5 bg-gray-100">
+              {images.slice(0, 6).map((url, idx) => (
+                <a key={idx} href={url} target="_blank" rel="noopener noreferrer" className="block aspect-square overflow-hidden">
+                  <img
+                    src={url}
+                    alt={`${cleanName} ${idx + 1}`}
+                    className="w-full h-full object-cover hover:scale-105 transition-transform duration-200"
+                    onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
+                  />
+                </a>
+              ))}
+            </div>
+            {/* Specs */}
+            {specs && (
+              <div className="px-4 py-3 text-[11px] text-gray-500 leading-relaxed max-h-28 overflow-y-auto">
+                <pre className="whitespace-pre-wrap font-sans">{specs}</pre>
+              </div>
+            )}
+            <div className="px-4 py-2 text-[10px] text-gray-300 font-mono border-t border-gray-50">SEARCH_PRODUCT</div>
+          </div>
+        </div>
+      );
+    }
+
+    // ── Default Action Card ─────────────────────────────────────────────────
     return (
       <div key={i} className={`flex items-start gap-2 ${i >= messages.length - 1 ? "msg-enter" : ""}`} dir="ltr">
         <div className={`flex items-start gap-3 px-4 py-3 rounded-2xl border text-[12px] max-w-md ${ok ? "bg-emerald-50 border-emerald-100 text-emerald-800" : "bg-red-50 border-red-100 text-red-700"}`}>
@@ -1220,7 +1279,7 @@ body {
       <button onClick={() => fileInputRef.current?.click()} className="text-gray-400 hover:text-gray-700 p-2 mb-1 rounded-xl hover:bg-white/60 transition-colors">
         <Plus size={18} />
       </button>
-      <input ref={fileInputRef} type="file" accept="image/*,video/*,.pdf,.doc,.docx,.txt" className="hidden" onChange={handleFile} />
+      <input ref={fileInputRef} type="file" accept="image/*,video/*,.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.csv,.md,.json,.xml,.html,.js,.ts,.py" className="hidden" onChange={handleFile} />
 
       <textarea
         className="flex-1 border-none focus:outline-none outline-none focus:ring-0 bg-transparent text-[14px] text-gray-700 placeholder-gray-400 mx-3 resize-none py-2.5 max-h-[120px]"

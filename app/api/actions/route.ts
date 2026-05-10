@@ -9,7 +9,7 @@ async function getUserPermissions(userId: string): Promise<PermissionSet> {
   } catch {
     return DEFAULT_PERMISSIONS[userId] ?? {
       update_audit: false, send_messages: false, send_email: false,
-      update_memory: false, trigger_sync: false,
+      update_memory: false, trigger_sync: false, product_search: false, send_telegram: false,
     };
   }
 }
@@ -66,6 +66,43 @@ export async function POST(req: Request) {
         await fetch(`${process.env.NEXT_PUBLIC_APP_URL ?? "https://tiktok-agent.vercel.app"}/api/cron`, { method: "POST" });
       } catch {}
       return Response.json({ ok: true, summary: "Triggered TikTok data sync", detail: "Data will refresh in ~30 seconds" });
+    }
+
+    if (type === "SEARCH_PRODUCT") {
+      if (!perms.product_search) return Response.json({ ok: false, error: "مش عندك صلاحية البحث عن صور المنتجات" });
+      const { brand = "", model = "", category = "" } = data;
+      const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "https://tiktok-agent.vercel.app";
+      const res = await fetch(`${appUrl}/api/products/search`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ brand, model, category }),
+      });
+      const result = await res.json();
+      if (!result.ok) return Response.json({ ok: false, error: result.error || "Search failed" });
+      return Response.json({
+        ok: true,
+        summary: `صور **${result.cleanName || `${brand} ${model}`}**`,
+        detail: result.specs ? result.specs.slice(0, 120) : undefined,
+        type: "SEARCH_PRODUCT",
+        images: result.images ?? [],
+        specs: result.specs ?? "",
+        colors: result.colors ?? "",
+        cleanName: result.cleanName ?? `${brand} ${model}`,
+      });
+    }
+
+    if (type === "SEND_TO_TELEGRAM") {
+      if (!perms.send_telegram) return Response.json({ ok: false, error: "مش عندك صلاحية إرسال رسائل للبوت" });
+      const { message } = data;
+      const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "https://tiktok-agent.vercel.app";
+      const res = await fetch(`${appUrl}/api/products/telegram`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ message }),
+      });
+      const result = await res.json();
+      if (!result.ok) return Response.json({ ok: false, error: result.error || "Telegram send failed" });
+      return Response.json({ ok: true, summary: "✅ تم الإرسال للبوت على Telegram", detail: message.slice(0, 80) });
     }
 
     return Response.json({ ok: false, error: `Unknown action type: ${type}` });

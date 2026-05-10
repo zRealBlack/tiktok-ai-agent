@@ -32,6 +32,8 @@ function buildActionsSection(perms: PermissionSet | null): string {
   مثال: [SARIE_ACTION:{"type":"UPDATE_MEMORY","data":{"insight":"الـ hook القصير (أقل من 3 ثواني) بيحقق retention أعلى"}}]`);
   if (perms.trigger_sync)  actions.push(`• TRIGGER_SYNC — تشغيل sync جديد لبيانات TikTok
   مثال: [SARIE_ACTION:{"type":"TRIGGER_SYNC","data":{}}]`);
+  if ((perms as any).product_search) actions.push(`• SEARCH_PRODUCT — ابحثي عن صور ومواصفات لمنتج معين (brand + model + category اختياري)\n  مثال: [SARIE_ACTION:{"type":"SEARCH_PRODUCT","data":{"brand":"Philips","model":"HD9252","category":"Air Fryer"}}]`);
+  if ((perms as any).send_telegram) actions.push(`• SEND_TO_TELEGRAM — ابعتي رسالة أو طلب لبوت الصور على Telegram\n  مثال: [SARIE_ACTION:{"type":"SEND_TO_TELEGRAM","data":{"message":"ابدأ كتالوج جديد"}}]`);
   if (actions.length === 0) return "";
   return `
 ═══════════════════════════════════════════════════
