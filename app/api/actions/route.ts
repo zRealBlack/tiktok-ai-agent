@@ -73,26 +73,72 @@ export async function POST(req: Request) {
       const { brand = "", model = "", category = "" } = data;
       const query = `${brand} ${model} product photo`.trim();
 
-      // ── Inline Bing image scraping (no server-to-server call) ─────────────
+      // ── DuckDuckGo image search (more reliable from server-side) ─────────
       let images: string[] = [];
       try {
-        const bingUrl = `https://www.bing.com/images/search?q=${encodeURIComponent(query)}&first=1&count=8&qft=+filterui:imagesize-large`;
-        const bingRes = await fetch(bingUrl, {
-          headers: {
-            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-            "Accept-Language": "en-US,en;q=0.9",
-          },
-          signal: AbortSignal.timeout(8000),
-        });
-        if (bingRes.ok) {
-          const html = await bingRes.text();
-          const matches = [...html.matchAll(/murl&quot;:&quot;(https?:\/\/[^&]+?)&quot;/g)];
-          images = matches
-            .map(m => m[1])
-            .filter(u => u.match(/\.(jpg|jpeg|png|webp)/i))
-            .slice(0, 6);
+        // Step 1: get the vqd token from DDG
+        const initRes = await fetch(
+          `https://duckduckgo.com/?q=${encodeURIComponent(query)}&iax=images&ia=images`,
+          {
+            headers: {
+              "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+              "Accept-Language": "en-US,en;q=0.9",
+              "Accept": "text/html,application/xhtml+xml",
+            },
+            signal: AbortSignal.timeout(8000),
+          }
+        );
+        const initHtml = await initRes.text();
+        const vqdMatch = initHtml.match(/vqd=["']?([^"'&\s]+)["']?/);
+        if (vqdMatch?.[1]) {
+          // Step 2: fetch image results JSON
+          const imgRes = await fetch(
+            `https://duckduckgo.com/i.js?q=${encodeURIComponent(query)}&vqd=${vqdMatch[1]}&o=json&p=1&s=0&u=bing`,
+            {
+              headers: {
+                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+                "Referer": "https://duckduckgo.com/",
+                "Accept": "application/json",
+              },
+              signal: AbortSignal.timeout(8000),
+            }
+          );
+          if (imgRes.ok) {
+            const imgData = await imgRes.json();
+            images = (imgData.results || [])
+              .map((r: any) => r.image as string)
+              .filter((u: string) => u && u.startsWith("http"))
+              .slice(0, 6);
+          }
         }
-      } catch { /* Bing failed, images stays empty */ }
+      } catch { /* DDG failed */ }
+
+      // ── Fallback: Bing if DDG returned nothing ────────────────────────────
+      if (images.length === 0) {
+        try {
+          const bingUrl = `https://www.bing.com/images/search?q=${encodeURIComponent(query)}&first=1&count=10&qft=+filterui:imagesize-large`;
+          const bingRes = await fetch(bingUrl, {
+            headers: {
+              "User-Agent": "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1",
+              "Accept-Language": "en-US,en;q=0.9",
+            },
+            signal: AbortSignal.timeout(8000),
+          });
+          if (bingRes.ok) {
+            const html = await bingRes.text();
+            // Try both encoded and unencoded murl patterns
+            const patterns = [
+              /murl&quot;:&quot;(https?:\/\/[^&"<\s]+)/g,
+              /"murl":"(https?:\/\/[^"<\s]+)"/g,
+            ];
+            for (const pattern of patterns) {
+              const matches = [...html.matchAll(pattern)];
+              const urls = matches.map(m => m[1]).filter(u => /\.(jpg|jpeg|png|webp)/i.test(u)).slice(0, 6);
+              if (urls.length > 0) { images = urls; break; }
+            }
+          }
+        } catch { /* Bing also failed */ }
+      }
 
       // ── Generate specs with Claude (best-effort, won't block images) ──────
       let cleanName = `${brand} ${model}`.trim();
