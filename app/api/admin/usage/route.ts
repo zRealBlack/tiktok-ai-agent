@@ -11,7 +11,7 @@ export const dynamic = "force-dynamic";
 
 export async function GET() {
   try {
-    const userIds = ["yassin", "dina", "haitham", "shahd", "sara", "shahdm", "yousef"];
+    const userIds = ["yassin", "dina", "haitham", "shahd", "sara", "shahdm", "yousef", "ahmed"];
     const keys = userIds.map(id => `spend:${id}`);
     
     const values = await redis.mget(...keys);

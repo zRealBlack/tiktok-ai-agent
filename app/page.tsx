@@ -180,10 +180,21 @@ const INITIAL_CONVERSATIONS: Conversation[] = [
     online: false,
     role: "Ai Artist",
   },
+  {
+    id: "ahmed",
+    name: "Ahmed Gaml",
+    avatar: null,
+    isAI: false,
+    lastMessage: "",
+    time: "",
+    unread: 0,
+    online: false,
+    role: "CEO",
+  },
 ];
 
 const INITIAL_TEAM_MESSAGES: Record<string, ChatMessage[]> = {
-  dina: [], yassin: [], hesham: [], shahd: [], sara: [], haitham: [], shahdm: [], yousef: []
+  dina: [], yassin: [], hesham: [], shahd: [], sara: [], haitham: [], shahdm: [], yousef: [], ahmed: []
 };
 
 // ─── Session types ────────────────────────────────────────────────────────────
@@ -497,7 +508,7 @@ function ChatPageInner() {
           const data = await res.json();
           if (data.messages && currentUser) {
             const reconstructed: Record<string, ChatMessage[]> = {
-              dina: [], yassin: [], hesham: [], shahd: [], sara: [], haitham: [], shahdm: [], yousef: []
+              dina: [], yassin: [], hesham: [], shahd: [], sara: [], haitham: [], shahdm: [], yousef: [], ahmed: []
             };
             const notifications: { name: string; text: string }[] = [];
 

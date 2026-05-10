@@ -20,6 +20,7 @@ const INITIAL_CONVERSATIONS = [
   { id: "sara", name: "Sara Hatem", isAI: false, lastMessage: "", time: "", unread: 0, online: false, role: "Marketing & Operation Management" },
   { id: "shahdm", name: "Shahd Mahmoud", isAI: false, lastMessage: "", time: "", unread: 0, online: false, role: "Community Manager" },
   { id: "yousef", name: "Yousef Hatem", isAI: false, lastMessage: "", time: "", unread: 0, online: false, role: "Ai Artist" },
+  { id: "ahmed", name: "Ahmed Gaml", isAI: false, lastMessage: "", time: "", unread: 0, online: false, role: "CEO" },
 ];
 
 function AvatarCircle({ name, src, size = 40, online }: { name: string; src?: string | null; size?: number; online?: boolean }) {
@@ -92,7 +93,7 @@ export default function TeamChatPage({ params }: { params: Promise<{ id: string 
           const data = await res.json();
           if (data.messages && currentUser) {
             const reconstructed: Record<string, any[]> = {
-              dina: [], yassin: [], hesham: [], shahd: [], sara: [], haitham: [], shahdm: [], yousef: []
+              dina: [], yassin: [], hesham: [], shahd: [], sara: [], haitham: [], shahdm: [], yousef: [], ahmed: []
             };
 
             const notifications: { name: string; text: string }[] = [];

@@ -63,6 +63,14 @@ export const TEAM_MEMBERS: TeamMember[] = [
     name: "Yousef Hatem",
     role: "Ai Artist",
     bio: "Generates videos with AI."
+  },
+  {
+    id: "ahmed",
+    email: "ahmed@mas.ai",
+    password: "Ahmed@7788",
+    name: "Ahmed Gaml",
+    role: "CEO",
+    bio: "CEO of Mas Agency. Oversees overall company operations, business strategy, and growth."
   }
 ];
 

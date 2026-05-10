@@ -16,4 +16,5 @@ export const DEFAULT_PERMISSIONS: Record<string, PermissionSet> = {
   sara:    { update_audit: true,  send_messages: true,  send_email: true,  update_memory: false, trigger_sync: false, product_search: true,  send_telegram: true  },
   shahdm:  { update_audit: false, send_messages: true,  send_email: false, update_memory: false, trigger_sync: false, product_search: true,  send_telegram: false },
   yousef:  { update_audit: false, send_messages: true,  send_email: false, update_memory: false, trigger_sync: false, product_search: true,  send_telegram: false },
+  ahmed:   { update_audit: true,  send_messages: true,  send_email: true,  update_memory: false, trigger_sync: false, product_search: true,  send_telegram: true  },
 };
