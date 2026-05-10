@@ -73,99 +73,69 @@ export async function POST(req: Request) {
       const { brand = "", model = "", category = "" } = data;
       const query = `${brand} ${model} product photo`.trim();
 
-      // ── Google Custom Search API (from photos-bot, most accurate) ─────────
+      // ── photos-bot technique: Google Custom Search -> Bing fallback ───────
       let images: string[] = [];
+      let searchSource = "";
+      
       const googleApiKey = process.env.GOOGLE_SEARCH_API_KEY;
       const googleCx = process.env.GOOGLE_SEARCH_CX;
-      
+
+      // 1. Google Custom Search (Primary)
       if (googleApiKey && googleCx) {
         try {
           const googleUrl = `https://www.googleapis.com/customsearch/v1?key=${googleApiKey}&cx=${googleCx}&q=${encodeURIComponent(query)}&searchType=image&num=6&imgType=photo&imgSize=large&safe=active`;
           const googleRes = await fetch(googleUrl, { signal: AbortSignal.timeout(8000) });
           if (googleRes.ok) {
             const data = await googleRes.json();
-            images = (data.items || [])
-              .map((item: any) => item.link)
-              .filter((u: string) => u && u.startsWith("http"))
-              .slice(0, 6);
+            images = (data.items || []).map((item: any) => item.link).slice(0, 6);
+            searchSource = "Google Custom Search";
+          } else {
+            console.error("Google Search API failed:", await googleRes.text());
           }
-        } catch { /* Google failed, proceed to fallback */ }
+        } catch (e) {
+          console.error("Google Search exception:", e);
+        }
       }
 
-      // ── Fallback 1: DuckDuckGo image search (if Google is missing/fails) ──
+      // 2. Bing Scraping (Fallback, exact regex from photos-bot)
       if (images.length === 0) {
         try {
-          const initRes = await fetch(
-            `https://duckduckgo.com/?q=${encodeURIComponent(query)}&iax=images&ia=images`,
-            {
-              headers: {
-                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-                "Accept-Language": "en-US,en;q=0.9",
-                "Accept": "text/html,application/xhtml+xml",
-              },
-              signal: AbortSignal.timeout(8000),
-            }
-          );
-          const initHtml = await initRes.text();
-          const vqdMatch = initHtml.match(/vqd=["']?([^"'&\s]+)["']?/);
-          if (vqdMatch?.[1]) {
-            const imgRes = await fetch(
-              `https://duckduckgo.com/i.js?q=${encodeURIComponent(query)}&vqd=${vqdMatch[1]}&o=json&p=1&s=0&u=bing`,
-              {
-                headers: {
-                  "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-                  "Referer": "https://duckduckgo.com/",
-                  "Accept": "application/json",
-                },
-                signal: AbortSignal.timeout(8000),
-              }
-            );
-            if (imgRes.ok) {
-              const imgData = await imgRes.json();
-              images = (imgData.results || [])
-                .map((r: any) => r.image as string)
-                .filter((u: string) => u && u.startsWith("http"))
-                .slice(0, 6);
-            }
-          }
-        } catch { /* DDG failed */ }
-      }
-
-      // ── Fallback 2: Bing (if DDG also fails) ──────────────────────────────
-      if (images.length === 0) {
-        try {
-          const bingUrl = `https://www.bing.com/images/search?q=${encodeURIComponent(query)}&first=1&count=10&qft=+filterui:imagesize-large`;
+          const bingUrl = `https://www.bing.com/images/search?q=${encodeURIComponent(query)}&first=1&count=8&qft=+filterui:imagesize-large`;
           const bingRes = await fetch(bingUrl, {
             headers: {
-              "User-Agent": "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1",
-              "Accept-Language": "en-US,en;q=0.9",
+              "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
             },
             signal: AbortSignal.timeout(8000),
           });
           if (bingRes.ok) {
             const html = await bingRes.text();
-            const patterns = [
-              /murl&quot;:&quot;(https?:\/\/[^&"<\s]+)/g,
-              /"murl":"(https?:\/\/[^"<\s]+)"/g,
-            ];
-            for (const pattern of patterns) {
-              const matches = [...html.matchAll(pattern)];
-              const urls = matches.map(m => m[1]).filter(u => /\.(jpg|jpeg|png|webp)/i.test(u)).slice(0, 6);
-              if (urls.length > 0) { images = urls; break; }
-            }
+            // Exact regex from photos-bot: r'murl&quot;:&quot;(https?://[^&]+?)&quot;'
+            const matches = [...html.matchAll(/murl&quot;:&quot;(https?:\/\/[^&]+?)&quot;/g)];
+            images = matches.map(m => m[1]).filter(u => /\.(jpg|jpeg|png|webp)/i.test(u)).slice(0, 6);
+            searchSource = "Bing Scraping";
           }
-        } catch { /* Bing also failed */ }
+        } catch (e) {
+          console.error("Bing Search exception:", e);
+        }
+      }
+
+      // If both failed, return an explicit error so the user knows what to fix
+      if (images.length === 0) {
+        return Response.json({ 
+          ok: false, 
+          error: "لم يتم العثور على صور. يرجى التأكد من إضافة GOOGLE_SEARCH_API_KEY و GOOGLE_SEARCH_CX في Vercel لأن Bing محظور على سيرفرات Vercel." 
+        });
       }
 
       // ── Generate specs with Claude (best-effort, won't block images) ──────
       let cleanName = `${brand} ${model}`.trim();
       let specs = "";
       let colors = "";
-      const apiKey = process.env.ANTHROPIC_API_KEY;
-      if (apiKey && images.length > 0) {
+      const anthropicKey = process.env.ANTHROPIC_API_KEY;
+      if (anthropicKey && images.length > 0) {
         try {
           const { default: Anthropic } = await import("@anthropic-ai/sdk");
-          const client = new Anthropic({ apiKey });
+          const client = new Anthropic({ apiKey: anthropicKey });
           const productName = [brand, model, category ? `(${category})` : ""].filter(Boolean).join(" ");
           const msg = await Promise.race([
             client.messages.create({
