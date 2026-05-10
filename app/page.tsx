@@ -390,12 +390,13 @@ function useSarieChat() {
       if (actionMatch && currentUser?.id) {
         try {
           const parsed = JSON.parse(actionMatch[1]);
-          const result = await fetch("/api/actions", {
+          const res = await fetch("/api/actions", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ userId: currentUser.id, type: parsed.type, data: parsed.data ?? {} }),
-          }).then(r => r.json());
-          // Append action card message
+          });
+          let result: any = {};
+          try { result = await res.json(); } catch { result = { ok: false, error: `Server error (${res.status})` }; }
           setMessages(p => [
             ...p,
             {
@@ -407,13 +408,22 @@ function useSarieChat() {
                 summary: result.summary || result.error || "Action executed",
                 detail: result.detail,
                 type: parsed.type,
+                images: result.images,
+                specs: result.specs,
+                colors: result.colors,
+                cleanName: result.cleanName,
+                fileType: result.fileType,
+                filename: result.filename,
+                fileData: result.fileData,
+                columns: result.columns,
+                title: result.title,
               },
             },
           ]);
-        } catch {
+        } catch (e: any) {
           setMessages(p => [
             ...p,
-            { role: "assistant", content: "", ts: now(), actionCard: { ok: false, summary: "Action failed — parse error", type: "UNKNOWN" } },
+            { role: "assistant", content: "", ts: now(), actionCard: { ok: false, summary: e?.message || "Action failed", type: "UNKNOWN" } },
           ]);
         }
       }
