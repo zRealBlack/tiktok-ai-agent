@@ -46,7 +46,8 @@ export async function POST(req: Request) {
   try {
     const { messages, contextData } = await req.json();
 
-    const apiKey = process.env.ANTHROPIC_API_KEY || "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";
+    const apiKey = process.env.ANTHROPIC_API_KEY;
+    if (!apiKey) throw new Error("ANTHROPIC_API_KEY is not set");
     const client = new Anthropic({ apiKey });
 
     // ─── Read DIRECTLY from KV using @upstash/redis (same SDK as /api/data) ───

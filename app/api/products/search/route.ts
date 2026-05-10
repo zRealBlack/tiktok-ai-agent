@@ -45,9 +45,8 @@ async function generateSpecs(
 ): Promise<{ specs: string; colors: string; cleanName: string }> {
   const fallback = { specs: "", colors: "", cleanName: `${brand} ${model}`.trim() };
   try {
-    const apiKey =
-      process.env.ANTHROPIC_API_KEY ||
-      "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";
+    const apiKey = process.env.ANTHROPIC_API_KEY;
+    if (!apiKey) return { specs: "", colors: "", cleanName: `${brand} ${model}`.trim() };
     const client = new Anthropic({ apiKey });
     const productName = [brand, model, category ? `(${category})` : ""].filter(Boolean).join(" ");
     const msg = await client.messages.create({
