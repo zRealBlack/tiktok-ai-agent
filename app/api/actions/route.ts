@@ -69,25 +69,69 @@ export async function POST(req: Request) {
     }
 
     if (type === "SEARCH_PRODUCT") {
-      if (!perms.product_search) return Response.json({ ok: false, error: "مش عندك صلاحية البحث عن صور المنتجات" });
+      if (!(perms as any).product_search) return Response.json({ ok: false, error: "مش عندك صلاحية البحث عن صور المنتجات" });
       const { brand = "", model = "", category = "" } = data;
-      const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "https://tiktok-agent.vercel.app";
-      const res = await fetch(`${appUrl}/api/products/search`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ brand, model, category }),
-      });
-      const result = await res.json();
-      if (!result.ok) return Response.json({ ok: false, error: result.error || "Search failed" });
+      const query = `${brand} ${model} product photo`.trim();
+
+      // ── Inline Bing image scraping (no server-to-server call) ─────────────
+      let images: string[] = [];
+      try {
+        const bingUrl = `https://www.bing.com/images/search?q=${encodeURIComponent(query)}&first=1&count=8&qft=+filterui:imagesize-large`;
+        const bingRes = await fetch(bingUrl, {
+          headers: {
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+            "Accept-Language": "en-US,en;q=0.9",
+          },
+          signal: AbortSignal.timeout(8000),
+        });
+        if (bingRes.ok) {
+          const html = await bingRes.text();
+          const matches = [...html.matchAll(/murl&quot;:&quot;(https?:\/\/[^&]+?)&quot;/g)];
+          images = matches
+            .map(m => m[1])
+            .filter(u => u.match(/\.(jpg|jpeg|png|webp)/i))
+            .slice(0, 6);
+        }
+      } catch { /* Bing failed, images stays empty */ }
+
+      // ── Generate specs with Claude (best-effort, won't block images) ──────
+      let cleanName = `${brand} ${model}`.trim();
+      let specs = "";
+      let colors = "";
+      const apiKey = process.env.ANTHROPIC_API_KEY;
+      if (apiKey && images.length > 0) {
+        try {
+          const { default: Anthropic } = await import("@anthropic-ai/sdk");
+          const client = new Anthropic({ apiKey });
+          const productName = [brand, model, category ? `(${category})` : ""].filter(Boolean).join(" ");
+          const msg = await Promise.race([
+            client.messages.create({
+              model: "claude-haiku-4-5-20251001",
+              max_tokens: 400,
+              messages: [{
+                role: "user",
+                content: `Product: ${productName}\nReturn ONLY raw JSON with keys: "cleanName" (short English name), "specs" (bullet points with -), "colors" (e.g. "Black, White" or "N/A")`,
+              }],
+            }),
+            new Promise((_, reject) => setTimeout(() => reject(new Error("timeout")), 7000)),
+          ]) as any;
+          const text = ((msg.content[0] as any).text || "").trim().replace(/^```json\n?/, "").replace(/^```\n?/, "").replace(/\n?```$/, "").trim();
+          const parsed = JSON.parse(text);
+          cleanName = parsed.cleanName || cleanName;
+          specs = (parsed.specs || "").replace(/\*\*/g, "");
+          colors = parsed.colors || "";
+        } catch { /* spec gen failed — still return images */ }
+      }
+
       return Response.json({
         ok: true,
-        summary: `صور **${result.cleanName || `${brand} ${model}`}**`,
-        detail: result.specs ? result.specs.slice(0, 120) : undefined,
+        summary: `صور **${cleanName}**`,
+        detail: specs ? specs.slice(0, 120) : undefined,
         type: "SEARCH_PRODUCT",
-        images: result.images ?? [],
-        specs: result.specs ?? "",
-        colors: result.colors ?? "",
-        cleanName: result.cleanName ?? `${brand} ${model}`,
+        images,
+        specs,
+        colors,
+        cleanName,
       });
     }
 
