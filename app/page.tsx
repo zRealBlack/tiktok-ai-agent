@@ -15,7 +15,7 @@ const EMOJIS = ["😂","❤️","🔥","👏","😮","😢","🤔","💯","🚀"
 
 interface Attachment { name: string; url: string; type: "image" | "video" | "file"; mimeType?: string; }
 
-interface ActionCard { ok: boolean; summary: string; detail?: string; type: string; images?: string[]; specs?: string; colors?: string; cleanName?: string; }
+interface ActionCard { ok: boolean; summary: string; detail?: string; type: string; images?: string[]; specs?: string; colors?: string; cleanName?: string; fileType?: string; filename?: string; fileData?: any[]; columns?: {key:string;label:string}[]; title?: string; }
 
 interface ChatMessage {
   id?: string;
@@ -1174,22 +1174,43 @@ body {
             {/* Header */}
             <div className="flex items-center gap-2 px-4 py-3 border-b border-gray-50 bg-gradient-to-r from-violet-50 to-white">
               <span className="text-lg">🔍</span>
-              <div>
+              <div className="flex-1">
                 <div className="font-bold text-[13px] text-gray-800" dangerouslySetInnerHTML={{ __html: summary.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>') }} />
                 {colors && colors !== "N/A" && <div className="text-[11px] text-gray-400 mt-0.5">🎨 {colors}</div>}
               </div>
+              {/* Download All button */}
+              <a
+                href={`/api/products/download-image?url=${encodeURIComponent(images[0])}&filename=${encodeURIComponent((cleanName || "product") + "_1.jpg")}`}
+                download
+                className="text-[10px] bg-gray-100 hover:bg-gray-200 text-gray-600 px-2 py-1 rounded-full font-semibold transition-colors shrink-0"
+                title="Download first image"
+              >
+                ↓ Download
+              </a>
             </div>
             {/* Image Grid */}
             <div className="grid grid-cols-3 gap-0.5 bg-gray-100">
               {images.slice(0, 6).map((url, idx) => (
-                <a key={idx} href={url} target="_blank" rel="noopener noreferrer" className="block aspect-square overflow-hidden">
-                  <img
-                    src={url}
-                    alt={`${cleanName} ${idx + 1}`}
-                    className="w-full h-full object-cover hover:scale-105 transition-transform duration-200"
-                    onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
-                  />
-                </a>
+                <div key={idx} className="relative aspect-square overflow-hidden group">
+                  <a href={url} target="_blank" rel="noopener noreferrer" className="block w-full h-full">
+                    <img
+                      src={url}
+                      alt={`${cleanName} ${idx + 1}`}
+                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200"
+                      onError={(e) => { (e.target as HTMLImageElement).parentElement!.parentElement!.style.display = 'none'; }}
+                    />
+                  </a>
+                  {/* Per-image download button */}
+                  <a
+                    href={`/api/products/download-image?url=${encodeURIComponent(url)}&filename=${encodeURIComponent((cleanName || "product") + `_${idx + 1}.jpg`)}`}
+                    download
+                    className="absolute bottom-1 right-1 w-6 h-6 flex items-center justify-center bg-black/60 hover:bg-black/80 text-white rounded-full text-[10px] opacity-0 group-hover:opacity-100 transition-opacity"
+                    title="Download"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    ↓
+                  </a>
+                </div>
               ))}
             </div>
             {/* Specs */}
@@ -1199,6 +1220,51 @@ body {
               </div>
             )}
             <div className="px-4 py-2 text-[10px] text-gray-300 font-mono border-t border-gray-50">SEARCH_PRODUCT</div>
+          </div>
+        </div>
+      );
+    }
+
+    // ── File Generation Card ──────────────────────────────────────────────
+    if (type === "GENERATE_FILE" && ok && m.actionCard?.fileData) {
+      const { fileType, filename: fn, fileData, columns: cols, title: sheetTitle } = m.actionCard;
+      const ext = fileType === "csv" ? "csv" : fileType === "txt" ? "txt" : "xlsx";
+      const icon = fileType === "csv" ? "📃" : fileType === "txt" ? "📝" : "📊";
+      const downloadFile = async () => {
+        try {
+          const res = await fetch("/api/products/generate-file", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ type: fileType, filename: fn, data: fileData, columns: cols, title: sheetTitle }),
+          });
+          if (!res.ok) throw new Error("Server error");
+          const blob = await res.blob();
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement("a");
+          a.href = url;
+          a.download = `${fn || "sarie_file"}.${ext}`;
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+          URL.revokeObjectURL(url);
+        } catch (err) {
+          alert("فشل التحميل، حاول مرة تانية");
+        }
+      };
+      return (
+        <div key={i} className={`flex items-start gap-2 ${i >= messages.length - 1 ? "msg-enter" : ""}`} dir="ltr">
+          <div className="flex items-center gap-3 px-4 py-3 rounded-2xl border border-blue-100 bg-blue-50 text-blue-800 text-[12px] max-w-sm">
+            <span className="text-2xl shrink-0">{icon}</span>
+            <div className="flex-1 min-w-0">
+              <div className="font-bold text-[13px] truncate">{fn || "sarie_file"}.{ext}</div>
+              <div className="text-[11px] text-blue-500 mt-0.5">{(fileData || []).length} rows • {fileType?.toUpperCase()}</div>
+            </div>
+            <button
+              onClick={downloadFile}
+              className="shrink-0 bg-blue-600 hover:bg-blue-700 text-white text-[11px] font-bold px-3 py-1.5 rounded-full flex items-center gap-1.5 transition-colors"
+            >
+              ↓ Download
+            </button>
           </div>
         </div>
       );

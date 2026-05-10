@@ -1,0 +1,28 @@
+{
+  "id": 1,
+  "jsonrpc": "2.0",
+  "result": {
+    "content": [
+      {
+        "text": "{\"name\":\"projects/889019208377206697/screens/c4e57347f57b4add84d7c6799a7ee45f\",\"title\":\"MAS AI Studio - Dashboard with Account Selector\",\"screenshot\":{\"name\":\"projects/889019208377206697/files/37c38610ed9e4f4a9b2d9e14bf2552d8\",\"downloadUrl\":\"https://lh3.googleusercontent.com/aida/ADBb0ujH4VYtqzISIjiRVfFE5iIBdpVgs_CtFr1-ugWW17fVT5azRkZuz8r-QnLiOgyxusahKBlflPswuGqivNgDwatCPFVDzj0725snzawKzm3YUiriTyeuSObVND-aVu9Fe03xbnE2pUz-pKHyduxu7e0HKLRIkXvJnDtbrS9AXwvv3_JxVtC1Ny0KslldRUMq8nzdrcnBn2KzBiBjXrWApC61AXDbRiCMTpG57eieLg57O9regoBxBbh_bQ\"},\"htmlCode\":{\"name\":\"projects/889019208377206697/files/a35a8dbaaf7644df91cb97b5e3f41772\",\"downloadUrl\":\"https://contribution.usercontent.google.com/download?c=CgthaWRhX2NvZGVmeBJ6Eh1hcHBfY29tcGFuaW9uX2dlbmVyYXRlZF9maWxlcxpZCiVodG1sXzVlOWQwYTQ2NWEyMTQ2YjE5ZGVhNjcxYmZiZGUwY2YxEgsSBxCjmqXkhwIYAZIBIgoKcHJvamVjdF9pZBIUQhI4ODkwMTkyMDgzNzcyMDY2OTc&filename=&opi=89354086\",\"mimeType\":\"text/html\"},\"width\":\"2560\",\"height\":\"2048\",\"deviceType\":\"DESKTOP\"}",
+        "type": "text"
+      }
+    ],
+    "structuredContent": {
+      "deviceType": "DESKTOP",
+      "height": "2048",
+      "htmlCode": {
+        "downloadUrl": "https://contribution.usercontent.google.com/download?c=CgthaWRhX2NvZGVmeBJ6Eh1hcHBfY29tcGFuaW9uX2dlbmVyYXRlZF9maWxlcxpZCiVodG1sXzVlOWQwYTQ2NWEyMTQ2YjE5ZGVhNjcxYmZiZGUwY2YxEgsSBxCjmqXkhwIYAZIBIgoKcHJvamVjdF9pZBIUQhI4ODkwMTkyMDgzNzcyMDY2OTc&filename=&opi=89354086",
+        "mimeType": "text/html",
+        "name": "projects/889019208377206697/files/a35a8dbaaf7644df91cb97b5e3f41772"
+      },
+      "name": "projects/889019208377206697/screens/c4e57347f57b4add84d7c6799a7ee45f",
+      "screenshot": {
+        "downloadUrl": "https://lh3.googleusercontent.com/aida/ADBb0ujH4VYtqzISIjiRVfFE5iIBdpVgs_CtFr1-ugWW17fVT5azRkZuz8r-QnLiOgyxusahKBlflPswuGqivNgDwatCPFVDzj0725snzawKzm3YUiriTyeuSObVND-aVu9Fe03xbnE2pUz-pKHyduxu7e0HKLRIkXvJnDtbrS9AXwvv3_JxVtC1Ny0KslldRUMq8nzdrcnBn2KzBiBjXrWApC61AXDbRiCMTpG57eieLg57O9regoBxBbh_bQ",
+        "name": "projects/889019208377206697/files/37c38610ed9e4f4a9b2d9e14bf2552d8"
+      },
+      "title": "MAS AI Studio - Dashboard with Account Selector",
+      "width": "2560"
+    }
+  }
+}

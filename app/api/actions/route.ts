@@ -105,6 +105,24 @@ export async function POST(req: Request) {
       return Response.json({ ok: true, summary: "✅ تم الإرسال للبوت على Telegram", detail: message.slice(0, 80) });
     }
 
+    if (type === "GENERATE_FILE") {
+      if (!perms.product_search) return Response.json({ ok: false, error: "مش عندك صلاحية توليد الملفات" });
+      const { fileType = "excel", filename = "sarie_file", data: fileData, columns, title } = data;
+      // Return a signed download URL — the frontend calls /api/products/generate-file directly
+      // We pass the params back so the UI can trigger the download client-side
+      return Response.json({
+        ok: true,
+        type: "GENERATE_FILE",
+        summary: `📎 **${filename}**`,
+        detail: `${(fileData || []).length} rows — click to download`,
+        fileType,
+        filename,
+        fileData,
+        columns,
+        title,
+      });
+    }
+
     return Response.json({ ok: false, error: `Unknown action type: ${type}` });
   } catch (err) {
     console.error("[actions]", err);

@@ -33,6 +33,7 @@ function buildActionsSection(perms: PermissionSet | null): string {
   if (perms.trigger_sync)  actions.push(`• TRIGGER_SYNC — تشغيل sync جديد لبيانات TikTok
   مثال: [SARIE_ACTION:{"type":"TRIGGER_SYNC","data":{}}]`);
   if ((perms as any).product_search) actions.push(`• SEARCH_PRODUCT — ابحثي عن صور ومواصفات لمنتج معين (brand + model + category اختياري)\n  مثال: [SARIE_ACTION:{"type":"SEARCH_PRODUCT","data":{"brand":"Philips","model":"HD9252","category":"Air Fryer"}}]`);
+  if ((perms as any).product_search) actions.push(`• GENERATE_FILE — اعملي ملف Excel أو CSV وابعتيه في الشات (fileType: excel/csv/txt)\n  مثال: [SARIE_ACTION:{"type":"GENERATE_FILE","data":{"fileType":"excel","filename":"تقرير_المنتجات","title":"المنتجات","columns":[{"key":"name","label":"الاسم"},{"key":"price","label":"السعر"}],"data":[{"name":"منتج 1","price":"100"},{"name":"منتج 2","price":"200"}]}}]`);
   if ((perms as any).send_telegram) actions.push(`• SEND_TO_TELEGRAM — ابعتي رسالة أو طلب لبوت الصور على Telegram\n  مثال: [SARIE_ACTION:{"type":"SEND_TO_TELEGRAM","data":{"message":"ابدأ كتالوج جديد"}}]`);
   if (actions.length === 0) return "";
   return `

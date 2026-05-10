@@ -6,21 +6,39 @@ import { DEFAULT_PERMISSIONS } from "@/lib/permissions";
 
 export const runtime = "nodejs";
 
-type SupportedMediaType = "image/jpeg" | "image/png" | "image/gif" | "image/webp";
+type ImageMediaType = "image/jpeg" | "image/png" | "image/gif" | "image/webp";
+const IMAGE_TYPES: ImageMediaType[] = ["image/jpeg", "image/png", "image/gif", "image/webp"];
+const TEXT_TYPES = ["text/plain","text/csv","text/markdown","text/html","text/xml","application/json","application/xml","application/javascript","application/typescript"];
 
-async function fetchImageAsBase64(url: string): Promise<{ data: string; mediaType: SupportedMediaType } | null> {
-  try {
-    const res = await fetch(url, { signal: AbortSignal.timeout(8000) });
-    if (!res.ok) return null;
-    const ct = (res.headers.get("content-type") || "image/jpeg").split(";")[0].trim();
-    const validTypes: SupportedMediaType[] = ["image/jpeg", "image/png", "image/gif", "image/webp"];
-    const mediaType: SupportedMediaType = validTypes.includes(ct as SupportedMediaType) ? (ct as SupportedMediaType) : "image/jpeg";
-    const buffer = await res.arrayBuffer();
-    const data = Buffer.from(buffer).toString("base64");
-    return { data, mediaType };
-  } catch {
-    return null;
+// Extract base64 payload from a data URL (strips "data:<mime>;base64," prefix)
+function dataUrlToBase64(dataUrl: string): string {
+  const comma = dataUrl.indexOf(",");
+  return comma >= 0 ? dataUrl.slice(comma + 1) : dataUrl;
+}
+
+// Build Anthropic content blocks for an attached file
+function buildAttachmentBlocks(attachment: { name: string; url: string; mimeType?: string }): any[] {
+  const mime = (attachment.mimeType || "").toLowerCase();
+  const base64 = dataUrlToBase64(attachment.url);
+
+  if (IMAGE_TYPES.includes(mime as ImageMediaType)) {
+    return [{ type: "image", source: { type: "base64", media_type: mime as ImageMediaType, data: base64 } }];
   }
+
+  if (mime === "application/pdf") {
+    return [{ type: "document", source: { type: "base64", media_type: "application/pdf", data: base64 } }];
+  }
+
+  if (TEXT_TYPES.some(t => mime.startsWith(t.split("/")[0]) && mime.includes(t.split("/")[1])) || mime.startsWith("text/")) {
+    try {
+      const text = Buffer.from(base64, "base64").toString("utf-8");
+      return [{ type: "text", text: `[File: ${attachment.name}]\n\`\`\`\n${text.slice(0, 30000)}\n\`\`\`` }];
+    } catch { /* fall through */ }
+  }
+
+  // Unsupported binary (Excel, Word, etc.) — describe it so Sarie is aware
+  const kb = Math.round((base64.length * 3) / 4 / 1024);
+  return [{ type: "text", text: `[Attached file: ${attachment.name} (${kb} KB) — binary format, content not directly readable. Acknowledge the attachment and note its type.]` }];
 }
 
 
@@ -78,20 +96,17 @@ export async function POST(req: Request) {
     // Keep only the last 10 messages to limit token growth, but still benefit from prompt caching
     const recentMessages = messages.slice(-10);
 
-    // Build Anthropic messages — support multimodal (image + text) when imageUrl is present
-    const formattedMessages: any[] = await Promise.all(
-      recentMessages.map(async (m: { role: string; content: string; imageUrl?: string }) => {
-        const content: any[] = [];
-        if (m.imageUrl) {
-          const img = await fetchImageAsBase64(m.imageUrl);
-          if (img) {
-            content.push({ type: "image", source: { type: "base64", media_type: img.mediaType, data: img.data } });
-          }
-        }
-        content.push({ type: "text", text: m.content });
-        return { role: m.role === "assistant" ? "assistant" : "user", content };
-      })
-    );
+    // Build Anthropic messages with multimodal support (images, PDFs, text files, etc.)
+    const formattedMessages: any[] = recentMessages.map((m: { role: string; content: string; attachment?: { name: string; url: string; mimeType?: string } }) => {
+      const content: any[] = [];
+      if (m.attachment?.url) {
+        content.push(...buildAttachmentBlocks(m.attachment));
+      }
+      if (m.content) content.push({ type: "text", text: m.content });
+      // If there's only an attachment with no text, still need at least one content block
+      if (content.length === 0) content.push({ type: "text", text: "" });
+      return { role: m.role === "assistant" ? "assistant" : "user", content };
+    });
 
     // Add cache_control to the last user message for maximum cache hits on chat history
     if (formattedMessages.length > 0) {
