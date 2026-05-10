@@ -73,47 +73,65 @@ export async function POST(req: Request) {
       const { brand = "", model = "", category = "" } = data;
       const query = `${brand} ${model} product photo`.trim();
 
-      // ── DuckDuckGo image search (more reliable from server-side) ─────────
+      // ── Google Custom Search API (from photos-bot, most accurate) ─────────
       let images: string[] = [];
-      try {
-        // Step 1: get the vqd token from DDG
-        const initRes = await fetch(
-          `https://duckduckgo.com/?q=${encodeURIComponent(query)}&iax=images&ia=images`,
-          {
-            headers: {
-              "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-              "Accept-Language": "en-US,en;q=0.9",
-              "Accept": "text/html,application/xhtml+xml",
-            },
-            signal: AbortSignal.timeout(8000),
+      const googleApiKey = process.env.GOOGLE_SEARCH_API_KEY;
+      const googleCx = process.env.GOOGLE_SEARCH_CX;
+      
+      if (googleApiKey && googleCx) {
+        try {
+          const googleUrl = `https://www.googleapis.com/customsearch/v1?key=${googleApiKey}&cx=${googleCx}&q=${encodeURIComponent(query)}&searchType=image&num=6&imgType=photo&imgSize=large&safe=active`;
+          const googleRes = await fetch(googleUrl, { signal: AbortSignal.timeout(8000) });
+          if (googleRes.ok) {
+            const data = await googleRes.json();
+            images = (data.items || [])
+              .map((item: any) => item.link)
+              .filter((u: string) => u && u.startsWith("http"))
+              .slice(0, 6);
           }
-        );
-        const initHtml = await initRes.text();
-        const vqdMatch = initHtml.match(/vqd=["']?([^"'&\s]+)["']?/);
-        if (vqdMatch?.[1]) {
-          // Step 2: fetch image results JSON
-          const imgRes = await fetch(
-            `https://duckduckgo.com/i.js?q=${encodeURIComponent(query)}&vqd=${vqdMatch[1]}&o=json&p=1&s=0&u=bing`,
+        } catch { /* Google failed, proceed to fallback */ }
+      }
+
+      // ── Fallback 1: DuckDuckGo image search (if Google is missing/fails) ──
+      if (images.length === 0) {
+        try {
+          const initRes = await fetch(
+            `https://duckduckgo.com/?q=${encodeURIComponent(query)}&iax=images&ia=images`,
             {
               headers: {
                 "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-                "Referer": "https://duckduckgo.com/",
-                "Accept": "application/json",
+                "Accept-Language": "en-US,en;q=0.9",
+                "Accept": "text/html,application/xhtml+xml",
               },
               signal: AbortSignal.timeout(8000),
             }
           );
-          if (imgRes.ok) {
-            const imgData = await imgRes.json();
-            images = (imgData.results || [])
-              .map((r: any) => r.image as string)
-              .filter((u: string) => u && u.startsWith("http"))
-              .slice(0, 6);
+          const initHtml = await initRes.text();
+          const vqdMatch = initHtml.match(/vqd=["']?([^"'&\s]+)["']?/);
+          if (vqdMatch?.[1]) {
+            const imgRes = await fetch(
+              `https://duckduckgo.com/i.js?q=${encodeURIComponent(query)}&vqd=${vqdMatch[1]}&o=json&p=1&s=0&u=bing`,
+              {
+                headers: {
+                  "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+                  "Referer": "https://duckduckgo.com/",
+                  "Accept": "application/json",
+                },
+                signal: AbortSignal.timeout(8000),
+              }
+            );
+            if (imgRes.ok) {
+              const imgData = await imgRes.json();
+              images = (imgData.results || [])
+                .map((r: any) => r.image as string)
+                .filter((u: string) => u && u.startsWith("http"))
+                .slice(0, 6);
+            }
           }
-        }
-      } catch { /* DDG failed */ }
+        } catch { /* DDG failed */ }
+      }
 
-      // ── Fallback: Bing if DDG returned nothing ────────────────────────────
+      // ── Fallback 2: Bing (if DDG also fails) ──────────────────────────────
       if (images.length === 0) {
         try {
           const bingUrl = `https://www.bing.com/images/search?q=${encodeURIComponent(query)}&first=1&count=10&qft=+filterui:imagesize-large`;
@@ -126,7 +144,6 @@ export async function POST(req: Request) {
           });
           if (bingRes.ok) {
             const html = await bingRes.text();
-            // Try both encoded and unencoded murl patterns
             const patterns = [
               /murl&quot;:&quot;(https?:\/\/[^&"<\s]+)/g,
               /"murl":"(https?:\/\/[^"<\s]+)"/g,
